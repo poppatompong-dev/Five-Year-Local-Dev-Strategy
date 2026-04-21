@@ -147,7 +147,7 @@ function DashboardPage() {
                       background: "oklch(1 0 0)",
                       boxShadow: "0 10px 30px -10px oklch(0 0 0 / 0.15)",
                     }}
-                    formatter={(v: number) => [`${v.toLocaleString("th-TH", { maximumFractionDigits: 2 })} ล้านบาท`, "งบประมาณ"]}
+                    formatter={(v) => [`${Number(v).toLocaleString("th-TH", { maximumFractionDigits: 2 })} ล้านบาท`, "งบประมาณ"]}
                     labelFormatter={(l) => `ปีงบประมาณ ${l}`}
                   />
                   <Bar dataKey="totalM" fill="url(#barGreen)" radius={[8, 8, 0, 0]} maxBarSize={60} />
@@ -181,7 +181,7 @@ function DashboardPage() {
                       background: "oklch(1 0 0)",
                       boxShadow: "0 10px 30px -10px oklch(0 0 0 / 0.15)",
                     }}
-                    formatter={(v: number, _n, p) => [`${v} โครงการ`, p.payload.label]}
+                    formatter={(v, _n, p) => [`${Number(v)} โครงการ`, (p as { payload?: { label?: string } }).payload?.label ?? ""]}
                   />
                   <Legend
                     verticalAlign="bottom"

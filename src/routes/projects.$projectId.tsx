@@ -177,7 +177,7 @@ function ProjectDetailPage() {
                         border: "1px solid oklch(0.9 0.015 140)",
                         background: "oklch(1 0 0)",
                       }}
-                      formatter={(v: number) => [`${v.toLocaleString("th-TH")} บาท`, "งบประมาณ"]}
+                      formatter={(v) => [`${Number(v).toLocaleString("th-TH")} บาท`, "งบประมาณ"]}
                       labelFormatter={(l) => `ปีงบประมาณ ${l}`}
                     />
                     <Bar dataKey="amount" fill="url(#budgetBar)" radius={[8, 8, 0, 0]} maxBarSize={70} />
