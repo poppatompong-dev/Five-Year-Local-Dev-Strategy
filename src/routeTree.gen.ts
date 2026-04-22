@@ -14,6 +14,9 @@ import { Route as ImportRouteImport } from './routes/import'
 import { Route as EquipmentRouteImport } from './routes/equipment'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
+import { Route as AuthPathnameRouteImport } from './routes/auth.$pathname'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AccountPathnameRouteImport } from './routes/account.$pathname'
 
 const ProjectsRoute = ProjectsRouteImport.update({
   id: '/projects',
@@ -40,12 +43,30 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   path: '/$projectId',
   getParentRoute: () => ProjectsRoute,
 } as any)
+const AuthPathnameRoute = AuthPathnameRouteImport.update({
+  id: '/auth/$pathname',
+  path: '/auth/$pathname',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountPathnameRoute = AccountPathnameRouteImport.update({
+  id: '/account/$pathname',
+  path: '/account/$pathname',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/equipment': typeof EquipmentRoute
   '/import': typeof ImportRoute
   '/projects': typeof ProjectsRouteWithChildren
+  '/account/$pathname': typeof AccountPathnameRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/auth/$pathname': typeof AuthPathnameRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +74,9 @@ export interface FileRoutesByTo {
   '/equipment': typeof EquipmentRoute
   '/import': typeof ImportRoute
   '/projects': typeof ProjectsRouteWithChildren
+  '/account/$pathname': typeof AccountPathnameRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/auth/$pathname': typeof AuthPathnameRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
 }
 export interface FileRoutesById {
@@ -61,6 +85,9 @@ export interface FileRoutesById {
   '/equipment': typeof EquipmentRoute
   '/import': typeof ImportRoute
   '/projects': typeof ProjectsRouteWithChildren
+  '/account/$pathname': typeof AccountPathnameRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/auth/$pathname': typeof AuthPathnameRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
 }
 export interface FileRouteTypes {
@@ -70,15 +97,29 @@ export interface FileRouteTypes {
     | '/equipment'
     | '/import'
     | '/projects'
+    | '/account/$pathname'
+    | '/admin/users'
+    | '/auth/$pathname'
     | '/projects/$projectId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/equipment' | '/import' | '/projects' | '/projects/$projectId'
+  to:
+    | '/'
+    | '/equipment'
+    | '/import'
+    | '/projects'
+    | '/account/$pathname'
+    | '/admin/users'
+    | '/auth/$pathname'
+    | '/projects/$projectId'
   id:
     | '__root__'
     | '/'
     | '/equipment'
     | '/import'
     | '/projects'
+    | '/account/$pathname'
+    | '/admin/users'
+    | '/auth/$pathname'
     | '/projects/$projectId'
   fileRoutesById: FileRoutesById
 }
@@ -87,6 +128,9 @@ export interface RootRouteChildren {
   EquipmentRoute: typeof EquipmentRoute
   ImportRoute: typeof ImportRoute
   ProjectsRoute: typeof ProjectsRouteWithChildren
+  AccountPathnameRoute: typeof AccountPathnameRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+  AuthPathnameRoute: typeof AuthPathnameRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -126,6 +170,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof ProjectsRoute
     }
+    '/auth/$pathname': {
+      id: '/auth/$pathname'
+      path: '/auth/$pathname'
+      fullPath: '/auth/$pathname'
+      preLoaderRoute: typeof AuthPathnameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/$pathname': {
+      id: '/account/$pathname'
+      path: '/account/$pathname'
+      fullPath: '/account/$pathname'
+      preLoaderRoute: typeof AccountPathnameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -146,7 +211,19 @@ const rootRouteChildren: RootRouteChildren = {
   EquipmentRoute: EquipmentRoute,
   ImportRoute: ImportRoute,
   ProjectsRoute: ProjectsRouteWithChildren,
+  AccountPathnameRoute: AccountPathnameRoute,
+  AdminUsersRoute: AdminUsersRoute,
+  AuthPathnameRoute: AuthPathnameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

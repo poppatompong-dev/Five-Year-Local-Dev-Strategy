@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "skills": {
+    "chart-visualization": {
+      "source": "antvis/chart-visualization-skills",
+      "sourceType": "github",
+      "computedHash": "23f0cd837bcef40b5d84e9f9e24de1f010fa2aa9bcc01ad3b5fd71d082f576c6"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "computedHash": "9e1c8b3103f92fa8092568a44fe64858de7c5c9dc65ce4bea8f168080e889cfd"
+    },
+    "ui-animation": {
+      "source": "mblode/agent-skills",
+      "sourceType": "github",
+      "computedHash": "f918842977d31fadccb206bd80163091b57294690cbb7351e91cf9c681de2310"
+    },
+    "ui-components": {
+      "source": "yonatangross/orchestkit",
+      "sourceType": "github",
+      "computedHash": "44ae2e6ae4c58187d070ebf567efdee5be35ed5ea69d9db9d498508a2a383f17"
+    }
+  }
+}

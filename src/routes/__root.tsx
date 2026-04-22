@@ -1,6 +1,13 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { Outlet, Link, createRootRoute, HeadContent, Scripts, useNavigate } from "@tanstack/react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { NeonAuthUIProvider } from "@neondatabase/neon-js/auth/react";
+import { authClient } from "../auth";
 
 import appCss from "../styles.css?url";
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 1000 * 60 * 5 } },
+});
 
 function NotFoundComponent() {
   return (
@@ -52,7 +59,7 @@ export const Route = createRootRoute({
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
@@ -71,5 +78,17 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  return <Outlet />;
+  const navigate = useNavigate();
+  return (
+    <QueryClientProvider client={queryClient}>
+      <NeonAuthUIProvider
+        authClient={authClient}
+        navigate={(path) => navigate({ to: path })}
+        social={{ providers: ["google", "github"] }}
+        credentials={{ forgotPassword: true }}
+      >
+        <Outlet />
+      </NeonAuthUIProvider>
+    </QueryClientProvider>
+  );
 }

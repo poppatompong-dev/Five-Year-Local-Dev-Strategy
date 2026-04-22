@@ -1,0 +1,3605 @@
+{
+  "sourceFile": "ส่วนที่ 3.2  แผนพัฒนาท้องถิ่น 5 ปี 66-70  20 10 64.xlsx",
+  "extractedAt": "2026-04-22T05:03:00.436Z",
+  "totalSheets": 42,
+  "totalTextBoxes": 230,
+  "typeCounts": {
+    "form_index": 40,
+    "status_note": 1,
+    "amendment": 136,
+    "change": 31,
+    "addition": 4,
+    "budget_source": 6,
+    "cover_metadata": 12
+  },
+  "sheets": [
+    {
+      "sheetName": "ผ.01 สรุป",
+      "sheetIndex": 3,
+      "drawingFile": "drawing2.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 11,
+          "toRow": 1,
+          "toCol": 12,
+          "rawText": "แบบ ผ.01",
+          "fragments": [
+            "แบบ ผ.01"
+          ],
+          "type": "form_index",
+          "formType": "ผ.01"
+        },
+        {
+          "fromRow": 5,
+          "fromCol": 13,
+          "toRow": 14,
+          "toCol": 21,
+          "rawText": "รวมเล่มถึง ปี 68 เรียบร้อย",
+          "fragments": [
+            "รวมเล่มถึง",
+            " ปี 68 เรียบร้อย"
+          ],
+          "type": "status_note"
+        }
+      ]
+    },
+    {
+      "sheetName": "ผ.01 .1 สรุป ชุมชน",
+      "sheetIndex": 4,
+      "drawingFile": "drawing3.xml",
+      "textBoxes": [
+        {
+          "fromRow": 2,
+          "fromCol": 12,
+          "toRow": 3,
+          "toCol": 13,
+          "rawText": "แบบ ผ.01 /1",
+          "fragments": [
+            "แบบ ผ.01",
+            "/1"
+          ],
+          "type": "form_index",
+          "formType": "ผ.01"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ1.1แผนงานสาธารณสุข",
+      "sheetIndex": 5,
+      "drawingFile": "drawing4.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 33,
+          "fromCol": 5,
+          "toRow": 33,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 18,
+          "fromCol": 6,
+          "toRow": 18,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 17,
+          "fromCol": 6,
+          "toRow": 17,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ1.2แผนงานการพาณิชย์",
+      "sheetIndex": 6,
+      "drawingFile": "drawing5.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ1.2แผนงานการศาสนาวัฒนธรรม",
+      "sheetIndex": 7,
+      "drawingFile": "drawing6.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ1.2แผนงานสร้างความเข้มแข็งข",
+      "sheetIndex": 8,
+      "drawingFile": "drawing7.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 17,
+          "fromCol": 6,
+          "toRow": 17,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 19,
+          "fromCol": 6,
+          "toRow": 19,
+          "toCol": 8,
+          "rawText": "เพิ่มเติม ครั้งที่ 2 / 2568",
+          "fragments": [
+            "เพิ่มเติม ครั้งที่ 2 / 2568"
+          ],
+          "type": "addition",
+          "amendmentType": "เพิ่มเติม",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 17,
+          "fromCol": 6,
+          "toRow": 17,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 1 / 2569",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 1 / 2569"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 1,
+          "amendmentYear": 2569
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ1.3แผนงานเคหะชุมชน",
+      "sheetIndex": 9,
+      "drawingFile": "drawing8.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ1.3แผนงานบริหารงานทั่วไป",
+      "sheetIndex": 10,
+      "drawingFile": "drawing9.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 14,
+          "fromCol": 4,
+          "toRow": 14,
+          "toCol": 8,
+          "rawText": "(3) แผนงานการศาสนาวัฒนธรรมและนันทนาการ แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "    (3) แผนงานการศาสนาวัฒนธรรมและนันทนาการ",
+            " ",
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566,
+          "sourcePlan": "(3) แผนงานการศาสนาวัฒนธรรมและนันทนาการ"
+        },
+        {
+          "fromRow": 16,
+          "fromCol": 4,
+          "toRow": 16,
+          "toCol": 8,
+          "rawText": "แผนงานสาธารณสุข แก้ไข ครั้งที่ 4 / 2567",
+          "fragments": [
+            "แผนงานสาธารณสุข",
+            "แก้ไข ครั้งที่ 4 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 4,
+          "amendmentYear": 2567,
+          "sourcePlan": "แผนงานสาธารณสุข"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ2.1แผนงานการศึกษา",
+      "sheetIndex": 11,
+      "drawingFile": "drawing10.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 115,
+          "fromCol": 6,
+          "toRow": 115,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 38,
+          "fromCol": 4,
+          "toRow": 38,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 136,
+          "fromCol": 4,
+          "toRow": 136,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566 แผนดำเนินงานอยู่แผนงานการศึกษาศาสนา",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566",
+            "แผนดำเนินงานอยู่แผนงานการศึกษาศาสนา"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 79,
+          "fromCol": 5,
+          "toRow": 79,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 123,
+          "fromCol": 6,
+          "toRow": 124,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 130,
+          "fromCol": 6,
+          "toRow": 130,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 140,
+          "fromCol": 4,
+          "toRow": 140,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2569",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2569"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2569
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ2.2แผนงานศาสนาวัฒนธรรม",
+      "sheetIndex": 12,
+      "drawingFile": "drawing11.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 31,
+          "fromCol": 5,
+          "toRow": 31,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 19,
+          "fromCol": 6,
+          "toRow": 19,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 21,
+          "fromCol": 6,
+          "toRow": 21,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 28,
+          "fromCol": 1,
+          "toRow": 28,
+          "toCol": 2,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 26,
+          "fromCol": 6,
+          "toRow": 26,
+          "toCol": 9,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 1 / 2568",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 1 / 2568"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 1,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 28,
+          "fromCol": 6,
+          "toRow": 28,
+          "toCol": 9,
+          "rawText": "เปลี่ยน ครั้งที่ 1 / 2568",
+          "fragments": [
+            "เปลี่ยน ครั้งที่ 1 / 2568"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 1,
+          "amendmentYear": 2568
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ2.2แผนงานการศึกษา",
+      "sheetIndex": 13,
+      "drawingFile": "drawing12.xml",
+      "textBoxes": [
+        {
+          "fromRow": 1,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 15,
+          "fromCol": 4,
+          "toRow": 15,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 5 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 5 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 5,
+          "amendmentYear": 2568
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ2.3แผนงานศาสนา",
+      "sheetIndex": 14,
+      "drawingFile": "drawing13.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 20,
+          "fromCol": 5,
+          "toRow": 20,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 2 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 2 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 2,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 26,
+          "fromCol": 6,
+          "toRow": 26,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 15,
+          "fromCol": 6,
+          "toRow": 15,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 16,
+          "fromCol": 6,
+          "toRow": 16,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 19,
+          "fromCol": 5,
+          "toRow": 19,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 23,
+          "fromCol": 5,
+          "toRow": 23,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 33,
+          "fromCol": 6,
+          "toRow": 33,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 27,
+          "fromCol": 4,
+          "toRow": 27,
+          "toCol": 7,
+          "rawText": "แผนงานสร้างความเข้มแข็งของชุมชน แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แผนงานสร้างความเข้มแข็งของชุมชน",
+            " ",
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566,
+          "sourcePlan": "แผนงานสร้างความเข้มแข็งของชุมชน"
+        },
+        {
+          "fromRow": 29,
+          "fromCol": 4,
+          "toRow": 29,
+          "toCol": 7,
+          "rawText": "แผนงานสร้างความเข้มแข็งของชุมชน แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แผนงานสร้างความเข้มแข็งของชุมชน",
+            " ",
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566,
+          "sourcePlan": "แผนงานสร้างความเข้มแข็งของชุมชน"
+        },
+        {
+          "fromRow": 25,
+          "fromCol": 5,
+          "toRow": 25,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 16,
+          "fromCol": 0,
+          "toRow": 16,
+          "toCol": 2,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 26,
+          "fromCol": 1,
+          "toRow": 26,
+          "toCol": 2,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ2.3แผนงานบริหารงานทั่วไป",
+      "sheetIndex": 15,
+      "drawingFile": "drawing14.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 23,
+          "fromCol": 5,
+          "toRow": 23,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 29,
+          "fromCol": 6,
+          "toRow": 29,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 5 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 5 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 5,
+          "amendmentYear": 2567
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ3.2แผนงานสร้างความเข้มแข็งช",
+      "sheetIndex": 16,
+      "drawingFile": "drawing15.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 28,
+          "fromCol": 4,
+          "toRow": 28,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 48,
+          "fromCol": 4,
+          "toRow": 48,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 26,
+          "fromCol": 5,
+          "toRow": 26,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 1 / 2566 แก้ไข 1/2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 1 / 2566",
+            "แก้ไข",
+            " 1/2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 26,
+          "fromCol": 5,
+          "toRow": 26,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 1 / 2566 แก้ไข 1/2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 1 / 2566",
+            "แก้ไข",
+            " 1/2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 51,
+          "fromCol": 5,
+          "toRow": 51,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 14,
+          "fromCol": 6,
+          "toRow": 14,
+          "toCol": 9,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 1/2569",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 1/2569"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 1,
+          "amendmentYear": 2569
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ3.3แผนงานสังคมสงเคราะห์",
+      "sheetIndex": 17,
+      "drawingFile": "drawing16.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 20,
+          "fromCol": 3,
+          "toRow": 20,
+          "toCol": 5,
+          "rawText": "พอช.,ท้องถิ่น, ประชาชนสมทบ",
+          "fragments": [
+            "พอช.,ท้องถิ่น,",
+            "ประชาชนสมทบ"
+          ],
+          "type": "budget_source",
+          "fundingSource": "พอช.,ท้องถิ่น, ประชาชนสมทบ"
+        },
+        {
+          "fromRow": 20,
+          "fromCol": 4,
+          "toRow": 20,
+          "toCol": 6,
+          "rawText": "พอช.,ท้องถิ่น, ประชาชนสมทบ",
+          "fragments": [
+            "พอช.,ท้องถิ่น,",
+            "ประชาชนสมทบ"
+          ],
+          "type": "budget_source",
+          "fundingSource": "พอช.,ท้องถิ่น, ประชาชนสมทบ"
+        },
+        {
+          "fromRow": 20,
+          "fromCol": 4,
+          "toRow": 20,
+          "toCol": 6,
+          "rawText": "พอช.,ท้องถิ่น, ประชาชนสมทบ",
+          "fragments": [
+            "พอช.,ท้องถิ่น,",
+            "ประชาชนสมทบ"
+          ],
+          "type": "budget_source",
+          "fundingSource": "พอช.,ท้องถิ่น, ประชาชนสมทบ"
+        },
+        {
+          "fromRow": 20,
+          "fromCol": 5,
+          "toRow": 20,
+          "toCol": 7,
+          "rawText": "พอช.,ท้องถิ่น, ประชาชนสมทบ",
+          "fragments": [
+            "พอช.,ท้องถิ่น,",
+            "ประชาชนสมทบ"
+          ],
+          "type": "budget_source",
+          "fundingSource": "พอช.,ท้องถิ่น, ประชาชนสมทบ"
+        },
+        {
+          "fromRow": 20,
+          "fromCol": 6,
+          "toRow": 20,
+          "toCol": 8,
+          "rawText": "พอช.,ท้องถิ่น, ประชาชนสมทบ",
+          "fragments": [
+            "พอช.,ท้องถิ่น,",
+            "ประชาชนสมทบ"
+          ],
+          "type": "budget_source",
+          "fundingSource": "พอช.,ท้องถิ่น, ประชาชนสมทบ"
+        },
+        {
+          "fromRow": 20,
+          "fromCol": 7,
+          "toRow": 20,
+          "toCol": 9,
+          "rawText": "พอช.,ท้องถิ่น, ประชาชนสมทบ",
+          "fragments": [
+            "พอช.,ท้องถิ่น,",
+            "ประชาชนสมทบ"
+          ],
+          "type": "budget_source",
+          "fundingSource": "พอช.,ท้องถิ่น, ประชาชนสมทบ"
+        },
+        {
+          "fromRow": 17,
+          "fromCol": 6,
+          "toRow": 17,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 16,
+          "fromCol": 6,
+          "toRow": 16,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 4 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 4 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 4,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 26,
+          "fromCol": 5,
+          "toRow": 26,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 23,
+          "fromCol": 4,
+          "toRow": 23,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 25,
+          "fromCol": 5,
+          "toRow": 25,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ4.1ผง.อุตสาหกรรมและการโยธา",
+      "sheetIndex": 18,
+      "drawingFile": "drawing17.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 88,
+          "fromCol": 6,
+          "toRow": 88,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 2 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 2 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 2,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 91,
+          "fromCol": 6,
+          "toRow": 91,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 124,
+          "fromCol": 6,
+          "toRow": 124,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 32,
+          "fromCol": 5,
+          "toRow": 32,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 94,
+          "fromCol": 5,
+          "toRow": 94,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 4 / 2567 ซ้ำลำดับที่ 63",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 / 2567",
+            "ซ้ำลำดับที่ 63"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 4,
+          "amendmentYear": 2567,
+          "targetRef": "ลำดับที่ 63"
+        },
+        {
+          "fromRow": 77,
+          "fromCol": 5,
+          "toRow": 77,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 4 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 4,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 119,
+          "fromCol": 6,
+          "toRow": 119,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 4 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 4,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 102,
+          "fromCol": 5,
+          "toRow": 102,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 4 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 4,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 138,
+          "fromCol": 5,
+          "toRow": 138,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 11 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 11 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 11,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 77,
+          "fromCol": 11,
+          "toRow": 77,
+          "toCol": 13,
+          "rawText": "แก้ไข ครั้งที่ 4 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 4,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 89,
+          "fromCol": 6,
+          "toRow": 89,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 23,
+          "fromCol": 5,
+          "toRow": 23,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 4 ประจําปี พ.ศ.2565",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 ประจําปี พ.ศ.2565"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 4,
+          "amendmentYear": 2565
+        },
+        {
+          "fromRow": 118,
+          "fromCol": 6,
+          "toRow": 118,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 64,
+          "fromCol": 6,
+          "toRow": 64,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 27,
+          "fromCol": 6,
+          "toRow": 27,
+          "toCol": 8,
+          "rawText": "แก้ไข 2/2568",
+          "fragments": [
+            "แก้ไข 2/2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 140,
+          "fromCol": 7,
+          "toRow": 140,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 8 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 8 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 8,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 141,
+          "fromCol": 7,
+          "toRow": 141,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 8 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 8 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 8,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 124,
+          "fromCol": 6,
+          "toRow": 124,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 2/ 2568",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 2/ 2568"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ4.2 บริหารทั่วไป",
+      "sheetIndex": 19,
+      "drawingFile": "drawing18.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ4.3ผง.การพาณิชย์",
+      "sheetIndex": 20,
+      "drawingFile": "drawing19.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 39,
+          "fromCol": 4,
+          "toRow": 39,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 1 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 1 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 1,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 45,
+          "fromCol": 5,
+          "toRow": 45,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 48,
+          "fromCol": 5,
+          "toRow": 48,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 6 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 6 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 6,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 30,
+          "fromCol": 5,
+          "toRow": 30,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 3 / 2565 แก้ไข ครั้งที่ 1 / 2567 แก้ไข ครั้งที่ 10 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 3 / 2565",
+            "แก้ไข ครั้งที่ 1 / 2567",
+            "แก้ไข ครั้งที่ 1",
+            "0",
+            " / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 3,
+          "amendmentYear": 2565
+        },
+        {
+          "fromRow": 30,
+          "fromCol": 5,
+          "toRow": 30,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 3 / 2565 แก้ไข ครั้งที่ 1 / 2567 แก้ไข ครั้งที่ 10 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 3 / 2565",
+            "แก้ไข ครั้งที่ 1 / 2567",
+            "แก้ไข ครั้งที่ 1",
+            "0",
+            " / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 30,
+          "fromCol": 5,
+          "toRow": 30,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 3 / 2565 แก้ไข ครั้งที่ 1 / 2567 แก้ไข ครั้งที่ 10 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 3 / 2565",
+            "แก้ไข ครั้งที่ 1 / 2567",
+            "แก้ไข ครั้งที่ 1",
+            "0",
+            " / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 10,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 31,
+          "fromCol": 5,
+          "toRow": 31,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 3 / 2565 แก้ไข ครั้งที่ 1 / 2567 แก้ไข ครั้งที่ 10 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 3 / 2565",
+            "แก้ไข ครั้งที่ 1 / 2567",
+            "แก้ไข ครั้งที่ 1",
+            "0",
+            " / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 3,
+          "amendmentYear": 2565
+        },
+        {
+          "fromRow": 31,
+          "fromCol": 5,
+          "toRow": 31,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 3 / 2565 แก้ไข ครั้งที่ 1 / 2567 แก้ไข ครั้งที่ 10 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 3 / 2565",
+            "แก้ไข ครั้งที่ 1 / 2567",
+            "แก้ไข ครั้งที่ 1",
+            "0",
+            " / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 31,
+          "fromCol": 5,
+          "toRow": 31,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 3 / 2565 แก้ไข ครั้งที่ 1 / 2567 แก้ไข ครั้งที่ 10 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 3 / 2565",
+            "แก้ไข ครั้งที่ 1 / 2567",
+            "แก้ไข ครั้งที่ 1",
+            "0",
+            " / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 10,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 53,
+          "fromCol": 6,
+          "toRow": 53,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 10 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ ",
+            "10",
+            " / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 10,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 54,
+          "fromCol": 6,
+          "toRow": 54,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 10 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ ",
+            "10",
+            " / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 10,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 55,
+          "fromCol": 6,
+          "toRow": 55,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 10 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ ",
+            "10",
+            " / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 10,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 65,
+          "fromCol": 5,
+          "toRow": 65,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 11 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ ",
+            "1",
+            "1 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 11,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 29,
+          "fromCol": 5,
+          "toRow": 29,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 3 / 2565 แก้ไข ครั้งที่ 1 / 2567 แก้ไข ครั้งที่ 10 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 3 / 2565",
+            "แก้ไข ครั้งที่ 1 / 2567",
+            "แก้ไข ครั้งที่ 1",
+            "0",
+            " / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 3,
+          "amendmentYear": 2565
+        },
+        {
+          "fromRow": 29,
+          "fromCol": 5,
+          "toRow": 29,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 3 / 2565 แก้ไข ครั้งที่ 1 / 2567 แก้ไข ครั้งที่ 10 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 3 / 2565",
+            "แก้ไข ครั้งที่ 1 / 2567",
+            "แก้ไข ครั้งที่ 1",
+            "0",
+            " / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 29,
+          "fromCol": 5,
+          "toRow": 29,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 3 / 2565 แก้ไข ครั้งที่ 1 / 2567 แก้ไข ครั้งที่ 10 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 3 / 2565",
+            "แก้ไข ครั้งที่ 1 / 2567",
+            "แก้ไข ครั้งที่ 1",
+            "0",
+            " / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 10,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 68,
+          "fromCol": 4,
+          "toRow": 68,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 5 / 2568 ไปประสาน 02/2",
+          "fragments": [
+            "แก้ไข ครั้งที่ 5 / 2568",
+            "ไปประสาน",
+            " ",
+            "02/2"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 5,
+          "amendmentYear": 2568,
+          "targetRef": "02/2"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ5.1ผง.บริหารงานทั่วไป",
+      "sheetIndex": 21,
+      "drawingFile": "drawing20.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ5.2ผง.การรักษาความสงบ",
+      "sheetIndex": 22,
+      "drawingFile": "drawing21.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 15,
+          "fromCol": 5,
+          "toRow": 15,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 2 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 2 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 2,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 24,
+          "fromCol": 5,
+          "toRow": 24,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 2 / 2567 รวมกับลำดับที่ 2",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 2 / 2567",
+            "รวมกับลำดับที่ 2"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 2,
+          "amendmentYear": 2567,
+          "targetRef": "ลำดับที่ 2"
+        },
+        {
+          "fromRow": 30,
+          "fromCol": 4,
+          "toRow": 30,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 3 / 2568 แผนงานอุตสาหกรรม",
+          "fragments": [
+            "แก้ไข ครั้งที่ 3 / 2568",
+            "แผนงานอุตสาหกรรม"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 3,
+          "amendmentYear": 2568
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ6.2ผง.บริหารงานทั่วไป",
+      "sheetIndex": 23,
+      "drawingFile": "drawing22.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 32,
+          "fromCol": 5,
+          "toRow": 32,
+          "toCol": 8,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 24,
+          "fromCol": 5,
+          "toRow": 24,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2566
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ6.2ผง.การพานิชย์",
+      "sheetIndex": 24,
+      "drawingFile": "drawing23.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 19,
+          "fromCol": 5,
+          "toRow": 19,
+          "toCol": 7,
+          "rawText": "เพิ่มเติมครั้งที่ 2/2566 แก้ไขครั้งที่ 2/2566 แก้ไข ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เพิ่มเติมครั้งที่ 2/2566",
+            "แก้ไขครั้งที่ 2/2566",
+            "แก้ไข ครั้งที่ 3 / 2567"
+          ],
+          "type": "addition",
+          "amendmentType": "เพิ่มเติม",
+          "amendmentNumber": 2,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 19,
+          "fromCol": 5,
+          "toRow": 19,
+          "toCol": 7,
+          "rawText": "เพิ่มเติมครั้งที่ 2/2566 แก้ไขครั้งที่ 2/2566 แก้ไข ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เพิ่มเติมครั้งที่ 2/2566",
+            "แก้ไขครั้งที่ 2/2566",
+            "แก้ไข ครั้งที่ 3 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 19,
+          "fromCol": 5,
+          "toRow": 19,
+          "toCol": 7,
+          "rawText": "เพิ่มเติมครั้งที่ 2/2566 แก้ไขครั้งที่ 2/2566 แก้ไข ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เพิ่มเติมครั้งที่ 2/2566",
+            "แก้ไขครั้งที่ 2/2566",
+            "แก้ไข ครั้งที่ 3 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 17,
+          "fromCol": 6,
+          "toRow": 17,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2568
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ6.2ผง.การศึกษา",
+      "sheetIndex": 25,
+      "drawingFile": "drawing24.xml",
+      "textBoxes": [
+        {
+          "fromRow": 1,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ6.3ผง.อุตสาหกรรมและโยธา",
+      "sheetIndex": 26,
+      "drawingFile": "drawing25.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ6.3ผง.บริหารงานทั่วไป",
+      "sheetIndex": 27,
+      "drawingFile": "drawing26.xml",
+      "textBoxes": [
+        {
+          "fromRow": 1,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ6.3ผง.การศึกษา",
+      "sheetIndex": 28,
+      "drawingFile": "drawing27.xml",
+      "textBoxes": [
+        {
+          "fromRow": 1,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ6.4ผง.การศึกษา",
+      "sheetIndex": 29,
+      "drawingFile": "drawing28.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 31,
+          "fromCol": 8,
+          "toRow": 31,
+          "toCol": 10,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566 แก้ไข ครั้งที่ 9 / 2567 แก้ไข ครั้งที่ 2 / 2568 แผนยุตสาหกรรม",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566",
+            "แก้ไข ครั้งที่ 9 / 2567",
+            "แก้ไข ครั้งที่ 2 / 2568",
+            "แผนยุตสาหกรรม"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 31,
+          "fromCol": 8,
+          "toRow": 31,
+          "toCol": 10,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566 แก้ไข ครั้งที่ 9 / 2567 แก้ไข ครั้งที่ 2 / 2568 แผนยุตสาหกรรม",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566",
+            "แก้ไข ครั้งที่ 9 / 2567",
+            "แก้ไข ครั้งที่ 2 / 2568",
+            "แผนยุตสาหกรรม"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 9,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 31,
+          "fromCol": 8,
+          "toRow": 31,
+          "toCol": 10,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566 แก้ไข ครั้งที่ 9 / 2567 แก้ไข ครั้งที่ 2 / 2568 แผนยุตสาหกรรม",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566",
+            "แก้ไข ครั้งที่ 9 / 2567",
+            "แก้ไข ครั้งที่ 2 / 2568",
+            "แผนยุตสาหกรรม"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 84,
+          "fromCol": 6,
+          "toRow": 84,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 4 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 4,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 88,
+          "fromCol": 6,
+          "toRow": 88,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 4 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 4,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 35,
+          "fromCol": 6,
+          "toRow": 35,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568 ย้ายไปแผนงานอุตสาหกรรม",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568",
+            "ย้ายไปแผนงานอุตสาหกรรม"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568,
+          "targetPlan": "แผนงานอุตสาหกรรม"
+        },
+        {
+          "fromRow": 41,
+          "fromCol": 6,
+          "toRow": 41,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568 ย้ายไปแผนงานอุตสาหกรรม",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568",
+            "ย้ายไปแผนงานอุตสาหกรรม"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568,
+          "targetPlan": "แผนงานอุตสาหกรรม"
+        },
+        {
+          "fromRow": 52,
+          "fromCol": 6,
+          "toRow": 52,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568 ย้ายไปแผนงานอุตสาหกรรม",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568",
+            "ย้ายไปแผนงานอุตสาหกรรม"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568,
+          "targetPlan": "แผนงานอุตสาหกรรม"
+        },
+        {
+          "fromRow": 51,
+          "fromCol": 6,
+          "toRow": 51,
+          "toCol": 8,
+          "rawText": "เปลี่ยน ครั้งที่ 1 / 2568 ย้ายไปแผนงานอุตสาหกรรม",
+          "fragments": [
+            "เปลี่ยน ครั้งที่ 1 / 2568",
+            "ย้ายไปแผนงานอุตสาหกรรม"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 1,
+          "amendmentYear": 2568,
+          "targetPlan": "แผนงานอุตสาหกรรม"
+        },
+        {
+          "fromRow": 88,
+          "fromCol": 6,
+          "toRow": 88,
+          "toCol": 8,
+          "rawText": "เปลี่ยน ครั้งที่ 1 / 2568 ย้ายไปแผนงานอุตสาหกรรม",
+          "fragments": [
+            "เปลี่ยน ครั้งที่ 1 / 2568",
+            "ย้ายไปแผนงานอุตสาหกรรม"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 1,
+          "amendmentYear": 2568,
+          "targetPlan": "แผนงานอุตสาหกรรม"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ6.5ผง.สังคมสงเคราะห์",
+      "sheetIndex": 30,
+      "drawingFile": "drawing29.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ6.6ผง.สาธารณสุข",
+      "sheetIndex": 31,
+      "drawingFile": "drawing30.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ6.7ผง.ศาสานา",
+      "sheetIndex": 32,
+      "drawingFile": "drawing31.xml",
+      "textBoxes": [
+        {
+          "fromRow": 0,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ6.3ผง.การพานิชย์",
+      "sheetIndex": 33,
+      "drawingFile": "drawing32.xml",
+      "textBoxes": [
+        {
+          "fromRow": 1,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ6.3ผง.การศึกษา (2)",
+      "sheetIndex": 34,
+      "drawingFile": "drawing33.xml",
+      "textBoxes": [
+        {
+          "fromRow": 1,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 15,
+          "fromCol": 6,
+          "toRow": 15,
+          "toCol": 8,
+          "rawText": "แก้ไข 10/2567 แก้ไข 2/2568 ย้ายไปแผนงานอุตสาหกรรม",
+          "fragments": [
+            "แก้ไข",
+            " 10/2567 ",
+            "แก้ไข",
+            " 2/2568",
+            "ย้ายไปแผนงานอุตสาหกรรม"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 10,
+          "amendmentYear": 2567,
+          "targetPlan": "แผนงานอุตสาหกรรม"
+        },
+        {
+          "fromRow": 15,
+          "fromCol": 6,
+          "toRow": 15,
+          "toCol": 8,
+          "rawText": "แก้ไข 10/2567 แก้ไข 2/2568 ย้ายไปแผนงานอุตสาหกรรม",
+          "fragments": [
+            "แก้ไข",
+            " 10/2567 ",
+            "แก้ไข",
+            " 2/2568",
+            "ย้ายไปแผนงานอุตสาหกรรม"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568,
+          "targetPlan": "แผนงานอุตสาหกรรม"
+        },
+        {
+          "fromRow": 23,
+          "fromCol": 6,
+          "toRow": 23,
+          "toCol": 8,
+          "rawText": "แก้ไข 2/2568 ย้ายไปแผนงานอุตสาหกรรม",
+          "fragments": [
+            "แก้ไข",
+            " 2/2568",
+            "ย้ายไปแผนงานอุตสาหกรรม"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568,
+          "targetPlan": "แผนงานอุตสาหกรรม"
+        },
+        {
+          "fromRow": 24,
+          "fromCol": 6,
+          "toRow": 24,
+          "toCol": 8,
+          "rawText": "แก้ไข 2/2568 ย้ายไปแผนงานอุตสาหกรรม แก้ไข 8/2568",
+          "fragments": [
+            "แก้ไข",
+            " 2/2568",
+            "ย้ายไปแผนงานอุตสาหกรรม",
+            "แก้ไข",
+            " 8/2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568,
+          "targetPlan": "แผนงานอุตสาหกรรม"
+        },
+        {
+          "fromRow": 24,
+          "fromCol": 6,
+          "toRow": 24,
+          "toCol": 8,
+          "rawText": "แก้ไข 2/2568 ย้ายไปแผนงานอุตสาหกรรม แก้ไข 8/2568",
+          "fragments": [
+            "แก้ไข",
+            " 2/2568",
+            "ย้ายไปแผนงานอุตสาหกรรม",
+            "แก้ไข",
+            " 8/2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 8,
+          "amendmentYear": 2568,
+          "targetPlan": "แผนงานอุตสาหกรรม"
+        },
+        {
+          "fromRow": 17,
+          "fromCol": 6,
+          "toRow": 17,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568 ย้ายไปแผนงานอุตสาหกรรม",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568",
+            "ย้ายไปแผนงานอุตสาหกรรม"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568,
+          "targetPlan": "แผนงานอุตสาหกรรม"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ6.3ผง.บริหาร",
+      "sheetIndex": 35,
+      "drawingFile": "drawing34.xml",
+      "textBoxes": [
+        {
+          "fromRow": 1,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ6.3ผง.สาธา",
+      "sheetIndex": 36,
+      "drawingFile": "drawing35.xml",
+      "textBoxes": [
+        {
+          "fromRow": 1,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 15,
+          "fromCol": 6,
+          "toRow": 15,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 5 / 2568 แผนอุตสาหกรรม",
+          "fragments": [
+            "แก้ไข ครั้งที่ 5 / 2568",
+            "แผนอุตสาหกรรม"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 5,
+          "amendmentYear": 2568
+        }
+      ]
+    },
+    {
+      "sheetName": "ยุทธ6.3ผง.อุตสาหกรรมและการโยธา",
+      "sheetIndex": 37,
+      "drawingFile": "drawing36.xml",
+      "textBoxes": [
+        {
+          "fromRow": 1,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02",
+          "fragments": [
+            "แบบ ผ.02"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02"
+        },
+        {
+          "fromRow": 22,
+          "fromCol": 7,
+          "toRow": 22,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 8 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 8 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 8,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 16,
+          "fromCol": 5,
+          "toRow": 16,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 5 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 5 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 5,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 16,
+          "fromCol": 5,
+          "toRow": 16,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 6 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 6 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 6,
+          "amendmentYear": 2568
+        }
+      ]
+    },
+    {
+      "sheetName": "02.1 แผนงานสร้างความเข้มแข็งข",
+      "sheetIndex": 38,
+      "drawingFile": "drawing37.xml",
+      "textBoxes": [
+        {
+          "fromRow": 1,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02/1",
+          "fragments": [
+            "แบบ ผ.02/1"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02/1"
+        },
+        {
+          "fromRow": 8,
+          "fromCol": 6,
+          "toRow": 9,
+          "toCol": 10,
+          "rawText": "แก้ไข ครั้งที่ 8 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 8 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 8,
+          "amendmentYear": 2567
+        }
+      ]
+    },
+    {
+      "sheetName": "ผ.02.2 ประสาน จว",
+      "sheetIndex": 39,
+      "drawingFile": "drawing38.xml",
+      "textBoxes": [
+        {
+          "fromRow": 1,
+          "fromCol": 10,
+          "toRow": 3,
+          "toCol": 10,
+          "rawText": "แบบ ผ.02/2",
+          "fragments": [
+            "แบบ ผ.02/2"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02/2"
+        },
+        {
+          "fromRow": 29,
+          "fromCol": 5,
+          "toRow": 29,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 55,
+          "fromCol": 5,
+          "toRow": 55,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 7 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 7 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 7,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 63,
+          "fromCol": 7,
+          "toRow": 63,
+          "toCol": 10,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        }
+      ]
+    },
+    {
+      "sheetName": "ผ.02.2 ประสาน จว (2)",
+      "sheetIndex": 40,
+      "drawingFile": "drawing39.xml",
+      "textBoxes": [
+        {
+          "fromRow": 1,
+          "fromCol": 10,
+          "toRow": 3,
+          "toCol": 10,
+          "rawText": "แบบ ผ.02/2",
+          "fragments": [
+            "แบบ ผ.02/2"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02/2"
+        },
+        {
+          "fromRow": 19,
+          "fromCol": 5,
+          "toRow": 19,
+          "toCol": 8,
+          "rawText": "เพิ่มเติมครั้งที่ 2/2566 แก้ไข ครั้งที่ 1 / 2567",
+          "fragments": [
+            "เพิ่มเติมครั้งที่ 2/2566",
+            "แก้ไข ครั้งที่ 1 / 2567"
+          ],
+          "type": "addition",
+          "amendmentType": "เพิ่มเติม",
+          "amendmentNumber": 2,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 19,
+          "fromCol": 5,
+          "toRow": 19,
+          "toCol": 8,
+          "rawText": "เพิ่มเติมครั้งที่ 2/2566 แก้ไข ครั้งที่ 1 / 2567",
+          "fragments": [
+            "เพิ่มเติมครั้งที่ 2/2566",
+            "แก้ไข ครั้งที่ 1 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 21,
+          "fromCol": 5,
+          "toRow": 21,
+          "toCol": 8,
+          "rawText": "เพิ่มเติมครั้งที่ 2/2566 แก้ไข ครั้งที่ 1 / 2567",
+          "fragments": [
+            "เพิ่มเติมครั้งที่ 2/2566",
+            "แก้ไข ครั้งที่ 1 / 2567"
+          ],
+          "type": "addition",
+          "amendmentType": "เพิ่มเติม",
+          "amendmentNumber": 2,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 21,
+          "fromCol": 5,
+          "toRow": 21,
+          "toCol": 8,
+          "rawText": "เพิ่มเติมครั้งที่ 2/2566 แก้ไข ครั้งที่ 1 / 2567",
+          "fragments": [
+            "เพิ่มเติมครั้งที่ 2/2566",
+            "แก้ไข ครั้งที่ 1 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 23,
+          "fromCol": 5,
+          "toRow": 23,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 5 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 5 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 5,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 29,
+          "fromCol": 4,
+          "toRow": 29,
+          "toCol": 6,
+          "rawText": "แก้ไข ครั้งที่ 4 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 4,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 30,
+          "fromCol": 4,
+          "toRow": 30,
+          "toCol": 6,
+          "rawText": "แก้ไข ครั้งที่ 4 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 4,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 29,
+          "fromCol": 4,
+          "toRow": 30,
+          "toCol": 6,
+          "rawText": "แก้ไข ครั้งที่ 5 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 5 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 5,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 36,
+          "fromCol": 4,
+          "toRow": 36,
+          "toCol": 6,
+          "rawText": "แก้ไข ครั้งที่ 5 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 5 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 5,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 25,
+          "fromCol": 5,
+          "toRow": 25,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 6 / 2568 ผ.02",
+          "fragments": [
+            "แก้ไข ครั้งที่ 6 / 2568",
+            "ผ.02"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 6,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 26,
+          "fromCol": 5,
+          "toRow": 26,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 6 / 2568 ผ.02",
+          "fragments": [
+            "แก้ไข ครั้งที่ 6 / 2568",
+            "ผ.02"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 6,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 34,
+          "fromCol": 4,
+          "toRow": 34,
+          "toCol": 6,
+          "rawText": "แก้ไข ครั้งที่ 6 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 6 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 6,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 35,
+          "fromCol": 4,
+          "toRow": 35,
+          "toCol": 6,
+          "rawText": "แก้ไข ครั้งที่ 6 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 6 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 6,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 28,
+          "fromCol": 7,
+          "toRow": 28,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 8 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 8 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 8,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 36,
+          "fromCol": 6,
+          "toRow": 36,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 8 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ ",
+            "8",
+            " / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 8,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 31,
+          "fromCol": 7,
+          "toRow": 31,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 8 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ ",
+            "8",
+            " / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 8,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 33,
+          "fromCol": 6,
+          "toRow": 33,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 8 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ ",
+            "8",
+            " / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 8,
+          "amendmentYear": 2568
+        }
+      ]
+    },
+    {
+      "sheetName": "ผ.08 ครุภัณฑ์",
+      "sheetIndex": 41,
+      "drawingFile": "drawing40.xml",
+      "textBoxes": [
+        {
+          "fromRow": 1,
+          "fromCol": 9,
+          "toRow": 1,
+          "toCol": 10,
+          "rawText": "แบบ ผ.03",
+          "fragments": [
+            "แบบ ผ.03"
+          ],
+          "type": "form_index",
+          "formType": "ผ.03"
+        },
+        {
+          "fromRow": 145,
+          "fromCol": 7,
+          "toRow": 145,
+          "toCol": 9,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 146,
+          "fromCol": 7,
+          "toRow": 146,
+          "toCol": 9,
+          "rawText": "เปลี่ยนแปลง ครั้งที่ 3 / 2567",
+          "fragments": [
+            "เปลี่ยนแปลง ครั้งที่ 3 / 2567"
+          ],
+          "type": "change",
+          "amendmentType": "เปลี่ยนแปลง",
+          "amendmentNumber": 3,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 180,
+          "fromCol": 6,
+          "toRow": 180,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 214,
+          "fromCol": 6,
+          "toRow": 214,
+          "toCol": 8,
+          "rawText": "แก้ไข 1/2566",
+          "fragments": [
+            "แก้ไข",
+            " 1/2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 122,
+          "fromCol": 6,
+          "toRow": 122,
+          "toCol": 8,
+          "rawText": "แก้ไข 1/2566",
+          "fragments": [
+            "แก้ไข 1/2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 123,
+          "fromCol": 6,
+          "toRow": 123,
+          "toCol": 8,
+          "rawText": "แก้ไข 1/2566",
+          "fragments": [
+            "แก้ไข 1/2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 130,
+          "fromCol": 6,
+          "toRow": 130,
+          "toCol": 8,
+          "rawText": "แก้ไข 1/2566",
+          "fragments": [
+            "แก้ไข 1/2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 178,
+          "fromCol": 6,
+          "toRow": 178,
+          "toCol": 8,
+          "rawText": "แก้ไข 1/2566",
+          "fragments": [
+            "แก้ไข 1/2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 32,
+          "fromCol": 7,
+          "toRow": 32,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 109,
+          "fromCol": 6,
+          "toRow": 109,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 110,
+          "fromCol": 6,
+          "toRow": 110,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 212,
+          "fromCol": 6,
+          "toRow": 212,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 1 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 1 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 1,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 260,
+          "fromCol": 6,
+          "toRow": 260,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 266,
+          "fromCol": 6,
+          "toRow": 266,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 267,
+          "fromCol": 6,
+          "toRow": 267,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2566",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2566"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 181,
+          "fromCol": 6,
+          "toRow": 181,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2566 แก้ไข ครั้งที่ 2 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2566",
+            "แก้ไข ครั้งที่ 2 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2566
+        },
+        {
+          "fromRow": 181,
+          "fromCol": 6,
+          "toRow": 181,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2566 แก้ไข ครั้งที่ 2 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2566",
+            "แก้ไข ครั้งที่ 2 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 273,
+          "fromCol": 6,
+          "toRow": 273,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 4 / 2567 แก้ไข ครั้งที่ 5 / 2567 แก้ไข ครั้งที่ 9 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 / 2567",
+            "แก้ไข ครั้งที่ ",
+            "5",
+            " / 2567",
+            "แก้ไข ครั้งที่ ",
+            "9",
+            " / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 4,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 273,
+          "fromCol": 6,
+          "toRow": 273,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 4 / 2567 แก้ไข ครั้งที่ 5 / 2567 แก้ไข ครั้งที่ 9 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 / 2567",
+            "แก้ไข ครั้งที่ ",
+            "5",
+            " / 2567",
+            "แก้ไข ครั้งที่ ",
+            "9",
+            " / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 5,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 273,
+          "fromCol": 6,
+          "toRow": 273,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 4 / 2567 แก้ไข ครั้งที่ 5 / 2567 แก้ไข ครั้งที่ 9 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 / 2567",
+            "แก้ไข ครั้งที่ ",
+            "5",
+            " / 2567",
+            "แก้ไข ครั้งที่ ",
+            "9",
+            " / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 9,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 98,
+          "fromCol": 5,
+          "toRow": 98,
+          "toCol": 6,
+          "rawText": "แก้ไข ครั้งที่ 4 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 4,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 276,
+          "fromCol": 8,
+          "toRow": 276,
+          "toCol": 10,
+          "rawText": "แก้ไข ครั้งที่ 4 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 4,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 307,
+          "fromCol": 7,
+          "toRow": 307,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 9 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 9 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 9,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 79,
+          "fromCol": 7,
+          "toRow": 79,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 9 / 2567",
+          "fragments": [
+            "แก้ไข ครั้งที่ 9 / 2567"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 9,
+          "amendmentYear": 2567
+        },
+        {
+          "fromRow": 121,
+          "fromCol": 6,
+          "toRow": 121,
+          "toCol": 8,
+          "rawText": "แก้ไข 2/2568",
+          "fragments": [
+            "แก้ไข 2/2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 144,
+          "fromCol": 7,
+          "toRow": 144,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 158,
+          "fromCol": 5,
+          "toRow": 158,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 83,
+          "fromCol": 7,
+          "toRow": 83,
+          "toCol": 9,
+          "rawText": "แก้ไข 2 / 2568",
+          "fragments": [
+            "แก้ไข 2 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 96,
+          "fromCol": 8,
+          "toRow": 96,
+          "toCol": 10,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 2 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 92,
+          "fromCol": 7,
+          "toRow": 92,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ ",
+            "2",
+            " / 256",
+            "8"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 93,
+          "fromCol": 7,
+          "toRow": 93,
+          "toCol": 9,
+          "rawText": "แก้ไข ครั้งที่ 2 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ ",
+            "2",
+            " / 256",
+            "8"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 2,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 369,
+          "fromCol": 5,
+          "toRow": 369,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 4 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 4,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 371,
+          "fromCol": 6,
+          "toRow": 371,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 4 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 4 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 4,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 261,
+          "fromCol": 6,
+          "toRow": 261,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 5 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 5 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 5,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 262,
+          "fromCol": 6,
+          "toRow": 262,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 5 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 5 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 5,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 263,
+          "fromCol": 6,
+          "toRow": 263,
+          "toCol": 8,
+          "rawText": "แก้ไข ครั้งที่ 5 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 5 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 5,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 346,
+          "fromCol": 5,
+          "toRow": 346,
+          "toCol": 7,
+          "rawText": "แก้ไข ครั้งที่ 5 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 5 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 5,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 372,
+          "fromCol": 4,
+          "toRow": 373,
+          "toCol": 6,
+          "rawText": "แก้ไข ครั้งที่ 6 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 6 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 6,
+          "amendmentYear": 2568
+        },
+        {
+          "fromRow": 373,
+          "fromCol": 4,
+          "toRow": 374,
+          "toCol": 6,
+          "rawText": "แก้ไข ครั้งที่ 6 / 2568",
+          "fragments": [
+            "แก้ไข ครั้งที่ 6 / 2568"
+          ],
+          "type": "amendment",
+          "amendmentType": "แก้ไข",
+          "amendmentNumber": 6,
+          "amendmentYear": 2568
+        }
+      ]
+    },
+    {
+      "sheetName": "Sheet2",
+      "sheetIndex": 43,
+      "drawingFile": "drawing41.xml",
+      "textBoxes": [
+        {
+          "fromRow": 17,
+          "fromCol": 1,
+          "toRow": 35,
+          "toCol": 9,
+          "rawText": "ร่าง แผนพัฒนาท้องถิ่น (พ.ศ.2566-2570) ทบทวนครั้งที่ 1/2566 เทศบาลนครนครสวรรค์",
+          "fragments": [
+            "ร่าง",
+            "แผนพัฒนาท้องถิ่น (พ.ศ.2566-2570)",
+            "ทบทวนครั้งที่ 1/2566",
+            "เทศบาลนครนครสวรรค์"
+          ],
+          "type": "cover_metadata"
+        },
+        {
+          "fromRow": 35,
+          "fromCol": 1,
+          "toRow": 50,
+          "toCol": 9,
+          "rawText": "การประชุม การประชุมคณะกรรมการพัฒนาเทศบาล และ คณะกรรมการสนับสนุนการจัดทำแผนพัฒนา วันที่ 23 กุมภาพันธ์ 2566 เวลา 10.00 น.",
+          "fragments": [
+            "การประชุม",
+            "การประชุมคณะกรรมการพัฒนาเทศบาล",
+            "และ",
+            "คณะกรรมการสนับสนุนการจัดทำแผนพัฒนา",
+            "วันที่ ",
+            "2",
+            "3 กุมภาพันธ์ 2566",
+            "  ",
+            "เวลา 10.00 น."
+          ],
+          "type": "cover_metadata"
+        },
+        {
+          "fromRow": 43,
+          "fromCol": 12,
+          "toRow": 49,
+          "toCol": 21,
+          "rawText": "การประชุมคณะกรรมการพัฒนาเทศบาล วันที่ 27  ตุลาคม  2564  เวลา 10 .00 น.",
+          "fragments": [
+            "การประชุมคณะกรรมการพัฒนาเทศบาล",
+            "วันที่ 27  ตุลาคม  2564  เวลา 1",
+            "0",
+            ".00 น."
+          ],
+          "type": "cover_metadata"
+        },
+        {
+          "fromRow": 14,
+          "fromCol": 12,
+          "toRow": 31,
+          "toCol": 21,
+          "rawText": "ร่าง แผนพัฒนาท้องถิ่น (พ.ศ.2566-2570) เทศบาลนครนครสวรรค์",
+          "fragments": [
+            "ร่าง",
+            "แผนพัฒนาท้องถิ่น (พ.ศ.2566-2570)",
+            "เทศบาลนครนครสวรรค์"
+          ],
+          "type": "cover_metadata"
+        },
+        {
+          "fromRow": 17,
+          "fromCol": 23,
+          "toRow": 35,
+          "toCol": 32,
+          "rawText": "แผนพัฒนาท้องถิ่น (พ.ศ.2566-2570) เทศบาลนครนครสวรรค์",
+          "fragments": [
+            "แผนพัฒนาท้องถิ่น (พ.ศ.2566-2570)",
+            "เทศบาลนครนครสวรรค์"
+          ],
+          "type": "cover_metadata"
+        },
+        {
+          "fromRow": 49,
+          "fromCol": 28,
+          "toRow": 57,
+          "toCol": 32,
+          "rawText": "งานวิเคราะห์นโยบายและแผน ฝ่ายแผนงานและงบประมาณ กองวิชาการและแผนงาน",
+          "fragments": [
+            "งานวิเคราะห์นโยบายและแผน",
+            "ฝ่ายแผนงานและงบประมาณ",
+            "กองวิชาการและแผนงาน"
+          ],
+          "type": "cover_metadata"
+        }
+      ]
+    },
+    {
+      "sheetName": "Sheet2 (2)",
+      "sheetIndex": 44,
+      "drawingFile": "drawing42.xml",
+      "textBoxes": [
+        {
+          "fromRow": 6,
+          "fromCol": 2,
+          "toRow": 24,
+          "toCol": 13,
+          "rawText": "ร่าง แผนการดำเนินงานประจำปีงบประมาณ พ.ศ. 2565 เทศบาลนครนครสวรรค์",
+          "fragments": [
+            "ร่าง",
+            "แผนการดำเนินงานประจำปีงบประมาณ",
+            " พ.ศ. 2565",
+            "เทศบาลนครนครสวรรค์"
+          ],
+          "type": "cover_metadata"
+        },
+        {
+          "fromRow": 19,
+          "fromCol": 3,
+          "toRow": 34,
+          "toCol": 11,
+          "rawText": "การประชุม คณะกรรมการสนับสนุนการจัดทำแผนพัฒนา วันที่ 20 ตุลาคม 2564 เวลา 10.00 น.",
+          "fragments": [
+            "การประชุม",
+            "คณะกรรมการสนับสนุนการจัดทำแผนพัฒนา",
+            "วันที่ ",
+            "20",
+            " ตุลาคม",
+            "  2564  ",
+            "เวลา 10.00 น."
+          ],
+          "type": "cover_metadata"
+        },
+        {
+          "fromRow": 20,
+          "fromCol": 17,
+          "toRow": 26,
+          "toCol": 25,
+          "rawText": "การประชุมคณะกรรมการพัฒนาเทศบาล วันที่ 27  ตุลาคม  2564  เวลา 10 .00 น.",
+          "fragments": [
+            "การประชุมคณะกรรมการพัฒนาเทศบาล",
+            "วันที่ 27  ตุลาคม  2564  เวลา 1",
+            "0",
+            ".00 น."
+          ],
+          "type": "cover_metadata"
+        },
+        {
+          "fromRow": 6,
+          "fromCol": 15,
+          "toRow": 24,
+          "toCol": 27,
+          "rawText": "ร่าง แผนการดำเนินงานประจำปีงบประมาณ พ.ศ. 2565 เทศบาลนครนครสวรรค์",
+          "fragments": [
+            "ร่าง",
+            "แผนการดำเนินงานประจำปีงบประมาณ",
+            " พ.ศ. 2565",
+            "เทศบาลนครนครสวรรค์"
+          ],
+          "type": "cover_metadata"
+        },
+        {
+          "fromRow": 10,
+          "fromCol": 28,
+          "toRow": 28,
+          "toCol": 41,
+          "rawText": "แผนการดำเนินงานประจำปีงบประมาณ พ.ศ. 2565 เทศบาลนครนครสวรรค์",
+          "fragments": [
+            "แผนการดำเนินงานประจำปีงบประมาณ",
+            " พ.ศ. 2565",
+            "เทศบาลนครนครสวรรค์"
+          ],
+          "type": "cover_metadata"
+        },
+        {
+          "fromRow": 28,
+          "fromCol": 36,
+          "toRow": 38,
+          "toCol": 41,
+          "rawText": "งานวิเคราะห์นโยบายและแผน ฝ่ายแผนงานและงบประมาณ กองวิชาการและแผนงาน",
+          "fragments": [
+            "งานวิเคราะห์นโยบายและแผน",
+            "ฝ่ายแผนงานและงบประมาณ",
+            "กองวิชาการและแผนงาน"
+          ],
+          "type": "cover_metadata"
+        }
+      ]
+    },
+    {
+      "sheetName": "แผนชุมชน",
+      "sheetIndex": 47,
+      "drawingFile": "drawing43.xml",
+      "textBoxes": [
+        {
+          "fromRow": 1,
+          "fromCol": 10,
+          "toRow": 2,
+          "toCol": 11,
+          "rawText": "แบบ ผ.02/1",
+          "fragments": [
+            "แบบ ผ.02/1"
+          ],
+          "type": "form_index",
+          "formType": "ผ.02/1"
+        }
+      ]
+    }
+  ]
+}

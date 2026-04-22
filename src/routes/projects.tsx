@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
-  projects,
   strategies,
   plans,
   tactics,
@@ -13,7 +13,12 @@ import {
   formatBaht,
   type Status,
 } from "@/lib/mock-data";
-import { Search, Filter, ChevronLeft, ChevronRight, X, ArrowUpDown } from "lucide-react";
+import { apiGetProjects, apiCreateProject, apiDeleteProject, type ProjectCreateInput } from "@/lib/api";
+import { authClient } from "@/auth";
+import { ProjectFormDialog } from "@/components/ProjectFormDialog";
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
+import { Search, Filter, ChevronLeft, ChevronRight, X, ArrowUpDown, Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/projects")({
   head: () => ({
@@ -29,6 +34,7 @@ const PAGE_SIZE = 12;
 
 function ProjectsPage() {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [strategyId, setStrategyId] = useState<number | "">("");
   const [planId, setPlanId] = useState<number | "">("");
   const [department, setDepartment] = useState("");
@@ -36,49 +42,68 @@ function ProjectsPage() {
   const [year, setYear] = useState<number | "">("");
   const [page, setPage] = useState(1);
 
-  const availablePlans = useMemo(() => {
-    if (!strategyId) return plans;
-    const tIds = tactics.filter((t) => t.strategy_id === strategyId).map((t) => t.id);
-    return plans.filter((p) => tIds.includes(p.tactic_id));
-  }, [strategyId]);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteName, setDeleteName] = useState("");
 
-  const filtered = useMemo(() => {
-    return projects.filter((p) => {
-      if (search) {
-        const q = search.toLowerCase();
-        if (
-          !p.name.toLowerCase().includes(q) &&
-          !p.department.toLowerCase().includes(q) &&
-          !p.objective.toLowerCase().includes(q)
-        )
-          return false;
-      }
-      if (strategyId) {
-        const plan = plans.find((x) => x.id === p.plan_id);
-        const tactic = plan ? tactics.find((t) => t.id === plan.tactic_id) : null;
-        if (!tactic || tactic.strategy_id !== strategyId) return false;
-      }
-      if (planId && p.plan_id !== planId) return false;
-      if (department && p.department !== department) return false;
-      if (status && p.status !== status) return false;
-      if (year && !(p.budgets[year] > 0)) return false;
-      return true;
-    });
-  }, [search, strategyId, planId, department, status, year]);
+  const { data: session } = authClient.useSession();
+  const isAuthed = !!session;
+  const qc = useQueryClient();
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const pageItems = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const createMutation = useMutation({
+    mutationFn: (data: ProjectCreateInput) => apiCreateProject(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      setCreateOpen(false);
+    },
+  });
 
-  const totalBudget = filtered.reduce(
-    (s, p) => s + (year ? p.budgets[year as number] || 0 : p.total_budget),
-    0,
-  );
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => apiDeleteProject(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      setDeleteId(null);
+    },
+  });
+
+  const availablePlans = strategyId
+    ? plans.filter((p) => tactics.find((t) => t.id === p.tactic_id)?.strategy_id === strategyId)
+    : plans;
+
+  const { data: result, isLoading } = useQuery({
+    queryKey: ["projects", { debouncedSearch, strategyId, planId, department, status, year, page }],
+    queryFn: () =>
+      apiGetProjects({
+        search: debouncedSearch || undefined,
+        strategy_id: strategyId || undefined,
+        plan_id: planId || undefined,
+        department: department || undefined,
+        status: (status as Status) || undefined,
+        year: (year as number) || undefined,
+        page,
+        limit: PAGE_SIZE,
+      }),
+    enabled: isAuthed,
+  });
+
+  const pageItems = result?.data ?? [];
+  const totalPages = result?.totalPages ?? 1;
+  const safePage = page;
+  const totalFiltered = result?.total ?? 0;
+  const totalBudget = pageItems.reduce((s, p) => s + p.total_budget, 0);
 
   const hasFilters = strategyId || planId || department || status || year || search;
 
+  function handleSearchChange(val: string) {
+    setSearch(val);
+    setPage(1);
+    clearTimeout((handleSearchChange as any)._t);
+    (handleSearchChange as any)._t = setTimeout(() => setDebouncedSearch(val), 400);
+  }
+
   function clearFilters() {
     setSearch("");
+    setDebouncedSearch("");
     setStrategyId("");
     setPlanId("");
     setDepartment("");
@@ -95,10 +120,15 @@ function ProjectsPage() {
             <div className="text-xs uppercase tracking-wider text-muted-foreground">รายการโครงการ</div>
             <h1 className="text-3xl font-semibold tracking-tight mt-1">โครงการทั้งหมด</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              พบ <span className="font-medium text-foreground tabular">{filtered.length.toLocaleString("th-TH")}</span> โครงการ ·
-              งบประมาณรวม <span className="font-medium text-foreground tabular">{formatBaht(totalBudget)} บาท</span>
+              {isLoading ? "กำลังโหลด..." : (
+                <>พบ <span className="font-medium text-foreground tabular">{totalFiltered.toLocaleString("th-TH")}</span> โครงการ ·
+                งบประมาณหน้านี้ <span className="font-medium text-foreground tabular">{formatBaht(totalBudget)} บาท</span></>
+              )}
             </p>
           </div>
+          <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
+            <Plus className="size-4" /> เพิ่มโครงการ
+          </Button>
         </div>
 
         {/* Filters */}
@@ -108,10 +138,7 @@ function ProjectsPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               <input
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="ค้นหาชื่อโครงการ หน่วยงาน วัตถุประสงค์..."
                 className="w-full bg-muted/50 border border-border rounded-lg pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground ring-focus"
               />
@@ -188,22 +215,20 @@ function ProjectsPage() {
                     </span>
                   </th>
                   <th className="px-5 py-3.5 font-medium">สถานะ</th>
+                  <th className="px-3 py-3.5 font-medium w-12"></th>
                 </tr>
               </thead>
               <tbody>
                 {pageItems.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-5 py-16 text-center text-muted-foreground">
+                    <td colSpan={6} className="px-5 py-16 text-center text-muted-foreground">
                       <Filter className="size-8 mx-auto mb-2 opacity-40" />
                       ไม่พบโครงการที่ตรงกับเงื่อนไข
                     </td>
                   </tr>
                 ) : (
                   pageItems.map((p) => {
-                    const plan = plans.find((x) => x.id === p.plan_id);
-                    const tactic = plan ? tactics.find((t) => t.id === plan.tactic_id) : null;
-                    const strategy = tactic ? strategies.find((s) => s.id === tactic.strategy_id) : null;
-                    const budget = year ? p.budgets[year as number] || 0 : p.total_budget;
+                    const budget = p.total_budget;
                     return (
                       <tr key={p.id} className="border-b border-border/50 hover:bg-muted/40 transition group">
                         <td className="px-5 py-4 max-w-[420px]">
@@ -214,21 +239,21 @@ function ProjectsPage() {
                           >
                             {p.name}
                           </Link>
-                          {tactic && (
+                          {p.tactic_code && (
                             <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5">
                               <span className="inline-flex items-center justify-center size-4 rounded bg-primary-soft text-primary text-[10px] font-semibold">
-                                {tactic.code}
+                                {p.tactic_code}
                               </span>
-                              <span className="truncate">{plan?.name}</span>
+                              <span className="truncate">{p.plan_name}</span>
                             </div>
                           )}
                         </td>
                         <td className="px-5 py-4 text-foreground/80">{p.department}</td>
                         <td className="px-5 py-4">
-                          {strategy && (
+                          {p.strategy_name && (
                             <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs">
                               <span className="size-1.5 rounded-full bg-primary" />
-                              {strategy.short_name}
+                              {p.strategy_name}
                             </span>
                           )}
                         </td>
@@ -237,6 +262,19 @@ function ProjectsPage() {
                         </td>
                         <td className="px-5 py-4">
                           <StatusBadge status={p.status} />
+                        </td>
+                        <td className="px-3 py-4">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteId(p.id);
+                              setDeleteName(p.name);
+                            }}
+                            className="size-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition opacity-0 group-hover:opacity-100"
+                            title="ลบโครงการ"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
                         </td>
                       </tr>
                     );
@@ -250,7 +288,7 @@ function ProjectsPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-5 py-4 border-t border-border">
               <div className="text-xs text-muted-foreground">
-                แสดง {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} จาก {filtered.length}
+                แสดง {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, totalFiltered)} จาก {totalFiltered}
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -292,6 +330,23 @@ function ProjectsPage() {
             </div>
           )}
         </div>
+        {/* Create Project Dialog */}
+        <ProjectFormDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          onSubmit={async (data) => { await createMutation.mutateAsync(data); }}
+          isSubmitting={createMutation.isPending}
+        />
+
+        {/* Delete Confirmation */}
+        <DeleteConfirmDialog
+          open={deleteId !== null}
+          onOpenChange={(open) => { if (!open) setDeleteId(null); }}
+          onConfirm={async () => { if (deleteId) await deleteMutation.mutateAsync(deleteId); }}
+          title="ลบโครงการ"
+          description={`คุณต้องการลบโครงการ "${deleteName}" หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
+          isDeleting={deleteMutation.isPending}
+        />
       </div>
     </AppLayout>
   );
