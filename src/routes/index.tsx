@@ -201,17 +201,90 @@ function DashboardPage() {
     ? (filteredResult?.data ?? [])
     : (recentResult?.data ?? []);
 
-  // ── Count-up hooks — MUST be before any early returns (Rules of Hooks) ─────────
+  // ── ALL hooks MUST be before any early returns (Rules of Hooks) ──────────────
+  // Count-up targets (safe with undefined data)
   const _totalProjects  = data?.totalProjects ?? 0;
   const _totalActive    = data?.byStatus.find(s => s.status === "in_progress")?.count ?? 0;
   const _totalCompleted = data?.byStatus.find(s => s.status === "completed")?.count ?? 0;
   const _totalPlanning  = data?.byStatus.find(s => s.status === "planning")?.count ?? 0;
   const _totalCancelled = data?.byStatus.find(s => s.status === "cancelled")?.count ?? 0;
-  const countProjects  = useCountUp(_totalProjects,  900,  !!data);
-  const countActive    = useCountUp(_totalActive,    750,  !!data);
-  const countCompleted = useCountUp(_totalCompleted, 800,  !!data);
-  const countPlanning  = useCountUp(_totalPlanning,  700,  !!data);
-  const countCancelled = useCountUp(_totalCancelled, 650,  !!data);
+  const countProjects  = useCountUp(_totalProjects,  900, !!data);
+  const countActive    = useCountUp(_totalActive,    750, !!data);
+  const countCompleted = useCountUp(_totalCompleted, 800, !!data);
+  const countPlanning  = useCountUp(_totalPlanning,  700, !!data);
+  const countCancelled = useCountUp(_totalCancelled, 650, !!data);
+
+  // Sorted memos (use empty arrays when data not yet loaded)
+  const stratSorted = useMemo(() => {
+    const arr = [...(data?.byStrategy ?? [])];
+    switch (stratSort) {
+      case "budget_desc":     return arr.sort((a, b) => b.total_budget - a.total_budget);
+      case "budget_asc":      return arr.sort((a, b) => a.total_budget - b.total_budget);
+      case "count_desc":      return arr.sort((a, b) => b.project_count - a.project_count);
+      case "count_asc":       return arr.sort((a, b) => a.project_count - b.project_count);
+      case "completion_desc": return arr.sort((a, b) => {
+        const pA = data?.byStrategyProgress.find(p => p.id === a.id)?.completion_rate ?? 0;
+        const pB = data?.byStrategyProgress.find(p => p.id === b.id)?.completion_rate ?? 0;
+        return pB - pA;
+      });
+      case "completion_asc":  return arr.sort((a, b) => {
+        const pA = data?.byStrategyProgress.find(p => p.id === a.id)?.completion_rate ?? 0;
+        const pB = data?.byStrategyProgress.find(p => p.id === b.id)?.completion_rate ?? 0;
+        return pA - pB;
+      });
+      case "id_asc":          return arr.sort((a, b) => a.id - b.id);
+      default:                return arr;
+    }
+  }, [data?.byStrategy, data?.byStrategyProgress, stratSort]);
+
+  const stratMax = Math.max(0, ...(data?.byStrategy ?? []).map((x) => x.total_budget));
+
+  const progressSorted = useMemo(() => {
+    const arr = [...(data?.byStrategyProgress ?? [])];
+    switch (progressSort) {
+      case "completion_desc": return arr.sort((a, b) => b.completion_rate - a.completion_rate);
+      case "completion_asc":  return arr.sort((a, b) => a.completion_rate - b.completion_rate);
+      case "count_desc":      return arr.sort((a, b) => b.project_count - a.project_count);
+      case "budget_desc":     return arr.sort((a, b) => b.total_budget - a.total_budget);
+      case "id_asc":          return arr.sort((a, b) => a.id - b.id);
+      default:                return arr;
+    }
+  }, [data?.byStrategyProgress, progressSort]);
+
+  const yearSorted = useMemo(() => {
+    const arr = [...(data?.byYear ?? [])];
+    switch (yearSort) {
+      case "year_asc":    return arr.sort((a, b) => a.year - b.year);
+      case "year_desc":   return arr.sort((a, b) => b.year - a.year);
+      case "budget_desc": return arr.sort((a, b) => b.total - a.total);
+      case "count_desc":  return arr.sort((a, b) => b.project_count - a.project_count);
+      default:            return arr;
+    }
+  }, [data?.byYear, yearSort]);
+
+  const deptSorted = useMemo(() => {
+    const arr = [...(data?.topDepts ?? [])];
+    switch (deptSort) {
+      case "count_desc":  return arr.sort((a, b) => b.count - a.count);
+      case "count_asc":   return arr.sort((a, b) => a.count - b.count);
+      case "budget_desc": return arr.sort((a, b) => b.budget - a.budget);
+      case "budget_asc":  return arr.sort((a, b) => a.budget - b.budget);
+      case "name_asc":    return arr.sort((a, b) => a.department.localeCompare(b.department, "th"));
+      default:            return arr;
+    }
+  }, [data?.topDepts, deptSort]);
+
+  const tableSorted = useMemo(() => {
+    const arr = [...tableRows];
+    switch (tableSort) {
+      case "name_asc":    return arr.sort((a, b) => a.name.localeCompare(b.name, "th"));
+      case "budget_desc": return arr.sort((a, b) => b.total_budget - a.total_budget);
+      case "budget_asc":  return arr.sort((a, b) => a.total_budget - b.total_budget);
+      case "status_asc":  return arr.sort((a, b) => a.status.localeCompare(b.status));
+      case "dept_asc":    return arr.sort((a, b) => (a.department ?? "").localeCompare(b.department ?? "", "th"));
+      default:            return arr;
+    }
+  }, [tableRows, tableSort]);
 
   // ── Loading skeleton ───────────────────────────────────────────────────────
   if (isLoading) {
@@ -247,7 +320,7 @@ function DashboardPage() {
     );
   }
 
-  // ── Derived metrics ────────────────────────────────────────────────────────
+  // ── Derived metrics (data is guaranteed non-null here) ──────────────────
   const totalActive    = _totalActive;
   const totalCompleted = _totalCompleted;
   const totalPlanning  = _totalPlanning;
@@ -255,81 +328,6 @@ function DashboardPage() {
   const activePct      = data.totalProjects > 0 ? Math.round((totalActive / data.totalProjects) * 100) : 0;
   const completedPct   = data.totalProjects > 0 ? Math.round((totalCompleted / data.totalProjects) * 100) : 0;
 
-  // ── Sorted strategy rows ──────────────────────────────────────────────────
-  const stratSorted = useMemo(() => {
-    const arr = [...data.byStrategy];
-    switch (stratSort) {
-      case "budget_desc":     return arr.sort((a, b) => b.total_budget - a.total_budget);
-      case "budget_asc":      return arr.sort((a, b) => a.total_budget - b.total_budget);
-      case "count_desc":      return arr.sort((a, b) => b.project_count - a.project_count);
-      case "count_asc":       return arr.sort((a, b) => a.project_count - b.project_count);
-      case "completion_desc": return arr.sort((a, b) => {
-        const pA = data.byStrategyProgress.find(p => p.id === a.id)?.completion_rate ?? 0;
-        const pB = data.byStrategyProgress.find(p => p.id === b.id)?.completion_rate ?? 0;
-        return pB - pA;
-      });
-      case "completion_asc":  return arr.sort((a, b) => {
-        const pA = data.byStrategyProgress.find(p => p.id === a.id)?.completion_rate ?? 0;
-        const pB = data.byStrategyProgress.find(p => p.id === b.id)?.completion_rate ?? 0;
-        return pA - pB;
-      });
-      case "id_asc":          return arr.sort((a, b) => a.id - b.id);
-      default:                return arr;
-    }
-  }, [data.byStrategy, data.byStrategyProgress, stratSort]);
-
-  const stratMax = Math.max(...data.byStrategy.map((x) => x.total_budget));
-
-  // ── Sorted progress data ───────────────────────────────────────────────────
-  const progressSorted = useMemo(() => {
-    const arr = [...data.byStrategyProgress];
-    switch (progressSort) {
-      case "completion_desc": return arr.sort((a, b) => b.completion_rate - a.completion_rate);
-      case "completion_asc":  return arr.sort((a, b) => a.completion_rate - b.completion_rate);
-      case "count_desc":      return arr.sort((a, b) => b.project_count - a.project_count);
-      case "budget_desc":     return arr.sort((a, b) => b.total_budget - a.total_budget);
-      case "id_asc":          return arr.sort((a, b) => a.id - b.id);
-      default:                return arr;
-    }
-  }, [data.byStrategyProgress, progressSort]);
-
-  // ── Sorted year data ───────────────────────────────────────────────────────
-  const yearSorted = useMemo(() => {
-    const arr = [...data.byYear];
-    switch (yearSort) {
-      case "year_asc":    return arr.sort((a, b) => a.year - b.year);
-      case "year_desc":   return arr.sort((a, b) => b.year - a.year);
-      case "budget_desc": return arr.sort((a, b) => b.total - a.total);
-      case "count_desc":  return arr.sort((a, b) => b.project_count - a.project_count);
-      default:            return arr;
-    }
-  }, [data.byYear, yearSort]);
-
-  // ── Sorted dept data ───────────────────────────────────────────────────────
-  const deptSorted = useMemo(() => {
-    const arr = [...data.topDepts];
-    switch (deptSort) {
-      case "count_desc":  return arr.sort((a, b) => b.count - a.count);
-      case "count_asc":   return arr.sort((a, b) => a.count - b.count);
-      case "budget_desc": return arr.sort((a, b) => b.budget - a.budget);
-      case "budget_asc":  return arr.sort((a, b) => a.budget - b.budget);
-      case "name_asc":    return arr.sort((a, b) => a.department.localeCompare(b.department, "th"));
-      default:            return arr;
-    }
-  }, [data.topDepts, deptSort]);
-
-  // ── Sorted table rows ──────────────────────────────────────────────────────
-  const tableSorted = useMemo(() => {
-    const arr = [...tableRows];
-    switch (tableSort) {
-      case "name_asc":    return arr.sort((a, b) => a.name.localeCompare(b.name, "th"));
-      case "budget_desc": return arr.sort((a, b) => b.total_budget - a.total_budget);
-      case "budget_asc":  return arr.sort((a, b) => a.total_budget - b.total_budget);
-      case "status_asc":  return arr.sort((a, b) => a.status.localeCompare(b.status));
-      case "dept_asc":    return arr.sort((a, b) => (a.department ?? "").localeCompare(b.department ?? "", "th"));
-      default:            return arr;
-    }
-  }, [tableRows, tableSort]);
   const STRAT_COLORS = [
     { bar: "from-emerald-700 to-emerald-500", badge: "bg-emerald-100 text-emerald-800", hex: "#0d7a5f" },
     { bar: "from-amber-600 to-amber-400",     badge: "bg-amber-100 text-amber-800",     hex: "#d97706" },
@@ -693,17 +691,17 @@ function DashboardPage() {
                     const maxProj   = Math.max(...data.byStrategy.map((s) => s.project_count));
                     const maxBudget = Math.max(...data.byStrategy.map((s) => s.total_budget));
                     return data.byStrategy.map((s) => ({
-                      subject:  s.name.replace(/^ยุทธศาสตร์ที่\s*\d+\.?\s*/, "").slice(0, 12),
+                      subject:  s.name,
                       stratId:  s.id,
                       โครงการ:  Math.round((s.project_count / maxProj) * 100),
                       งบประมาณ: Math.round((s.total_budget / maxBudget) * 100),
                     }));
                   })()}
-                  outerRadius={100}
-                  margin={{ top: 10, right: 40, bottom: 10, left: 40 }}
+                  outerRadius={90}
+                  margin={{ top: 24, right: 65, bottom: 24, left: 65 }}
                 >
                   <PolarGrid stroke="oklch(0.88 0.02 150)" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: "oklch(0.45 0.02 160)" }} />
+                  <PolarAngleAxis dataKey="subject" tick={CustomPolarAngleTick} />
                   <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9, fill: "oklch(0.6 0.02 160)" }} tickCount={4} />
                   <Radar name="โครงการ"  dataKey="โครงการ"  stroke="oklch(0.52 0.105 165)" fill="oklch(0.52 0.105 165)" fillOpacity={0.25} strokeWidth={2} />
                   <Radar name="งบประมาณ" dataKey="งบประมาณ" stroke="oklch(0.74 0.12 88)"   fill="oklch(0.74 0.12 88)"   fillOpacity={0.2}  strokeWidth={2} />
@@ -806,7 +804,7 @@ function DashboardPage() {
                         </Link>
                       </td>
                       <td className="px-3 py-3 hidden md:table-cell text-muted-foreground text-xs max-w-[140px] truncate">{p.department ?? "—"}</td>
-                      <td className="px-3 py-3 hidden lg:table-cell text-xs text-muted-foreground">{p.strategy_name ? p.strategy_name.slice(0, 18) + "…" : "—"}</td>
+                      <td className="px-3 py-3 hidden lg:table-cell text-xs text-muted-foreground max-w-[160px] truncate" title={p.strategy_name ?? undefined}>{p.strategy_name ?? "—"}</td>
                       <td className="px-3 py-3 text-right tabular text-xs hidden sm:table-cell font-medium">{formatBaht(p.total_budget, { compact: true })}</td>
                       <td className="px-3 py-3"><StatusBadge status={p.status} /></td>
                       <td className="px-3 py-3 text-center">
@@ -1012,8 +1010,15 @@ function TreemapCell(props: any) {
   if (!width || !height || width < 10 || height < 10) return null;
   const color = STRATEGY_COLORS[colorIndex % STRATEGY_COLORS.length];
   const isActive = activeId === null || activeId === stratId;
+  const clipId = `tree-clip-${stratId}`;
   return (
     <g style={{ cursor: "pointer" }}>
+      <title>{name}</title>
+      <defs>
+        <clipPath id={clipId}>
+          <rect x={x + 4} y={y + 4} width={width - 8} height={height - 8} />
+        </clipPath>
+      </defs>
       <rect
         x={x} y={y} width={width} height={height}
         style={{ fill: color, stroke: "oklch(1 0 0 / 0.12)", strokeWidth: 2, opacity: isActive ? 1 : 0.35 }}
@@ -1026,15 +1031,17 @@ function TreemapCell(props: any) {
       {width > 50 && height > 30 && (
         <>
           <text
+            clipPath={`url(#${clipId})`}
             x={x + width / 2} y={y + height / 2 - (height > 50 ? 8 : 0)}
             textAnchor="middle" dominantBaseline="middle"
             fill="white" fontSize={Math.min(12, width / 8)} fontWeight={600}
             opacity={isActive ? 1 : 0.4}
           >
-            {name.replace(/^ยุทธศาสตร์ที่\s*\d+\.?\s*/, "").slice(0, 12)}
+            {name}
           </text>
           {height > 50 && (
             <text
+              clipPath={`url(#${clipId})`}
               x={x + width / 2} y={y + height / 2 + 12}
               textAnchor="middle" dominantBaseline="middle"
               fill="white" fontSize={10} opacity={isActive ? 0.85 : 0.3}
@@ -1045,6 +1052,24 @@ function TreemapCell(props: any) {
         </>
       )}
     </g>
+  );
+}
+
+function CustomPolarAngleTick({ x, y, payload, textAnchor }: any) {
+  const text = String(payload?.value ?? "");
+  const charsPerLine = 8;
+  const lines: string[] = [];
+  for (let i = 0; i < text.length; i += charsPerLine) {
+    lines.push(text.slice(i, i + charsPerLine));
+  }
+  const lineH = 12;
+  const startY = y - ((lines.length - 1) * lineH) / 2;
+  return (
+    <text textAnchor={textAnchor ?? "middle"} fontSize={9} fill="oklch(0.45 0.02 160)">
+      {lines.map((line, i) => (
+        <tspan key={i} x={x} y={startY + i * lineH}>{line}</tspan>
+      ))}
+    </text>
   );
 }
 
@@ -1188,8 +1213,8 @@ function ProgressChart({
   };
 
   const chartData = data.map((s) => ({
-    name: s.name.replace(/^ยุทธศาสตร์\s*\d+\.?\s*/, "S").slice(0, 10),
-    fullName: s.name,
+    name: "S" + s.id,
+    fullName: s.full_name,
     stratId: s.id,
     completed:   s.completed,
     in_progress: s.in_progress,
@@ -1229,7 +1254,7 @@ function ProgressChart({
             <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.015 140)" horizontal={false} />
             <XAxis type="number" tick={{ fontSize: 10, fill: "oklch(0.55 0.02 160)" }} axisLine={false} tickLine={false} />
             <YAxis
-              type="category" dataKey="name" width={72}
+              type="category" dataKey="name" width={30}
               tick={({ x, y, payload }: any) => (
                 <text
                   x={(x as number) - 4} y={y} textAnchor="end" dominantBaseline="middle"

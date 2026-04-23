@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -13,9 +13,12 @@ import { apiGetProject, apiPatchProjectStatus, apiUpdateProject, apiDeleteProjec
 import { authClient } from "@/auth";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, FileText, Target, Award, TrendingUp, Building2, Calendar, Pencil, Trash2 } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { ChevronLeft, ChevronRight, FileText, Target, Award, TrendingUp, Building2, Calendar, Pencil, Trash2, CheckCircle2, XCircle, ArrowRight, RotateCcw } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/projects/$projectId")({
   head: ({ params }) => ({
@@ -34,6 +37,197 @@ export const Route = createFileRoute("/projects/$projectId")({
     </AppLayout>
   ),
 });
+
+const STEP_FLOW: Status[] = ["planning", "in_progress", "completed"];
+
+const STEP_LABEL_MAP: Record<string, string> = {
+  planning: "วางแผน",
+  in_progress: "กำลังดำเนินการ",
+  completed: "เสร็จสิ้น",
+};
+
+const STEP_DESC: Record<string, string> = {
+  planning: "กำหนดแนวทางและเตรียมทรัพยากร",
+  in_progress: "กำลังดำเนินงานตามแผน",
+  completed: "โครงการสำเร็จลุล่วงแล้ว",
+};
+
+type ConfirmAction =
+  | { type: "revert"; to: Status }
+  | { type: "cancel" }
+  | { type: "reactivate" };
+
+function StatusStepper({
+  status,
+  onStatusChange,
+  isPending,
+}: {
+  status: Status;
+  onStatusChange: (s: Status) => void;
+  isPending: boolean;
+}) {
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const currentIdx = STEP_FLOW.indexOf(status);
+  const isCancelled = status === "cancelled";
+
+  function handleConfirm() {
+    if (!confirmAction) return;
+    if (confirmAction.type === "cancel") onStatusChange("cancelled");
+    else if (confirmAction.type === "reactivate") onStatusChange("planning");
+    else onStatusChange(confirmAction.to);
+    setConfirmAction(null);
+  }
+
+  const confirmMeta = confirmAction
+    ? confirmAction.type === "cancel"
+      ? { title: "ยืนยันการยกเลิกโครงการ", desc: "โครงการนี้จะถูกยกเลิก คุณสามารถเปิดใช้งานใหม่ได้ภายหลัง", action: "ยกเลิกโครงการ", destructive: true }
+      : confirmAction.type === "revert"
+      ? { title: "ย้อนสถานะโครงการ", desc: `โครงการจะถูกย้อนกลับไปที่ "${STEP_LABEL_MAP[confirmAction.to]}" คุณแน่ใจหรือไม่?`, action: "ย้อนกลับ", destructive: false }
+      : { title: "เปิดใช้งานโครงการใหม่", desc: `โครงการจะถูกย้ายกลับไปยังสถานะ "วางแผน" เพื่อดำเนินการต่อ`, action: "เปิดใช้งานใหม่", destructive: false }
+    : null;
+
+  return (
+    <>
+      <div className="w-full">
+        <div className="relative flex items-start">
+          {STEP_FLOW.map((step, idx) => {
+            const isDone = !isCancelled && currentIdx > idx;
+            const isCurrent = !isCancelled && currentIdx === idx;
+            const isFuture = isCancelled || currentIdx < idx;
+            return (
+              <Fragment key={step}>
+                <div className="flex flex-col items-center flex-1">
+                  <div
+                    className={cn(
+                      "size-10 rounded-full flex items-center justify-center border-2 transition-all duration-300",
+                      isDone && "border-green-500 bg-green-500 text-white",
+                      isCurrent && "border-primary bg-primary text-primary-foreground ring-4 ring-primary/15",
+                      isFuture && "border-muted-foreground/25 bg-muted text-muted-foreground/40",
+                    )}
+                  >
+                    {isDone ? (
+                      <CheckCircle2 className="size-5" />
+                    ) : isCurrent ? (
+                      <span className="size-2.5 rounded-full bg-current" />
+                    ) : (
+                      <span className="text-xs font-semibold">{idx + 1}</span>
+                    )}
+                  </div>
+                  <div className="mt-2.5 text-center px-1">
+                    <div
+                      className={cn(
+                        "text-xs font-semibold",
+                        isDone && "text-green-600",
+                        isCurrent && "text-primary",
+                        isFuture && "text-muted-foreground/50",
+                      )}
+                    >
+                      {STEP_LABEL_MAP[step]}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground/55 mt-0.5 leading-tight">
+                      {STEP_DESC[step]}
+                    </div>
+                  </div>
+                </div>
+                {idx < STEP_FLOW.length - 1 && (
+                  <div className="flex-1 h-0.5 mt-5 max-w-[80px]">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all duration-500",
+                        !isCancelled && currentIdx > idx ? "bg-green-400" : "bg-muted-foreground/20",
+                      )}
+                    />
+                  </div>
+                )}
+              </Fragment>
+            );
+          })}
+        </div>
+
+        {isCancelled && (
+          <div className="mt-5 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 flex items-center gap-3">
+            <XCircle className="size-4 text-destructive shrink-0" />
+            <p className="flex-1 text-sm text-destructive font-medium">โครงการนี้ถูกยกเลิกแล้ว</p>
+            <button
+              onClick={() => setConfirmAction({ type: "reactivate" })}
+              disabled={isPending}
+              className="flex items-center gap-1.5 text-xs font-medium text-foreground/70 hover:text-foreground border border-border rounded-lg px-3 py-1.5 bg-background hover:bg-muted transition disabled:opacity-50"
+            >
+              <RotateCcw className="size-3.5" />
+              เปิดใช้งานใหม่
+            </button>
+          </div>
+        )}
+
+        {!isCancelled && (
+          <div className="mt-5 pt-4 border-t border-border flex items-center justify-between gap-3">
+            <div>
+              {currentIdx > 0 && (
+                <button
+                  onClick={() => setConfirmAction({ type: "revert", to: STEP_FLOW[currentIdx - 1] })}
+                  disabled={isPending}
+                  className="flex items-center gap-1.5 text-xs font-medium text-foreground/60 hover:text-foreground border border-border rounded-lg px-3 py-1.5 bg-background hover:bg-muted transition disabled:opacity-50"
+                >
+                  <RotateCcw className="size-3.5" />
+                  ย้อนกลับ
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {currentIdx < STEP_FLOW.length - 1 && (
+                <button
+                  onClick={() => setConfirmAction({ type: "cancel" })}
+                  disabled={isPending}
+                  className="flex items-center gap-1.5 text-xs font-medium text-destructive hover:text-destructive border border-destructive/30 rounded-lg px-3 py-1.5 bg-background hover:bg-destructive/5 transition disabled:opacity-50"
+                >
+                  <XCircle className="size-3.5" />
+                  ยกเลิกโครงการ
+                </button>
+              )}
+              {currentIdx < STEP_FLOW.length - 1 ? (
+                <button
+                  onClick={() => onStatusChange(STEP_FLOW[currentIdx + 1])}
+                  disabled={isPending}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-4 py-1.5 transition press-effect disabled:opacity-50"
+                >
+                  {isPending ? (
+                    <span className="size-3 border-2 border-primary-foreground/60 border-t-primary-foreground rounded-full animate-spin" />
+                  ) : (
+                    <ArrowRight className="size-3.5" />
+                  )}
+                  ไปยัง{STEP_LABEL_MAP[STEP_FLOW[currentIdx + 1]]}
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5 text-xs font-medium text-green-600 border border-green-500/30 rounded-lg px-3 py-1.5 bg-green-50 dark:bg-green-950/20">
+                  <CheckCircle2 className="size-3.5" />
+                  โครงการเสร็จสิ้นแล้ว
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => { if (!open) setConfirmAction(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmMeta?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{confirmMeta?.desc}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirm}
+              className={cn(confirmMeta?.destructive && buttonVariants({ variant: "destructive" }))}
+            >
+              {confirmMeta?.action}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
 
 function ProjectDetailPage() {
   const { projectId } = Route.useParams();
@@ -81,6 +275,7 @@ function ProjectDetailPage() {
   function handleStatusChange(s: Status) {
     setLocalStatus(s);
     patchStatus.mutate(s);
+    toast.success(`เปลี่ยนสถานะเป็น "${STATUS_LABEL[s]}" แล้ว`, { icon: "✅" });
   }
 
   if (isLoading) {
@@ -187,28 +382,16 @@ function ProjectDetailPage() {
             </div>
           </div>
 
-          <div className="p-6 lg:p-7 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">สถานะปัจจุบัน:</span>
+          <div className="p-6 lg:p-7">
+            <div className="flex items-center gap-3 mb-5">
+              <span className="text-sm font-medium text-muted-foreground">สถานะโครงการ:</span>
               <StatusBadge status={status} />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground mr-1">เปลี่ยนสถานะ:</span>
-              {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => handleStatusChange(s)}
-                  className={[
-                    "rounded-lg px-3 py-1.5 text-xs font-medium border transition",
-                    s === status
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background border-border text-foreground/70 hover:border-primary/40 hover:text-foreground",
-                  ].join(" ")}
-                >
-                  {STATUS_LABEL[s]}
-                </button>
-              ))}
-            </div>
+            <StatusStepper
+              status={status}
+              onStatusChange={handleStatusChange}
+              isPending={patchStatus.isPending}
+            />
           </div>
         </div>
 

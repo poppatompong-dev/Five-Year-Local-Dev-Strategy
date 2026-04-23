@@ -2,7 +2,7 @@
 
 > **Document Type:** Combined Software Requirements Specification (SRS) + System Design Document (SDD)
 > **Target Audience:** AI development agents analyzing, maintaining, and extending this codebase
-> **Version:** 4.0
+> **Version:** 4.1
 > **Date:** 2026-04-23
 > **Repository Root:** `C:\Users\PC\Documents\Projects\Five-Year Local Development Strategy`
 
@@ -385,11 +385,11 @@ Data sourced from `apiGetDashboard()` and `apiGetProjects()` via TanStack Query 
 3. **Stat cards** — 4 summary cards (total projects, total budget, strategies, departments). Tooltip + `hover-lift` micro-animation.
 4. **Budget by year** — Vertical bar chart (clickable bars → year filter) + Sort control. Donut chart (status breakdown — clickable slices).
 5. **Budget by strategy** — Horizontal bar list with clickable rows → strategy filter. **HoverCard** on each row shows full strategy name, budget, per-status project counts, and completion rate progress bar.
-6. **Treemap** — Budget treemap, clickable cells → strategy filter.
-7. **Strategy progress** — Stacked bar chart (planning / in_progress / completed / cancelled) per strategy. Sortable.
-8. **Radar chart** — Budget vs. project count by strategy (dual-axis radar).
+6. **Treemap** — Budget treemap, clickable cells → strategy filter. Each cell uses a `<clipPath>` (`tree-clip-{stratId}`) to prevent text overflow. Labels use full strategy `name` (not truncated). `<title>` element provides native SVG tooltip.
+7. **Strategy progress** — Stacked bar chart (planning / in_progress / completed / cancelled) per strategy. Sortable. Y-axis labels use `"S" + s.id` short codes (e.g. S1, S2) with `width={30}`; full name shown in Recharts tooltip via `fullName` payload field.
+8. **Radar chart** — Budget vs. project count by strategy (dual-axis radar). Labels rendered via `CustomPolarAngleTick` (custom SVG `<text>/<tspan>` component) which word-wraps long strategy names at 8 chars per line. `outerRadius={90}`, wider margins (`left/right: 65`) for label room. `subject` uses full strategy `name` (not truncated).
 9. **Department chart** — Horizontal bar chart (budget by department, top 10). Sortable.
-10. **Project table** — Sortable table of recent or filtered projects. Each row has a **QuickMenu** (view, edit, copy link, copy row data — copy actions emit toast notifications).
+10. **Project table** — Sortable table of recent or filtered projects. Each row has a **QuickMenu** (view, edit, copy link, copy row data — copy actions emit toast notifications). Strategy name column uses `max-w-[160px] truncate` + `title` attribute for full name on hover.
 11. **Filter chip** — Active filter shown as a dismissible chip above the table. `clearFilters()` emits a `toast.info`.
 12. **Year-by-year multi-line chart** — ComposedChart (bar + line) showing yearly trend. Sortable.
 
@@ -672,9 +672,12 @@ When modifying this system:
 - **Never commit `.env`.** It contains the Neon Data API URL. Use environment variables in CI/CD.
 - **Keep component additions inside `src/components/`.** Add new shadcn/ui components via `npx shadcn@latest add <component>` to keep the `components.json` manifest in sync.
 - **Do not add duplicate Vite plugins.** `@lovable.dev/vite-tanstack-config` already bundles TanStack Start, React, Tailwind, tsconfig-paths, and Cloudflare plugins. See the comment at the top of `vite.config.ts`.
-- **All hooks in `DashboardPage` MUST be called before any early return.** The `useCountUp` hook and all `useMemo` calls must precede the `if (isLoading)` and `if (error)` guard blocks. Violating this causes a React "change in order of Hooks" crash.
+- **All hooks in `DashboardPage` MUST be called before any early return.** Both `useCountUp` (×5) and all `useMemo` calls (×5: `stratSorted`, `progressSorted`, `yearSorted`, `deptSorted`, `tableSorted`) must precede the `if (isLoading)` and `if (error || !data)` guard blocks. All `useMemo` deps use optional chaining (`data?.byStrategy ?? []`) so they are safe when data is `undefined`. Violating this causes a React "Rendered more hooks than during the previous render" crash.
 - **Animate only `transform` and `opacity`.** Never animate `width`, `height`, `top`, `left`, or use `transition: all`. See `src/styles.css` keyframes for approved patterns.
 - **Recharts `Tooltip` must be aliased** as `ReTooltip` in `index.tsx` to avoid naming conflict with Radix UI `Tooltip` (imported as `TipRoot`).
+- **`CustomPolarAngleTick`** is a standalone function component (not inside `DashboardPage`) used as the `tick` prop for `PolarAngleAxis` in the radar chart. It wraps long labels into multiple `<tspan>` lines at 8 chars each.
+- **SVG `<clipPath>` for Treemap cells** — Each `TreemapCell` defines its own `<defs><clipPath id="tree-clip-{stratId}">` to clip text within the cell boundary. This prevents label overflow across cell borders.
+- **Strategy name display:** radar chart `subject` and treemap cell `name` both use the full untruncated strategy name. Short codes (`S1`–`S6`) are used only on the stacked-bar Y-axis for space efficiency.
 
 ---
 
@@ -687,6 +690,7 @@ When modifying this system:
 | 3.0 | 2026-04-21 | System analyst (AI) | Backend integration: Neon PostgreSQL schema + seed data; Neon Auth (Better Auth); Neon Data API (PostgREST) wired via `src/lib/api.ts`; TanStack Query in all pages; route protection in `AppLayout`; `scripts/migrate.js` and `scripts/seed.js` added. Updated architecture diagram, FR table, tech stack, file map. |
 | 3.1 | 2026-04-21 | System analyst (AI) | Added user management: `/admin/users` page (list/create/delete), `apiGetUsers`/`apiCreateUser`/`apiDeleteUser` in `api.ts`, `scripts/add-users.js`, `npm run add-users`. Fixed hydration mismatch (`suppressHydrationWarning` on `<html>`). Added `enabled: !!session` gate to all `useQuery` calls to prevent unauthenticated API requests. Updated FR table (FR-16), routes, file map, nav, and deployment sections. |
 | 4.0 | 2026-04-23 | System analyst (AI) | **UX Enhancement release.** Added: interactive chart filtering (click any bar/slice/row → filters project table), multi-sort controls on all dashboard sections, strategy progress stacked bar chart, radar chart, Treemap, HoverCard on strategy rows, Radix Tooltip on KPI + stat cards, Sonner toast notifications (filter/copy actions), `useCountUp` animated KPI hook, micro-animation CSS utilities (fade-up, hover-lift, press-effect, stagger delays), `TooltipProvider` + `Toaster` in `AppLayout`. Added `ProjectFormDialog`, `EquipmentFormDialog`, `DeleteConfirmDialog` components. Added Excel import pipeline scripts (`import-projects.cjs`, `extract-textboxes.cjs`, `seed-textboxes.js`) + forensic analysis. Updated all section 7 subsections, FR-01, NFR-09/10, file map, guardrails, and change log. Fixed Rules of Hooks violation (moved `useCountUp` before early returns). |
+| 4.1 | 2026-04-23 | System analyst (AI) + User | **Chart polish + final Rules-of-Hooks fix.** (1) Moved all 5 `useMemo` hooks before early returns with `data?.xxx ?? []` optional-chaining deps — resolves "Rendered more hooks" crash. (2) Radar chart: `CustomPolarAngleTick` word-wrap component, full strategy names as `subject`, `outerRadius=90`, wider margins. (3) Treemap: SVG `<clipPath>` per cell to prevent text overflow, full `name` labels, `<title>` tooltip. (4) Strategy progress chart: Y-axis short codes `S1`–`S6` (`width=30`), `fullName` in tooltip payload. (5) Project table strategy column: `max-w-[160px] truncate` + `title` native tooltip. Updated §7.3 (sections 6–10), §7.4, §11.4 guardrails, and change log. |
 
 ---
 

@@ -84,7 +84,7 @@ function RootComponent() {
       <NeonAuthUIProvider
         authClient={authClient}
         navigate={(path) => navigate({ to: path })}
-        social={{ providers: ["google", "github"] }}
+        social={{ providers: ["google"] }}
         credentials={{ forgotPassword: true }}
       >
         <Outlet />
