@@ -2,8 +2,8 @@
 
 > **Document Type:** Combined Software Requirements Specification (SRS) + System Design Document (SDD)
 > **Target Audience:** AI development agents analyzing, maintaining, and extending this codebase
-> **Version:** 3.1
-> **Date:** 2026-04-21
+> **Version:** 4.0
+> **Date:** 2026-04-23
 > **Repository Root:** `C:\Users\PC\Documents\Projects\Five-Year Local Development Strategy`
 
 ---
@@ -85,7 +85,7 @@ Authentication is enforced via Neon Auth. Role separation is not yet enforced at
 
 | ID | Requirement | Status |
 |---|---|---|
-| FR-01 | System SHALL display an overview dashboard showing total projects, total budget, budget-by-year, budget-by-strategy, status breakdown, and top 10 departments. | ✅ Implemented |
+| FR-01 | System SHALL display an overview dashboard showing total projects, total budget, budget-by-year, budget-by-strategy, status breakdown, strategy progress, radar chart, top 10 departments, and a sortable project table. | ✅ Implemented |
 | FR-02 | System SHALL list all projects with pagination (default 12/page) and filters for search text, strategy, plan, department, status, and year. | ✅ Implemented |
 | FR-03 | System SHALL show a single-project detail view including hierarchy path, objective, target, KPI, expected result, department, and per-year budget. | ✅ Implemented |
 | FR-04 | System SHALL allow changing a project's status to one of: `planning`, `in_progress`, `completed`, `cancelled`. | ✅ Implemented — persisted to Neon via PATCH |
@@ -110,6 +110,8 @@ Authentication is enforced via Neon Auth. Role separation is not yet enforced at
 | NFR-02 | Usability | Dashboards SHALL be readable at 1366×768 and above. |
 | NFR-03 | Performance | Dashboard rendering SHALL be perceptible as instant for the current mock-data scale (248 projects). |
 | NFR-04 | Portability | The system SHALL run on a single machine with Node.js ≥18 installed; no external service required. |
+| NFR-09 | UX | UI SHALL include micro-animations, tooltips, hover cards, and toast notifications to communicate state changes clearly to non-technical users. |
+| NFR-10 | UX | Interactive charts SHALL filter the project table immediately on click, with visible active state and a dismissible filter chip. |
 | NFR-05 | Data integrity | The Strategy → Tactic → Plan → Project hierarchy MUST be enforced in the data layer. |
 | NFR-06 | Scalability | The data model SHALL accommodate additional fiscal years without restructuring the `Project.budgets` map. |
 | NFR-07 | Localization | Numbers SHALL be formatted with Thai locale (`th-TH`) via `formatBaht()`. |
@@ -376,31 +378,72 @@ Navigation items:
 
 ### 7.3 Dashboard Composition (`src/routes/index.tsx`)
 
-Data sourced from `apiGetDashboard()` and `apiGetProjects()` via TanStack Query (enabled only when authenticated).
+Data sourced from `apiGetDashboard()` and `apiGetProjects()` via TanStack Query (enabled only when authenticated). **All chart interactions filter the project table below in real-time.**
 
-1. **Stat cards** — 7 cards: total projects, total budget, strategies, plans, departments, completed count, in-progress count.
-2. **Charts row 1** — Bar chart (budget by year) + Pie/donut chart (status breakdown).
-3. **Charts row 2** — Horizontal bar charts: project count by strategy + budget by strategy.
-4. **Top Departments table** — Top 10 by project count.
+1. **Hero banner** — Gradient section showing system title, fiscal year badge, budget total, and a click-to-filter hint.
+2. **Status KPI strip** — 4 clickable cards (กำลังดำเนินการ / เสร็จสิ้น / วางแผน / ยกเลิก). Count-up animation on load. Tooltip on each card. Staggered `fade-up` entrance.
+3. **Stat cards** — 4 summary cards (total projects, total budget, strategies, departments). Tooltip + `hover-lift` micro-animation.
+4. **Budget by year** — Vertical bar chart (clickable bars → year filter) + Sort control. Donut chart (status breakdown — clickable slices).
+5. **Budget by strategy** — Horizontal bar list with clickable rows → strategy filter. **HoverCard** on each row shows full strategy name, budget, per-status project counts, and completion rate progress bar.
+6. **Treemap** — Budget treemap, clickable cells → strategy filter.
+7. **Strategy progress** — Stacked bar chart (planning / in_progress / completed / cancelled) per strategy. Sortable.
+8. **Radar chart** — Budget vs. project count by strategy (dual-axis radar).
+9. **Department chart** — Horizontal bar chart (budget by department, top 10). Sortable.
+10. **Project table** — Sortable table of recent or filtered projects. Each row has a **QuickMenu** (view, edit, copy link, copy row data — copy actions emit toast notifications).
+11. **Filter chip** — Active filter shown as a dismissible chip above the table. `clearFilters()` emits a `toast.info`.
+12. **Year-by-year multi-line chart** — ComposedChart (bar + line) showing yearly trend. Sortable.
 
-### 7.4 Styling
+### 7.4 Styling & Animation
 
 - **TailwindCSS 4** with CSS custom properties for theming (defined in `src/styles.css`).
-- **shadcn/ui** component library — 45 pre-built components under `src/components/ui/`.
+- **shadcn/ui** component library — 45+ pre-built components under `src/components/ui/`.
 - **Color palette:** `--color-gold` accent, `--color-success`, `--color-warning`, `--color-destructive`, `--color-info` — all referenced via `STATUS_COLOR` map.
 - **Font:** IBM Plex Sans Thai (Google Fonts, preconnect in `__root.tsx`).
+- **Micro-animations (`src/styles.css`):**
+  - `@keyframes fade-up` — entrance from below with opacity; used via `animate-fade-up`.
+  - `@keyframes scale-in`, `bounce-in`, `pulse-ring`, `wiggle` — available utilities.
+  - `.hover-lift` — `translateY(-2px)` + shadow on hover (transform + opacity only, per ui-animation rules).
+  - `.press-effect` — `scale(0.96)` on `:active` for button press feedback.
+  - `.stagger-1` through `.stagger-6` — animation-delay helpers for sequential entrance.
+  - `.tooltip-rich` — override class for Radix Tooltip content styling.
+- **Easing:** `cubic-bezier(0.22, 1, 0.36, 1)` (enter curve) used throughout, matching `ui-animation` skill defaults.
+- **`useCountUp(target, duration, enabled)`** — custom hook in `index.tsx`; animates KPI integers from 0 on first data load using `requestAnimationFrame` with cubic ease-out. Called **before** any early returns to comply with Rules of Hooks.
 
-### 7.5 Data Fetching
+### 7.5 UX Components
+
+| Component / Pattern | Source | Usage |
+|---|---|---|
+| `Tooltip` (Radix) | `src/components/ui/tooltip.tsx` | KPI status cards, stat cards — show description + filter hint on hover |
+| `HoverCard` (Radix) | `src/components/ui/hover-card.tsx` | Strategy rows — hover preview with full name, budget, per-status counts, completion rate |
+| `Toaster` (Sonner) | `src/components/ui/sonner.tsx` | Toast notifications for filter apply/clear, copy link, copy row data |
+| `TooltipProvider` | `src/components/AppLayout.tsx` | Wraps entire app layout; required for Radix Tooltip to function |
+| `QuickMenu` | inline in `index.tsx` | Per-row dropdown (view, edit, copy link 🔗, copy data 📋) with toast feedback |
+
+**Toast trigger points:**
+- `setStatusFilter(s)` → `toast.success("กรองสถานะ: …")` with 🎯 emoji
+- `setStrategyFilter(id)` → `toast.success("กรองยุทธศาสตร์: …")`
+- `setYearFilter(y)` → `toast.success("กรองปีงบประมาณ: …")` with 📅 emoji
+- `clearFilters()` → `toast.info("ล้างตัวกรองแล้ว")`
+- Copy link → `toast.success("คัดลอกลิงก์แล้ว", { description: url, icon: "🔗" })`
+- Copy row → `toast.success("คัดลอกข้อมูลแล้ว", { icon: "📋" })`
+
+### 7.6 Data Fetching
 
 All pages use **TanStack Query** (`useQuery` / `useMutation`) with query keys scoped by resource + params. Data comes from `src/lib/api.ts` → Neon Data API. The `QueryClient` is instantiated in `__root.tsx` with a 5-minute stale time. Loading and error states are handled inline in each route component.
 
-### 7.6 Components
+### 7.7 Components
 
 | File | Purpose |
 |---|---|
-| `src/components/AppLayout.tsx` | Sidebar + header + main layout shell |
+| `src/components/AppLayout.tsx` | Sidebar + header + layout shell; mounts `TooltipProvider` + `Toaster` |
 | `src/components/StatusBadge.tsx` | Colored Thai status pill |
-| `src/components/ui/*` | shadcn/ui primitives |
+| `src/components/ProjectFormDialog.tsx` | Create/edit project modal (Dialog) |
+| `src/components/EquipmentFormDialog.tsx` | Create/edit equipment modal (Dialog) |
+| `src/components/DeleteConfirmDialog.tsx` | Generic delete confirmation Dialog |
+| `src/components/ui/tooltip.tsx` | Radix Tooltip wrapper with animation classes |
+| `src/components/ui/hover-card.tsx` | Radix HoverCard wrapper |
+| `src/components/ui/sonner.tsx` | Sonner Toaster wrapper (richColors, top-right position) |
+| `src/components/ui/*` | shadcn/ui primitives (45+ components) |
 | `src/hooks/use-mobile.tsx` | `useIsMobile()` hook (breakpoint 768 px) |
 | `src/lib/utils.ts` | `cn()` helper (clsx + tailwind-merge) |
 | `src/lib/mock-data.ts` | Static reference arrays + `formatBaht` (generator fns no longer called) |
@@ -448,14 +491,27 @@ A robust importer should:
 - ✅ **TanStack Query** — all pages use `useQuery` / `useMutation` to fetch from the Neon Data API.
 - ✅ **Status mutation** — PATCH to Neon Data API is wired on the project detail page.
 - ✅ Dashboard with recharts visualizations (live data).
+- ✅ **Interactive chart filtering** — clicking any chart bar/slice/row instantly filters the project table below. Active filter shown as a dismissible chip.
+- ✅ **Multi-sort** on every dashboard section (strategies, progress, departments, years, project table) — dedicated `<SortSelect>` controls.
+- ✅ **Strategy progress chart** — stacked bar chart showing planning/in_progress/completed/cancelled per strategy, with completion rate overlay.
+- ✅ **Radar chart** — budget vs. project count by strategy (dual-axis).
+- ✅ **Treemap** — budget allocation by strategy, clickable.
+- ✅ **HoverCard on strategy rows** — preview popup with full name, budget, per-status counts, completion %, openDelay 400ms.
+- ✅ **Tooltips on KPI + stat cards** — Radix `Tooltip` with description text and filter hint.
+- ✅ **Toast notifications** (Sonner) — on filter apply, filter clear, copy link, copy row data.
+- ✅ **Count-up animation** (`useCountUp`) — KPI integers animate from 0 on load; hook placed before early returns (Rules of Hooks compliant).
+- ✅ **Micro-animations** — `animate-fade-up` + stagger delays on card sections; `hover-lift` on stat cards; `press-effect` on strategy row buttons.
+- ✅ **`TooltipProvider` + `Toaster`** mounted globally in `AppLayout`.
+- ✅ **QuickMenu** per project row — view/edit links + copy link/copy data with toast feedback.
 - ✅ Project list with server-side filters + pagination (12/page) via PostgREST.
 - ✅ Project detail with hierarchy path + budget bar chart (live data).
 - ✅ Equipment list with pagination + search (live data).
 - ✅ Import page UI (file picker, drag-and-drop, validation — stub).
 - ✅ Thai locale number formatting (`formatBaht`).
-- ✅ shadcn/ui component library (45 components).
-- ✅ TailwindCSS 4 theming with custom CSS properties.
+- ✅ shadcn/ui component library (45+ components).
+- ✅ TailwindCSS 4 theming with custom CSS properties + animation utilities.
 - ✅ IBM Plex Sans Thai font.
+- ✅ `ProjectFormDialog`, `EquipmentFormDialog`, `DeleteConfirmDialog` components (wired to pages).
 
 ### 9.2 What is Missing (v1.0 → v1.1)
 
@@ -475,21 +531,25 @@ A robust importer should:
 ```
 C:\Users\PC\Documents\Projects\Five-Year Local Development Strategy\
 ├── docs/
-│   └── SYSTEM_DOCUMENT.md          # This file
+│   ├── SYSTEM_DOCUMENT.md           # This file
+│   └── FORENSIC_IMPORT_ANALYSIS.md  # Deep analysis of source Excel workbook structure
 ├── src/
 │   ├── components/
-│   │   ├── AppLayout.tsx            # Sidebar + header + layout shell
+│   │   ├── AppLayout.tsx            # Sidebar + header + layout shell; TooltipProvider + Toaster
 │   │   ├── StatusBadge.tsx          # Thai status pill component
-│   │   └── ui/                      # 45 shadcn/ui components
+│   │   ├── ProjectFormDialog.tsx    # Create/edit project Dialog form
+│   │   ├── EquipmentFormDialog.tsx  # Create/edit equipment Dialog form
+│   │   ├── DeleteConfirmDialog.tsx  # Generic delete confirmation Dialog
+│   │   └── ui/                      # 45+ shadcn/ui components incl. tooltip, hover-card, sonner
 │   ├── hooks/
 │   │   └── use-mobile.tsx           # useIsMobile() hook
 │   ├── lib/
-│   │   ├── api.ts                   # All Neon Data API fetch helpers
+│   │   ├── api.ts                   # All Neon Data API fetch helpers + types
 │   │   ├── mock-data.ts             # Static reference arrays + formatBaht
 │   │   └── utils.ts                 # cn() helper
 │   ├── routes/
 │   │   ├── __root.tsx               # HTML shell, NeonAuthUIProvider, QueryClientProvider
-│   │   ├── index.tsx                # Dashboard page (live data via TanStack Query)
+│   │   ├── index.tsx                # Dashboard page — charts, filters, animations, HoverCard, Toast
 │   │   ├── projects.tsx             # Project list page (server-side filter + pagination)
 │   │   ├── projects.$projectId.tsx  # Project detail page (status PATCH to Neon)
 │   │   ├── equipment.tsx            # Equipment list page
@@ -500,13 +560,22 @@ C:\Users\PC\Documents\Projects\Five-Year Local Development Strategy\
 │   ├── auth.ts                      # Neon Auth client (createAuthClient)
 │   ├── routeTree.gen.ts             # AUTO-GENERATED — do not edit
 │   ├── router.tsx                   # createRouter() + error boundary
-│   └── styles.css                   # TailwindCSS 4 + Neon Auth UI styles
+│   └── styles.css                   # TailwindCSS 4 + animation utilities + Neon Auth UI styles
 ├── scripts/
 │   ├── migrate.js                   # DDL migration (node scripts/migrate.js)
 │   ├── seed.js                      # Seed data from mock arrays (node scripts/seed.js)
-│   └── add-users.js                 # Create demo users via Neon Auth API (node scripts/add-users.js)
+│   ├── add-users.js                 # Create demo users via Neon Auth API
+│   ├── import-projects.cjs          # Full Excel import pipeline (548 projects, 33 sheets)
+│   ├── extract-textboxes.cjs        # Extracts 212 text box annotations from source workbook
+│   ├── seed-textboxes.js            # Seeds project_annotations, sheet_metadata, document_metadata
+│   ├── forensic-extract.cjs         # Workbook forensic analysis + report
+│   ├── sheet-inventory.cjs          # Sheet inventory tool
+│   └── lib/
+│       └── textbox-lookup.cjs       # Reusable Map<sheet, Map<row, annotations>> lookup
 ├── .env                             # VITE_NEON_AUTH_URL, VITE_NEON_DATA_API_URL (gitignored)
-├── package.json                     # npm scripts: dev, build, preview, lint, migrate, seed, add-users
+├── package.json                     # npm scripts: dev, build, preview, lint, migrate, seed,
+│                                    #   add-users, extract-textboxes, seed-textboxes, import-projects
+├── skills-lock.json                 # Windsurf installed skills manifest
 ├── vite.config.ts                   # @lovable.dev/vite-tanstack-config
 ├── tsconfig.json
 ├── components.json                  # shadcn/ui config
@@ -573,13 +642,13 @@ Both migration/seed scripts use the `pg` Node.js client with the direct PostgreS
 
 ### 11.1 Near-Term (v1.1)
 
-1. **Project CRUD** — Add create/edit/delete forms; call `POST /projects` and `DELETE /projects?id=eq.{id}` via Data API.
-2. **Functional Excel import** — Parse `.xlsx` server-side (or in a Cloudflare Worker) → upsert to Neon via the Data API or direct `pg` connection.
+1. **Project CRUD** — `ProjectFormDialog` exists; wire `POST /projects` and `DELETE /projects?id=eq.{id}` via Data API.
+2. **Functional Excel import** — `scripts/import-projects.cjs` pipeline exists for Node.js; wire to UI upload handler on `/import` page.
 3. **Replace static filter dropdowns** — Replace `strategies`, `tactics`, `plans` arrays from `mock-data.ts` with `useQuery(apiGetStrategies)` etc.
 4. **CORS for production** — Configure Neon Data API allowed origins before deploying.
 5. **Role-based access control** — Gate `/admin/users` and mutation endpoints to `admin` role only.
 
-### 11.2 Mid-Term (v1.1)
+### 11.2 Mid-Term (v1.2)
 
 6. **Per-year budget editing** — Inline-editable budget rows on the project detail page.
 7. **Excel export** — Filtered project list and dashboard export via SheetJS.
@@ -603,6 +672,9 @@ When modifying this system:
 - **Never commit `.env`.** It contains the Neon Data API URL. Use environment variables in CI/CD.
 - **Keep component additions inside `src/components/`.** Add new shadcn/ui components via `npx shadcn@latest add <component>` to keep the `components.json` manifest in sync.
 - **Do not add duplicate Vite plugins.** `@lovable.dev/vite-tanstack-config` already bundles TanStack Start, React, Tailwind, tsconfig-paths, and Cloudflare plugins. See the comment at the top of `vite.config.ts`.
+- **All hooks in `DashboardPage` MUST be called before any early return.** The `useCountUp` hook and all `useMemo` calls must precede the `if (isLoading)` and `if (error)` guard blocks. Violating this causes a React "change in order of Hooks" crash.
+- **Animate only `transform` and `opacity`.** Never animate `width`, `height`, `top`, `left`, or use `transition: all`. See `src/styles.css` keyframes for approved patterns.
+- **Recharts `Tooltip` must be aliased** as `ReTooltip` in `index.tsx` to avoid naming conflict with Radix UI `Tooltip` (imported as `TipRoot`).
 
 ---
 
@@ -614,6 +686,7 @@ When modifying this system:
 | 2.0 | 2026-04-21 | System analyst (AI) | Full rewrite to reflect actual codebase: TanStack Start + Vite 7 + React 19 + TailwindCSS 4 + mock-data frontend-only app. Corrected all outdated Express/SQLite/`webapp/` references. Updated file map, technology table, data types, routes, and implementation status. |
 | 3.0 | 2026-04-21 | System analyst (AI) | Backend integration: Neon PostgreSQL schema + seed data; Neon Auth (Better Auth); Neon Data API (PostgREST) wired via `src/lib/api.ts`; TanStack Query in all pages; route protection in `AppLayout`; `scripts/migrate.js` and `scripts/seed.js` added. Updated architecture diagram, FR table, tech stack, file map. |
 | 3.1 | 2026-04-21 | System analyst (AI) | Added user management: `/admin/users` page (list/create/delete), `apiGetUsers`/`apiCreateUser`/`apiDeleteUser` in `api.ts`, `scripts/add-users.js`, `npm run add-users`. Fixed hydration mismatch (`suppressHydrationWarning` on `<html>`). Added `enabled: !!session` gate to all `useQuery` calls to prevent unauthenticated API requests. Updated FR table (FR-16), routes, file map, nav, and deployment sections. |
+| 4.0 | 2026-04-23 | System analyst (AI) | **UX Enhancement release.** Added: interactive chart filtering (click any bar/slice/row → filters project table), multi-sort controls on all dashboard sections, strategy progress stacked bar chart, radar chart, Treemap, HoverCard on strategy rows, Radix Tooltip on KPI + stat cards, Sonner toast notifications (filter/copy actions), `useCountUp` animated KPI hook, micro-animation CSS utilities (fade-up, hover-lift, press-effect, stagger delays), `TooltipProvider` + `Toaster` in `AppLayout`. Added `ProjectFormDialog`, `EquipmentFormDialog`, `DeleteConfirmDialog` components. Added Excel import pipeline scripts (`import-projects.cjs`, `extract-textboxes.cjs`, `seed-textboxes.js`) + forensic analysis. Updated all section 7 subsections, FR-01, NFR-09/10, file map, guardrails, and change log. Fixed Rules of Hooks violation (moved `useCountUp` before early returns). |
 
 ---
 
