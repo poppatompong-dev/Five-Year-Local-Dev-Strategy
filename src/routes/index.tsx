@@ -1,15 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import React from "react";
 import { toast } from "sonner";
 import { Tooltip as TipRoot, TooltipContent as TipContent, TooltipTrigger as TipTrigger } from "@/components/ui/tooltip";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AppLayout } from "@/components/AppLayout";
 import { StatusBadge } from "@/components/StatusBadge";
-import { formatBaht, STATUS_COLOR, type Status } from "@/lib/mock-data";
-import { apiGetDashboard, apiGetProjects } from "@/lib/api";
-import type { ProjectRow, StrategyProgress } from "@/lib/api";
+import { ProjectFormDialog } from "@/components/ProjectFormDialog";
+import { formatBaht, STATUS_COLOR, YEARS, type Status } from "@/lib/mock-data";
+import { apiGetDashboard, apiGetProjects, apiGetProject, apiUpdateProject, apiPatchProjectStatus } from "@/lib/api";
+import type { ProjectRow, StrategyProgress, ProjectCreateInput } from "@/lib/api";
 import { authClient } from "@/auth";
 import {
   ResponsiveContainer,
@@ -83,6 +85,14 @@ export const Route = createFileRoute("/")({
 type FilterStatus   = Status | null;
 type FilterStrategy = number | null;
 type FilterYear     = number | null;
+type SelectedProject = number | null;
+
+const STATUS_LABEL: Record<Status, string> = {
+  planning: "วางแผน",
+  in_progress: "ดำเนินการ",
+  completed: "เสร็จสิ้น",
+  cancelled: "ยกเลิก",
+};
 
 type SortDir = "asc" | "desc";
 
@@ -119,6 +129,7 @@ function DashboardPage() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>(null);
   const [filterStrategy, setFilterStrategy] = useState<FilterStrategy>(null);
   const [filterYear, setFilterYear] = useState<FilterYear>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<SelectedProject>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
   // ── Sort state ────────────────────────────────────────────────────────────
@@ -449,7 +460,7 @@ function DashboardPage() {
               }
             />
             <div className="h-[280px] mt-4">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={280}>
                 <ComposedChart
                   data={yearSorted.map((d) => ({ ...d, totalM: +(d.total / 1_000_000).toFixed(2) }))}
                   margin={{ left: -10, right: 20, top: 10 }}
@@ -507,7 +518,7 @@ function DashboardPage() {
           <Card>
             <CardHeader title="สัดส่วนสถานะโครงการ" subtitle={`คลิกส่วนใดก็ได้เพื่อกรอง · รวม ${data.totalProjects.toLocaleString("th-TH")} โครงการ`} />
             <div className="relative h-[280px] mt-2">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
                   <Pie
                     data={data.byStatus}
@@ -661,7 +672,7 @@ function DashboardPage() {
           <Card>
             <CardHeader title="Treemap งบประมาณ" subtitle="คลิกช่องเพื่อกรองยุทธศาสตร์" />
             <div className="h-[320px] mt-4">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={320}>
                 <Treemap
                   data={data.byStrategy.map((s, i) => ({
                     name: s.name, size: Math.round(s.total_budget / 1_000_000),
@@ -685,7 +696,7 @@ function DashboardPage() {
           <Card>
             <CardHeader title="Radar เปรียบเทียบยุทธศาสตร์" subtitle="สัดส่วนโครงการ vs งบประมาณ (% เทียบยุทธศาสตร์สูงสุด)" />
             <div className="h-[300px] mt-4">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={300}>
                 <RadarChart
                   data={(() => {
                     const maxProj   = Math.max(...data.byStrategy.map((s) => s.project_count));
@@ -697,8 +708,8 @@ function DashboardPage() {
                       งบประมาณ: Math.round((s.total_budget / maxBudget) * 100),
                     }));
                   })()}
-                  outerRadius={90}
-                  margin={{ top: 24, right: 65, bottom: 24, left: 65 }}
+                  outerRadius={80}
+                  margin={{ top: 30, right: 90, bottom: 30, left: 90 }}
                 >
                   <PolarGrid stroke="oklch(0.88 0.02 150)" />
                   <PolarAngleAxis dataKey="subject" tick={CustomPolarAngleTick} />
@@ -792,22 +803,31 @@ function DashboardPage() {
                     </tr>
                   )}
                   {tableSorted.map((p, i) => (
-                    <tr key={p.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors group">
+                    <tr
+                      key={p.id}
+                      className={[
+                        "border-b border-border/50 transition-colors group cursor-pointer",
+                        selectedProjectId === p.id
+                          ? "bg-primary/8 ring-1 ring-inset ring-primary/20"
+                          : "hover:bg-muted/40",
+                      ].join(" ")}
+                      onClick={(e) => {
+                        // Don't open sheet when clicking the quick-menu
+                        if ((e.target as HTMLElement).closest("[data-quick-menu]")) return;
+                        setSelectedProjectId(p.id);
+                      }}
+                    >
                       <td className="px-3 py-3 text-muted-foreground tabular text-xs">{i + 1}</td>
                       <td className="px-3 py-3 max-w-[220px]">
-                        <Link
-                          to="/projects/$projectId"
-                          params={{ projectId: String(p.id) }}
-                          className="font-medium line-clamp-2 hover:text-primary transition-colors"
-                        >
+                        <span className="font-medium line-clamp-2 group-hover:text-primary transition-colors">
                           {p.name}
-                        </Link>
+                        </span>
                       </td>
                       <td className="px-3 py-3 hidden md:table-cell text-muted-foreground text-xs max-w-[140px] truncate">{p.department ?? "—"}</td>
                       <td className="px-3 py-3 hidden lg:table-cell text-xs text-muted-foreground max-w-[160px] truncate" title={p.strategy_name ?? undefined}>{p.strategy_name ?? "—"}</td>
                       <td className="px-3 py-3 text-right tabular text-xs hidden sm:table-cell font-medium">{formatBaht(p.total_budget, { compact: true })}</td>
                       <td className="px-3 py-3"><StatusBadge status={p.status} /></td>
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-3 py-3 text-center" data-quick-menu>
                         <QuickMenu projectId={p.id} projectName={p.name} />
                       </td>
                     </tr>
@@ -912,7 +932,240 @@ function DashboardPage() {
         </section>
 
       </div>
+
+      {/* Project Detail Sheet */}
+      <ProjectDetailSheet
+        projectId={selectedProjectId}
+        onClose={() => setSelectedProjectId(null)}
+      />
+
+      {/* Floating clear-filter button — visible whenever any filter is active */}
+      {hasFilter && (
+        <button
+          onClick={clearFilters}
+          title="ล้างตัวกรองทั้งหมด"
+          className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-3 text-sm font-semibold shadow-lg hover:shadow-xl hover:bg-primary/90 transition-all press-effect animate-in fade-in slide-in-from-bottom-4 duration-300"
+        >
+          <X className="size-4" />
+          ล้างตัวกรอง
+          {filterLabel && (
+            <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-medium ml-1">
+              {filterLabel}
+            </span>
+          )}
+        </button>
+      )}
     </AppLayout>
+  );
+}
+
+
+// ─── Project Detail Sheet ─────────────────────────────────────────────────────
+function ProjectDetailSheet({ projectId, onClose }: { projectId: number | null; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [editOpen, setEditOpen] = useState(false);
+
+  const { data: project, isLoading } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: () => apiGetProject(projectId!),
+    enabled: projectId !== null,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: ProjectCreateInput) => apiUpdateProject(projectId!, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["project", projectId] });
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["projects-filtered"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      setEditOpen(false);
+      toast.success("บันทึกการแก้ไขเรียบร้อยแล้ว", { icon: "✅" });
+    },
+  });
+
+  const patchStatus = useMutation({
+    mutationFn: (s: Status) => apiPatchProjectStatus(projectId!, s),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["project", projectId] });
+      qc.invalidateQueries({ queryKey: ["projects-filtered"] });
+    },
+  });
+
+  return (
+    <>
+      <Sheet open={projectId !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-lg p-0 flex flex-col"
+        >
+          {/* ── Fixed header ─────────────────────────────────── */}
+          <div className="shrink-0 bg-background/95 backdrop-blur border-b border-border px-6 py-4">
+            <SheetHeader>
+              <SheetTitle className="text-base font-semibold pr-6 leading-snug">
+                {isLoading ? "กำลังโหลด..." : (project?.name ?? "รายละเอียดโครงการ")}
+              </SheetTitle>
+            </SheetHeader>
+          </div>
+
+          {/* ── Scrollable body ──────────────────────────────── */}
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+            {isLoading && (
+              <div className="flex items-center justify-center py-16">
+                <div className="size-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+
+            {project && (
+              <>
+                {/* Status + budget hero */}
+                <div className="rounded-2xl bg-emerald-gradient p-5 text-primary-foreground">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-xs text-primary-foreground/70 mb-1">สถานะปัจจุบัน</div>
+                      <StatusBadge status={project.status} />
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-primary-foreground/70">งบประมาณรวม</div>
+                      <div className="text-xl font-bold tabular mt-0.5">
+                        {formatBaht(project.total_budget, { compact: true })}
+                      </div>
+                      <div className="text-[11px] text-primary-foreground/60">บาท</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Hierarchy breadcrumb */}
+                {project.strategy && (
+                  <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground/80">{project.strategy.name}</span>
+                    {project.tactic && (
+                      <>
+                        <span>›</span>
+                        <span>{project.tactic.code}: {project.tactic.name}</span>
+                      </>
+                    )}
+                    {project.plan && (
+                      <>
+                        <span>›</span>
+                        <span>{project.plan.name}</span>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Meta info */}
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: "หน่วยงาน", value: project.department },
+                    { label: "แหล่งข้อมูล", value: project.source_sheet },
+                    { label: "เพิ่มเมื่อ", value: new Date(project.created_at).toLocaleDateString("th-TH", { year: "numeric", month: "short", day: "numeric" }) },
+                    { label: "รหัสโครงการ", value: `#${project.id}` },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="rounded-xl bg-muted/50 px-3 py-2.5">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{label}</div>
+                      <div className="text-sm font-medium truncate">{value ?? "—"}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Budget by year */}
+                <div className="rounded-xl border border-border p-4">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">งบประมาณรายปี</div>
+                  <div className="space-y-2">
+                    {YEARS.map((y) => {
+                      const amt = project.budgets[y] || 0;
+                      const max = Math.max(...YEARS.map(yr => project.budgets[yr] || 0), 1);
+                      const pct = (amt / max) * 100;
+                      return (
+                        <div key={y}>
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="text-muted-foreground">ปี {y}</span>
+                            <span className="font-medium tabular">{amt > 0 ? formatBaht(amt, { compact: true }) : "—"}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                            <div className="h-full rounded-full bg-emerald-gradient transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Details */}
+                {([
+                  { label: "วัตถุประสงค์", value: project.objective },
+                  { label: "เป้าหมาย", value: project.target },
+                  { label: "ตัวชี้วัด (KPI)", value: project.kpi },
+                  { label: "ผลที่คาดว่าจะได้รับ", value: project.expected_result },
+                ] as const).filter(({ value }) => value).map(({ label, value }) => (
+                  <div key={label} className="rounded-xl border border-border p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{label}</div>
+                    <p className="text-sm leading-relaxed text-foreground/85">{value}</p>
+                  </div>
+                ))}
+
+                {/* Status stepper */}
+                <div className="rounded-xl border border-border p-4">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">เปลี่ยนสถานะ</div>
+                  <div className="flex flex-wrap gap-2">
+                    {(["planning", "in_progress", "completed", "cancelled"] as Status[]).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => {
+                          patchStatus.mutate(s);
+                          toast.success(`เปลี่ยนสถานะเป็น "${STATUS_LABEL[s]}" แล้ว`, { icon: "✅" });
+                        }}
+                        disabled={patchStatus.isPending || project.status === s}
+                        className={[
+                          "text-xs px-3 py-1.5 rounded-lg border font-medium transition-all",
+                          project.status === s
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background hover:bg-muted border-border text-foreground/70",
+                        ].join(" ")}
+                      >
+                        {STATUS_LABEL[s]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* ── Fixed footer ─────────────────────────────────── */}
+          {project && (
+            <div className="shrink-0 bg-background/95 backdrop-blur border-t border-border px-6 py-4 flex items-center gap-3">
+              <button
+                onClick={() => setEditOpen(true)}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground px-4 py-2.5 text-sm font-semibold hover:bg-primary/90 transition press-effect"
+              >
+                <Pencil className="size-3.5" />
+                แก้ไขโครงการ
+              </button>
+              <Link
+                to="/projects/$projectId"
+                params={{ projectId: String(project.id) }}
+                className="flex items-center justify-center gap-2 rounded-xl border border-border bg-background hover:bg-muted px-4 py-2.5 text-sm font-medium transition"
+              >
+                <ExternalLink className="size-3.5" />
+                ดูเต็มหน้า
+              </Link>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Edit dialog */}
+      {project && (
+        <ProjectFormDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          onSubmit={async (data) => { await updateMutation.mutateAsync(data); }}
+          initialData={project}
+          isSubmitting={updateMutation.isPending}
+        />
+      )}
+    </>
   );
 }
 
@@ -1055,19 +1308,66 @@ function TreemapCell(props: any) {
   );
 }
 
-function CustomPolarAngleTick({ x, y, payload, textAnchor }: any) {
-  const text = String(payload?.value ?? "");
-  const charsPerLine = 8;
+/** Count Thai grapheme clusters (not raw code-point length) */
+function graphemeLen(s: string): number {
+  return Array.from(new Intl.Segmenter("th", { granularity: "grapheme" }).segment(s)).length;
+}
+
+/**
+ * Wrap Thai text by word boundary (Intl.Segmenter "word"), keeping
+ * each line ≤ maxPerLine grapheme clusters.  Long single words are
+ * left intact on one line (no mid-word break).
+ */
+function wrapThai(text: string, maxPerLine: number): string[] {
+  const words = Array.from(
+    new Intl.Segmenter("th", { granularity: "word" }).segment(text),
+  ).map((s) => s.segment);
+
   const lines: string[] = [];
-  for (let i = 0; i < text.length; i += charsPerLine) {
-    lines.push(text.slice(i, i + charsPerLine));
+  let current = "";
+  let currentLen = 0;
+
+  for (const word of words) {
+    const wLen = graphemeLen(word);
+    if (currentLen === 0) {
+      current = word;
+      currentLen = wLen;
+    } else if (currentLen + wLen <= maxPerLine) {
+      current += word;
+      currentLen += wLen;
+    } else {
+      lines.push(current);
+      current = word;
+      currentLen = wLen;
+    }
   }
-  const lineH = 12;
+  if (current.length > 0) lines.push(current);
+  return lines.length > 0 ? lines : [text];
+}
+
+function CustomPolarAngleTick({ x, y, cx, payload, textAnchor }: any) {
+  const text = String(payload?.value ?? "");
+
+  // Side labels get narrower lines; top/bottom labels get wider
+  const dx = x - (cx ?? 0);
+  const isCenter = Math.abs(dx) < 20;
+  const maxPerLine = isCenter ? 14 : 9;
+
+  const lines = wrapThai(text, maxPerLine);
+  const lineH = 14;
   const startY = y - ((lines.length - 1) * lineH) / 2;
+
   return (
-    <text textAnchor={textAnchor ?? "middle"} fontSize={9} fill="oklch(0.45 0.02 160)">
+    <text
+      textAnchor={textAnchor ?? "middle"}
+      fontSize={11}
+      fill="oklch(0.35 0.03 160)"
+      fontWeight={500}
+    >
       {lines.map((line, i) => (
-        <tspan key={i} x={x} y={startY + i * lineH}>{line}</tspan>
+        <tspan key={i} x={x} y={startY + i * lineH}>
+          {line}
+        </tspan>
       ))}
     </text>
   );
@@ -1240,7 +1540,7 @@ function ProgressChart({
     <div className="mt-5 space-y-4">
       {/* Stacked 100% horizontal bar chart */}
       <div className="h-[320px]">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={320}>
           <BarChart
             data={chartData}
             layout="vertical"

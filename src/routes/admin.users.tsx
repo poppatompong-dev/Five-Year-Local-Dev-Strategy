@@ -55,9 +55,20 @@ function UsersPage() {
 
         {error && (
           <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
-            ไม่สามารถโหลดรายชื่อผู้ใช้ได้ — อาจต้องตรวจสอบสิทธิ์ Data API: {String(error)}
+            ไม่สามารถโหลดรายชื่อผู้ใช้ได้: {String(error)}
           </div>
         )}
+
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 px-4 py-3 text-sm text-amber-900 dark:text-amber-200 flex items-start gap-2">
+          <ShieldOff className="size-4 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium">รายชื่อนี้แสดงผู้ใช้ที่เพิ่มผ่านหน้านี้เท่านั้น</p>
+            <p className="text-xs mt-0.5 text-amber-800/80 dark:text-amber-300/70">
+              Neon Auth (Better Auth) ยังไม่ได้ expose admin API สำหรับรายชื่อผู้ใช้ทั้งหมด —
+              การลบในหน้านี้จะเอาออกจากรายการเท่านั้น ไม่ได้ลบบัญชีในระบบยืนยันตัวตน
+            </p>
+          </div>
+        </div>
 
         <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
           {isLoading ? (
@@ -172,8 +183,8 @@ function UsersPage() {
 // ---------------------------------------------------------------------------
 
 function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [username, setUsername] = useState("");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
@@ -184,15 +195,40 @@ function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
     onError: (e: Error) => setError(e.message),
   });
 
+  function suggestPassword() {
+    const base = username.trim() || "user";
+    const suffix = Math.random().toString(36).slice(2, 6);
+    setPassword(`${base}${suffix}`.slice(0, 20).padEnd(8, "0"));
+    setShowPw(true);
+  }
+
   function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault();
     setError("");
-    if (password.length < 8) {
-      setError("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร");
+    const u = username.trim();
+    if (!u) {
+      setError("กรุณาระบุชื่อผู้ใช้");
       return;
     }
-    createMutation.mutate({ name, email, password });
+    if (password.length < 8) {
+      setError("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร (ข้อกำหนดของระบบยืนยันตัวตน)");
+      return;
+    }
+    // username "pop" → email "pop@nakhonsawan.local" (handled in apiCreateUser).
+    // If user typed a real email, it's kept as-is.
+    createMutation.mutate({
+      name: name.trim() || u,
+      email: u,
+      password,
+    });
   }
+
+  const isEmail = username.includes("@");
+  const previewEmail = isEmail
+    ? username.trim()
+    : username.trim()
+    ? `${username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, "")}@nakhonsawan.local`
+    : "";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
@@ -205,49 +241,69 @@ function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Field label="ชื่อ-นามสกุล">
+          <Field label="ชื่อผู้ใช้ (username)">
             <input
               required
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="เช่น pop หรือ pop@domain.com"
+              autoComplete="off"
+              autoCapitalize="none"
+              className="input-base"
+            />
+            {previewEmail && !isEmail && (
+              <p className="text-[11px] text-muted-foreground mt-1">
+                ระบบจะใช้เป็นอีเมลภายใน: <span className="font-mono text-foreground/80">{previewEmail}</span>
+              </p>
+            )}
+          </Field>
+
+          <Field label="ชื่อที่แสดง (ไม่บังคับ)">
+            <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="ชื่อ นามสกุล"
+              placeholder="ชื่อ-นามสกุล หรือปล่อยว่างเพื่อใช้ชื่อผู้ใช้"
               className="input-base"
             />
           </Field>
 
-          <Field label="อีเมล">
-            <input
-              required
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@example.com"
-              className="input-base"
-            />
-          </Field>
-
-          <Field label="รหัสผ่าน (อย่างน้อย 8 ตัวอักษร)">
+          <Field label="รหัสผ่าน">
             <div className="relative">
               <input
                 required
                 type={showPw ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="input-base pr-10"
+                placeholder="อย่างน้อย 8 ตัวอักษร"
+                minLength={8}
+                className="input-base pr-20"
               />
-              <button
-                type="button"
-                onClick={() => setShowPw((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-              >
-                {showPw ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              </button>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setShowPw((v) => !v)}
+                  className="size-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground"
+                  title={showPw ? "ซ่อน" : "แสดง"}
+                >
+                  {showPw ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={suggestPassword}
+                  className="text-[10px] px-2 py-1 rounded-md bg-primary-soft text-primary font-medium hover:bg-primary-soft/80"
+                  title="สุ่มรหัสผ่านจากชื่อผู้ใช้"
+                >
+                  สุ่ม
+                </button>
+              </div>
             </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              ขั้นต่ำ 8 ตัว · กดปุ่ม "สุ่ม" เพื่อให้ระบบช่วยตั้งรหัสผ่าน
+            </p>
           </Field>
 
           {error && (
-            <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{error}</p>
+            <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg whitespace-pre-line">{error}</p>
           )}
 
           <div className="flex gap-3 pt-1">

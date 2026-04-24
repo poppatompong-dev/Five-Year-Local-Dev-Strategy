@@ -419,7 +419,7 @@ function ProjectDetailPage() {
                 <p className="text-xs text-muted-foreground mt-0.5">การจัดสรรงบประมาณตลอด 5 ปีงบประมาณ</p>
               </div>
               <div className="h-[260px] mt-4">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={budgetData} margin={{ left: -10, right: 10, top: 10 }}>
                     <defs>
                       <linearGradient id="budgetBar" x1="0" y1="0" x2="0" y2="1">
