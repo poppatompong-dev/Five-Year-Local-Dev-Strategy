@@ -286,8 +286,13 @@ export async function apiCreateUser(data: {
     if (code === "VALIDATION_ERROR") {
       throw new Error(`ข้อมูลไม่ถูกต้อง: ${msg}`);
     }
-    if (code === "USER_ALREADY_EXISTS" || res.status === 409) {
-      throw new Error("ชื่อผู้ใช้/อีเมลนี้ถูกใช้งานแล้ว");
+    if (
+      code === "USER_ALREADY_EXISTS" ||
+      code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL" ||
+      res.status === 409 ||
+      res.status === 422
+    ) {
+      throw new Error("ชื่อผู้ใช้นี้ถูกใช้งานแล้ว กรุณาเลือกชื่ออื่น");
     }
     throw new Error(msg);
   }
