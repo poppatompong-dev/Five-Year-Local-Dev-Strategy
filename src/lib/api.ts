@@ -257,7 +257,7 @@ export async function apiCreateUser(data: {
   const rawEmail = data.email.trim();
   const email = rawEmail.includes("@")
     ? rawEmail
-    : `${rawEmail.toLowerCase().replace(/[^a-z0-9._-]/g, "")}@nakhonsawan.local`;
+    : `${rawEmail.toLowerCase().replace(/[^a-z0-9._-]/g, "")}@nmt.local`;
 
   const res = await fetch(`${AUTH_BASE}/sign-up/email`, {
     method: "POST",

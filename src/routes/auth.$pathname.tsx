@@ -35,9 +35,9 @@ function AuthPage() {
     // Convert username to synthetic email for Better Auth backend
     const email = username.includes("@")
       ? username
-      : `${username.toLowerCase().replace(/[^a-z0-9._-]/g, "")}@nakhonsawan.local`;
+      : `${username.toLowerCase().replace(/[^a-z0-9._-]/g, "")}@nmt.local`;
 
-    const result = await authClient.signIn.credentials({
+    const result = await authClient.signIn.email({
       email,
       password,
     });
