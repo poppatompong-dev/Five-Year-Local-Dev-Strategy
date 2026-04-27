@@ -275,10 +275,11 @@ export async function apiCreateUser(data: {
       callbackURL: window.location.origin,
     }),
   });
+  // Parse body once — stream can only be read once
+  const resBody = await res.json().catch(() => ({})) as any;
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    const code = (body as any)?.code;
-    const msg = (body as any)?.message ?? `HTTP ${res.status}`;
+    const code = resBody?.code;
+    const msg = resBody?.message ?? `HTTP ${res.status}`;
     // Friendlier Thai errors for the most common validation failures
     if (code === "PASSWORD_TOO_SHORT") {
       throw new Error("รหัสผ่านสั้นเกินไป — ต้องมีอย่างน้อย 8 ตัวอักษร");
@@ -298,8 +299,7 @@ export async function apiCreateUser(data: {
   }
 
   // Mirror the new user into the local admin list so the UI can show it.
-  const body = (await res.json().catch(() => ({}))) as any;
-  const u = body?.user;
+  const u = resBody?.user;
   if (u?.id) {
     const list = readLocalUsers();
     if (!list.find((x) => x.id === u.id)) {
