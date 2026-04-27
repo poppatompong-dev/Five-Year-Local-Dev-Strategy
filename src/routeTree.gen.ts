@@ -14,7 +14,6 @@ import { Route as ImportRouteImport } from './routes/import'
 import { Route as EquipmentRouteImport } from './routes/equipment'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
-import { Route as AuthPathnameRouteImport } from './routes/auth.$pathname'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminAuditRouteImport } from './routes/admin.audit'
 import { Route as AccountPathnameRouteImport } from './routes/account.$pathname'
@@ -44,11 +43,6 @@ const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   path: '/$projectId',
   getParentRoute: () => ProjectsRoute,
 } as any)
-const AuthPathnameRoute = AuthPathnameRouteImport.update({
-  id: '/auth/$pathname',
-  path: '/auth/$pathname',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/admin/users',
   path: '/admin/users',
@@ -73,7 +67,6 @@ export interface FileRoutesByFullPath {
   '/account/$pathname': typeof AccountPathnameRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/users': typeof AdminUsersRoute
-  '/auth/$pathname': typeof AuthPathnameRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
 }
 export interface FileRoutesByTo {
@@ -84,7 +77,6 @@ export interface FileRoutesByTo {
   '/account/$pathname': typeof AccountPathnameRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/users': typeof AdminUsersRoute
-  '/auth/$pathname': typeof AuthPathnameRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
 }
 export interface FileRoutesById {
@@ -96,7 +88,6 @@ export interface FileRoutesById {
   '/account/$pathname': typeof AccountPathnameRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/users': typeof AdminUsersRoute
-  '/auth/$pathname': typeof AuthPathnameRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
 }
 export interface FileRouteTypes {
@@ -109,7 +100,6 @@ export interface FileRouteTypes {
     | '/account/$pathname'
     | '/admin/audit'
     | '/admin/users'
-    | '/auth/$pathname'
     | '/projects/$projectId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -120,7 +110,6 @@ export interface FileRouteTypes {
     | '/account/$pathname'
     | '/admin/audit'
     | '/admin/users'
-    | '/auth/$pathname'
     | '/projects/$projectId'
   id:
     | '__root__'
@@ -131,7 +120,6 @@ export interface FileRouteTypes {
     | '/account/$pathname'
     | '/admin/audit'
     | '/admin/users'
-    | '/auth/$pathname'
     | '/projects/$projectId'
   fileRoutesById: FileRoutesById
 }
@@ -143,7 +131,6 @@ export interface RootRouteChildren {
   AccountPathnameRoute: typeof AccountPathnameRoute
   AdminAuditRoute: typeof AdminAuditRoute
   AdminUsersRoute: typeof AdminUsersRoute
-  AuthPathnameRoute: typeof AuthPathnameRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -182,13 +169,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectId'
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof ProjectsRoute
-    }
-    '/auth/$pathname': {
-      id: '/auth/$pathname'
-      path: '/auth/$pathname'
-      fullPath: '/auth/$pathname'
-      preLoaderRoute: typeof AuthPathnameRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/admin/users': {
       id: '/admin/users'
@@ -234,7 +214,6 @@ const rootRouteChildren: RootRouteChildren = {
   AccountPathnameRoute: AccountPathnameRoute,
   AdminAuditRoute: AdminAuditRoute,
   AdminUsersRoute: AdminUsersRoute,
-  AuthPathnameRoute: AuthPathnameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
