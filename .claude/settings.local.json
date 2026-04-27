@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080/)",
+      "Bash(curl -s \"https://ep-plain-darkness-ao06zq83.apirest.c-2.ap-southeast-1.aws.neon.tech/neondb/rest/v1/\")",
+      "Bash(curl -s -X POST \"https://ep-plain-darkness-ao06zq83.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth/admin/list-users\" -H \"Content-Type: application/json\")",
+      "Bash(curl -s -X POST \"https://ep-plain-darkness-ao06zq83.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth/admin/list-users\" -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(curl -sv -X POST \"https://ep-plain-darkness-ao06zq83.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth/admin/list-users\" -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(curl -sv -X POST \"https://ep-plain-darkness-ao06zq83.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth/admin/create-user\" -H \"Content-Type: application/json\" -d '{\"name\":\"test\",\"email\":\"test@local\",\"password\":\"test\"}')",
+      "Bash(curl -sv -X POST \"https://ep-plain-darkness-ao06zq83.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth/sign-up/email\" -H \"Content-Type: application/json\" -H \"Origin: http://localhost:8080\" -d '{\"name\":\"test\",\"email\":\"test@local\",\"password\":\"test\"}')",
+      "Bash(curl -sv -X POST \"https://ep-plain-darkness-ao06zq83.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth/sign-up/email\" -H \"Content-Type: application/json\" -H \"Origin: http://localhost:8080\" -d '{\"name\":\"pop\",\"email\":\"pop@nakhonsawan.local\",\"password\":\"pop\"}')",
+      "Bash(curl -sv -X POST \"https://ep-plain-darkness-ao06zq83.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth/sign-up/email\" -H \"Content-Type: application/json\" -H \"Origin: http://localhost:8080\" -d '{\"name\":\"pop\",\"email\":\"pop@nakhonsawan.local\",\"password\":\"pop12345\"}')",
+      "Bash(curl -s 'https://ep-plain-darkness-ao06zq83.apirest.c-2.ap-southeast-1.aws.neon.tech/neondb/rest/v1/user?order=created_at.asc' -H 'Authorization: Bearer HXYw6yENUNW0SPbZ677tV2oV78ZqeVx3')",
+      "Bash(curl -s https://ep-plain-darkness-ao06zq83.apirest.c-2.ap-southeast-1.aws.neon.tech/neondb/rest/v1/ -H 'Authorization: Bearer HXYw6yENUNW0SPbZ677tV2oV78ZqeVx3')",
+      "Bash(curl -s \"https://ep-plain-darkness-ao06zq83.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth/ok\")",
+      "Bash(curl -s -X POST \"https://ep-plain-darkness-ao06zq83.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth/sign-in/email\" -H \"Content-Type: application/json\" -H \"Origin: http://localhost:8080\" -d '{\"email\":\"pop@nakhonsawan.local\",\"password\":\"pop12345\"}')",
+      "Bash(curl -s https://ep-plain-darkness-ao06zq83.apirest.c-2.ap-southeast-1.aws.neon.tech/neondb/rest/v1/users_sync -H 'Authorization: Bearer Ty5lmJ6LdTRKJrizzNfLfDCPUxscf0BC')",
+      "Bash(curl -s 'https://ep-plain-darkness-ao06zq83.apirest.c-2.ap-southeast-1.aws.neon.tech/neondb/rest/v1/projects?select=id&limit=1' -H 'Authorization: Bearer Ty5lmJ6LdTRKJrizzNfLfDCPUxscf0BC')",
+      "Bash(curl -s https://ep-plain-darkness-ao06zq83.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth/token -H 'Cookie: __Secure-neon-auth.session_token=Ty5lmJ6LdTRKJrizzNfLfDCPUxscf0BC' -H 'Origin: http://localhost:8080')",
+      "Bash(curl -s -X POST \"https://ep-plain-darkness-ao06zq83.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth/token\" -H \"Content-Type: application/json\" -H \"Origin: http://localhost:8080\" -H \"Cookie: __Secure-neon-auth.session_token=Ty5lmJ6LdTRKJrizzNfLfDCPUxscf0BC\" -d '{}')",
+      "Bash(git add *)",
+      "Bash(git commit -m 'fix: chart warnings, dialog aria, row click, filter UX & user management *)",
+      "Bash(git push *)"
+    ]
+  }
+}
