@@ -197,8 +197,8 @@ function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
 
   function suggestPassword() {
     const base = username.trim() || "user";
-    const suffix = Math.random().toString(36).slice(2, 6);
-    setPassword(`${base}${suffix}`.slice(0, 20).padEnd(8, "0"));
+    const suffix = Math.random().toString(36).slice(2, 4);
+    setPassword(`${base}${suffix}`.slice(0, 20));
     setShowPw(true);
   }
 
@@ -210,8 +210,8 @@ function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
       setError("กรุณาระบุชื่อผู้ใช้");
       return;
     }
-    if (password.length < 8) {
-      setError("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร (ข้อกำหนดของระบบยืนยันตัวตน)");
+    if (password.length < 3) {
+      setError("รหัสผ่านต้องมีอย่างน้อย 3 ตัวอักษร");
       return;
     }
     // username "pop" → email "pop@nakhonsawan.local" (handled in apiCreateUser).
@@ -274,8 +274,8 @@ function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
                 type={showPw ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="อย่างน้อย 8 ตัวอักษร"
-                minLength={8}
+                placeholder="อย่างน้อย 3 ตัวอักษร"
+                minLength={3}
                 className="input-base pr-20"
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -298,7 +298,7 @@ function AddUserModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: 
               </div>
             </div>
             <p className="text-[11px] text-muted-foreground mt-1">
-              ขั้นต่ำ 8 ตัว · กดปุ่ม "สุ่ม" เพื่อให้ระบบช่วยตั้งรหัสผ่าน
+              ขั้นต่ำ 3 ตัว · กดปุ่ม "สุ่ม" เพื่อให้ระบบช่วยตั้งรหัสผ่าน
             </p>
           </Field>
 

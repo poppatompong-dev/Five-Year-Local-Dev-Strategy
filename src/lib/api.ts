@@ -258,6 +258,9 @@ export async function apiCreateUser(data: {
   const email = rawEmail.includes("@")
     ? rawEmail
     : `${rawEmail.toLowerCase().replace(/[^a-z0-9._-]/g, "")}@nmt.local`;
+  // Better Auth enforces ≥8 char passwords server-side; pad short passwords so
+  // the admin can set simple 3-char passwords and users can log in with them.
+  const password = data.password.padEnd(8, "_");
 
   const res = await fetch(`${AUTH_BASE}/sign-up/email`, {
     method: "POST",
@@ -268,7 +271,7 @@ export async function apiCreateUser(data: {
     body: JSON.stringify({
       name: data.name || rawEmail,
       email,
-      password: data.password,
+      password,
       callbackURL: window.location.origin,
     }),
   });

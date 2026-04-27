@@ -37,9 +37,10 @@ function AuthPage() {
       ? username
       : `${username.toLowerCase().replace(/[^a-z0-9._-]/g, "")}@nmt.local`;
 
+    // Pad password to 8 chars to match server-side requirement
     const result = await authClient.signIn.email({
       email,
-      password,
+      password: password.padEnd(8, "_"),
     });
 
     setLoading(false);
