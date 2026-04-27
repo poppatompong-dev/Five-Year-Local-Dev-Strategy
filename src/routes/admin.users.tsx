@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { apiGetUsers, apiCreateUser, apiDeleteUser, type AuthUser } from "@/lib/api";
-import { authClient } from "@/auth";
 import { Users, Plus, Trash2, Mail, ShieldCheck, ShieldOff, Eye, EyeOff, X } from "lucide-react";
 
 export const Route = createFileRoute("/admin/users")({
@@ -15,14 +14,11 @@ export const Route = createFileRoute("/admin/users")({
 
 function UsersPage() {
   const qc = useQueryClient();
-  const { data: session } = authClient.useSession();
-  const currentUserId = session?.user?.id;
-  const isAuthed = !!session;
+  const currentUserId: string | undefined = undefined;
 
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ["admin-users"],
     queryFn: apiGetUsers,
-    enabled: isAuthed,
   });
 
   const deleteMutation = useMutation({
@@ -59,17 +55,6 @@ function UsersPage() {
           </div>
         )}
 
-        <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 px-4 py-3 text-sm text-amber-900 dark:text-amber-200 flex items-start gap-2">
-          <ShieldOff className="size-4 mt-0.5 shrink-0" />
-          <div>
-            <p className="font-medium">รายชื่อนี้แสดงผู้ใช้ที่เพิ่มผ่านหน้านี้เท่านั้น</p>
-            <p className="text-xs mt-0.5 text-amber-800/80 dark:text-amber-300/70">
-              Neon Auth (Better Auth) ยังไม่ได้ expose admin API สำหรับรายชื่อผู้ใช้ทั้งหมด —
-              การลบในหน้านี้จะเอาออกจากรายการเท่านั้น ไม่ได้ลบบัญชีในระบบยืนยันตัวตน
-            </p>
-          </div>
-        </div>
-
         <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
           {isLoading ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground">
@@ -82,6 +67,7 @@ function UsersPage() {
                 <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground bg-muted/30 border-b border-border">
                   <th className="px-5 py-3.5 font-medium">ผู้ใช้</th>
                   <th className="px-5 py-3.5 font-medium">อีเมล</th>
+                  <th className="px-5 py-3.5 font-medium">สิทธิ์</th>
                   <th className="px-5 py-3.5 font-medium">ยืนยันอีเมล</th>
                   <th className="px-5 py-3.5 font-medium">วันที่สร้าง</th>
                   <th className="px-5 py-3.5 font-medium text-right">การจัดการ</th>
@@ -90,7 +76,7 @@ function UsersPage() {
               <tbody>
                 {users.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-5 py-16 text-center text-muted-foreground">
+                    <td colSpan={6} className="px-5 py-16 text-center text-muted-foreground">
                       <Users className="size-8 mx-auto mb-2 opacity-40" />
                       ยังไม่มีผู้ใช้ในระบบ
                     </td>
@@ -113,9 +99,22 @@ function UsersPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-foreground/80 flex items-center gap-1.5 mt-1">
-                        <Mail className="size-3.5 text-muted-foreground" />
-                        {u.email}
+                      <td className="px-5 py-4 text-foreground/80">
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="size-3.5 text-muted-foreground shrink-0" />
+                          <span>{u.email}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        {u.role === "admin" ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-gold/15 text-amber-700 dark:text-amber-400">
+                            <ShieldCheck className="size-3" /> admin
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            user
+                          </span>
+                        )}
                       </td>
                       <td className="px-5 py-4">
                         {u.email_verified ? (

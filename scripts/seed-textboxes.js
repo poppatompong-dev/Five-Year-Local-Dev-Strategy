@@ -11,8 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const { Client } = pg;
 
 const client = new Client({
-  connectionString:
-    "postgresql://neondb_owner:npg_9S4KAqlyiCUO@ep-plain-darkness-ao06zq83-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+  connectionString: process.env.DATABASE_URL,
 });
 
 const textboxDataPath = join(__dirname, "textbox-data.json");

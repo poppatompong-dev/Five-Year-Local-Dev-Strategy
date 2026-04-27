@@ -9,13 +9,12 @@ import {
   STATUS_LABEL,
   type Status,
 } from "@/lib/mock-data";
-import { apiGetProject, apiPatchProjectStatus, apiUpdateProject, apiDeleteProject, type ProjectCreateInput } from "@/lib/api";
-import { authClient } from "@/auth";
+import { apiGetProject, apiPatchProjectStatus, apiUpdateProject, apiUpdateBudgets, apiDeleteProject, apiLogAudit, type ProjectCreateInput } from "@/lib/api";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ChevronLeft, ChevronRight, FileText, Target, Award, TrendingUp, Building2, Calendar, Pencil, Trash2, CheckCircle2, XCircle, ArrowRight, RotateCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Target, Award, TrendingUp, Building2, Calendar, Pencil, Trash2, CheckCircle2, XCircle, ArrowRight, RotateCcw, Save, X } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -235,13 +234,9 @@ function ProjectDetailPage() {
   const qc = useQueryClient();
   const id = Number(projectId);
 
-  const { data: session } = authClient.useSession();
-  const isAuthed = !!session;
-
   const { data: project, isLoading, error } = useQuery({
     queryKey: ["project", id],
     queryFn: () => apiGetProject(id),
-    enabled: isAuthed,
   });
 
   const [localStatus, setLocalStatus] = useState<Status | null>(null);
@@ -252,15 +247,24 @@ function ProjectDetailPage() {
 
   const patchStatus = useMutation({
     mutationFn: (s: Status) => apiPatchProjectStatus(id, s),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["project", id] }),
+    onSuccess: (_r, newStatus) => {
+      qc.invalidateQueries({ queryKey: ["project", id] });
+      apiLogAudit({ action: "status_change", entity: "project", entity_id: id, after: { status: newStatus } }).catch(() => {});
+    },
   });
 
   const updateMutation = useMutation({
     mutationFn: (data: ProjectCreateInput) => apiUpdateProject(id, data),
-    onSuccess: () => {
+    onSuccess: (_r, variables) => {
       qc.invalidateQueries({ queryKey: ["project", id] });
       qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
       setEditOpen(false);
+      toast.success("บันทึกการเปลี่ยนแปลงแล้ว", { icon: "✅" });
+      apiLogAudit({ action: "update", entity: "project", entity_id: id, after: variables }).catch(() => {});
+    },
+    onError: (err) => {
+      toast.error(`บันทึกไม่สำเร็จ: ${err.message}`);
     },
   });
 
@@ -268,7 +272,13 @@ function ProjectDetailPage() {
     mutationFn: () => apiDeleteProject(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      toast.success("ลบโครงการแล้ว", { icon: "🗑️" });
+      apiLogAudit({ action: "delete", entity: "project", entity_id: id }).catch(() => {});
       navigate({ to: "/projects" });
+    },
+    onError: (err) => {
+      toast.error(`ลบโครงการไม่สำเร็จ: ${err.message}`);
     },
   });
 
@@ -448,34 +458,7 @@ function ProjectDetailPage() {
           </div>
 
           <aside className="space-y-5">
-            <div className="bg-card rounded-2xl border border-border p-5 shadow-soft">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">สรุปงบประมาณ</h3>
-              <div className="mt-4 space-y-3">
-                {YEARS.map((y) => {
-                  const amt = project.budgets[y] || 0;
-                  const max = Math.max(...YEARS.map((yr) => project.budgets[yr] || 0));
-                  const pct = max > 0 ? (amt / max) * 100 : 0;
-                  return (
-                    <div key={y}>
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="font-medium">ปี {y}</span>
-                        <span className="tabular text-foreground/80">{amt > 0 ? formatBaht(amt) : "—"}</span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-emerald-gradient transition-all"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-5 pt-4 border-t border-border flex items-center justify-between">
-                <span className="text-sm font-medium">รวมทั้งสิ้น</span>
-                <span className="text-lg font-semibold tabular text-primary">{formatBaht(project.total_budget)}</span>
-              </div>
-            </div>
+            <BudgetPanel projectId={id} budgets={project.budgets} totalBudget={project.total_budget} />
 
             <div className="bg-card rounded-2xl border border-border p-5 shadow-soft">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">ลำดับชั้น</h3>
@@ -535,6 +518,134 @@ function ProjectDetailPage() {
         />
       </div>
     </AppLayout>
+  );
+}
+
+function BudgetPanel({
+  projectId,
+  budgets,
+  totalBudget,
+}: {
+  projectId: number;
+  budgets: Record<number, number>;
+  totalBudget: number;
+}) {
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Record<number, string>>({});
+  const [errors, setErrors] = useState<Record<number, string>>({});
+
+  function startEdit() {
+    const d: Record<number, string> = {};
+    YEARS.forEach((y) => { d[y] = budgets[y] ? String(budgets[y]) : ""; });
+    setDraft(d);
+    setErrors({});
+    setEditing(true);
+  }
+
+  function cancelEdit() { setEditing(false); setErrors({}); }
+
+  const saveMutation = useMutation({
+    mutationFn: (b: Record<number, number>) => apiUpdateBudgets(projectId, b),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["project", projectId] });
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      setEditing(false);
+      toast.success("บันทึกงบประมาณแล้ว", { icon: "✅" });
+    },
+    onError: (err) => {
+      toast.error(`บันทึกไม่สำเร็จ: ${err.message}`);
+    },
+  });
+
+  function handleSave() {
+    const errs: Record<number, string> = {};
+    const parsed: Record<number, number> = {};
+    YEARS.forEach((y) => {
+      const val = parseFloat((draft[y] || "0").replace(/,/g, ""));
+      if (isNaN(val) || val < 0) errs[y] = "ค่าไม่ถูกต้อง";
+      else if (val > 0) parsed[y] = val;
+    });
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    setErrors({});
+    saveMutation.mutate(parsed);
+  }
+
+  const max = Math.max(...YEARS.map((y) => budgets[y] || 0));
+
+  return (
+    <div className="bg-card rounded-2xl border border-border p-5 shadow-soft">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">สรุปงบประมาณ</h3>
+        {!editing && (
+          <button
+            onClick={startEdit}
+            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition font-medium"
+          >
+            <Pencil className="size-3" /> แก้ไข
+          </button>
+        )}
+      </div>
+      <div className="mt-4 space-y-3">
+        {YEARS.map((y) => {
+          if (editing) {
+            return (
+              <div key={y}>
+                <label className="flex items-center justify-between text-sm mb-1">
+                  <span className="font-medium">ปี {y}</span>
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={draft[y] ?? ""}
+                  onChange={(e) =>
+                    setDraft((p) => ({ ...p, [y]: e.target.value.replace(/[^\d.,]/g, "") }))
+                  }
+                  className={cn(
+                    "w-full bg-muted/50 border rounded-lg px-3 py-2 text-sm text-right tabular ring-focus",
+                    errors[y] ? "border-destructive" : "border-border",
+                  )}
+                  placeholder="0"
+                />
+                {errors[y] && <p className="text-xs text-destructive mt-0.5">{errors[y]}</p>}
+              </div>
+            );
+          }
+          const amt = budgets[y] || 0;
+          const pct = max > 0 ? (amt / max) * 100 : 0;
+          return (
+            <div key={y}>
+              <div className="flex items-center justify-between text-sm mb-1">
+                <span className="font-medium">ปี {y}</span>
+                <span className="tabular text-foreground/80">{amt > 0 ? formatBaht(amt) : "—"}</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-emerald-gradient transition-all"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {editing ? (
+        <div className="mt-4 pt-4 border-t border-border flex items-center justify-end gap-2">
+          <Button size="sm" variant="outline" onClick={cancelEdit} disabled={saveMutation.isPending}>
+            <X className="size-3.5 mr-1" /> ยกเลิก
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={saveMutation.isPending}>
+            <Save className="size-3.5 mr-1" /> บันทึก
+          </Button>
+        </div>
+      ) : (
+        <div className="mt-5 pt-4 border-t border-border flex items-center justify-between">
+          <span className="text-sm font-medium">รวมทั้งสิ้น</span>
+          <span className="text-lg font-semibold tabular text-primary">{formatBaht(totalBudget)}</span>
+        </div>
+      )}
+    </div>
   );
 }
 

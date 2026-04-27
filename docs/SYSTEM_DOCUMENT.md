@@ -2,8 +2,8 @@
 
 > **Document Type:** Combined Software Requirements Specification (SRS) + System Design Document (SDD)
 > **Target Audience:** AI development agents analyzing, maintaining, and extending this codebase
-> **Version:** 4.1
-> **Date:** 2026-04-23
+> **Version:** 4.2
+> **Date:** 2026-04-27
 > **Repository Root:** `C:\Users\PC\Documents\Projects\Five-Year Local Development Strategy`
 
 ---
@@ -72,7 +72,7 @@ Provide a structured, scalable, user-friendly web application that:
 
 ### 3.1 Stakeholders and User Roles
 
-Authentication is enforced via Neon Auth. Role separation is not yet enforced at the API level — any authenticated user can access all pages including admin.
+Authentication is currently **disabled** — the app is accessible without login. Auth was temporarily bypassed in `AppLayout.tsx` (v4.2) pending a stable auth implementation. When re-enabled, it will use Neon Auth (Better Auth). Role separation is not yet enforced at the API level.
 
 | Role | Description | Primary use cases |
 |---|---|---|
@@ -96,7 +96,7 @@ Authentication is enforced via Neon Auth. Role separation is not yet enforced at
 | FR-09 | System SHOULD support editing strategies, tactics, and plans through UI. | ❌ Missing |
 | FR-10 | System SHOULD support editing per-year budget rows directly on the project detail page. | ❌ Missing |
 | FR-11 | System SHOULD provide Excel export of filtered project lists and dashboard data. | ❌ Missing |
-| FR-12 | System SHOULD support user authentication and role-based permissions. | ✅ Implemented — Neon Auth (Better Auth) with sign-in/sign-up/sign-out |
+| FR-12 | System SHOULD support user authentication and role-based permissions. | ⚠️ Auth temporarily disabled — `AppLayout` no longer redirects unauthenticated users. Custom login form exists at `/auth/sign-in` but is not enforced. |
 | FR-13 | System SHOULD provide an audit trail for all mutations (who changed what, when). | ❌ Missing |
 | FR-16 | System SHALL provide a user management page to list, create, and delete user accounts. | ✅ Implemented — `/admin/users` page with `apiGetUsers`, `apiCreateUser`, `apiDeleteUser` |
 | FR-14 | System SHOULD support multi-sheet import that respects the Strategy/Tactic/Plan hierarchy from source workbook structure. | ❌ Missing |
@@ -181,7 +181,7 @@ Authentication is enforced via Neon Auth. Role separation is not yet enforced at
 ### 4.4 Trade-offs (current state)
 
 - **`mock-data.ts` retained** — still exports static reference arrays (`strategies`, `tactics`, `plans`, `DEPARTMENTS`, `YEARS`, `STATUS_LABEL`, `STATUS_COLOR`, `formatBaht`) used by filter dropdowns and formatting. The generator functions (`getDashboardData`, `getProjectWithHierarchy`) are no longer called at runtime.
-- **Auth-gated data** — all Data API requests require a valid Neon Auth JWT. Unauthenticated users are redirected to `/auth/sign-in` by `AppLayout`.
+- **Auth-gated data** — Auth guard is currently disabled. `AppLayout` no longer redirects unauthenticated users (v4.2). Data API requests still send a JWT if a session exists, but do not block if there is none.
 - **File-based routing** — TanStack Router auto-generates `src/routeTree.gen.ts` from the files in `src/routes/`. Never hand-edit `routeTree.gen.ts`.
 - **Import page** — UI exists; file upload is still a stub (no parsing/persistence).
 - **CORS** — Neon Data API must have this app's origin in its allowed-origins list (configure in Neon Console → Data API → Settings).
@@ -322,14 +322,19 @@ Pagination uses `Prefer: count=exact` header → reads `Content-Range: from-to/t
 
 ### 6.2 Auth Endpoints (Neon Auth / Better Auth)
 
-Handled automatically by `@neondatabase/neon-js`. Key UI paths:
+`auth.$pathname.tsx` now uses a **custom login form** (not `AuthView`) calling `authClient.signIn.email()` directly.
 
 | Path | Component | Purpose |
 |---|---|---|
-| `/auth/sign-in` | `AuthView` | Sign in |
-| `/auth/sign-up` | `AuthView` | Sign up |
-| `/auth/forgot-password` | `AuthView` | Password reset |
+| `/auth/sign-in` | Custom form | Username + password login — no email label shown |
+| `/auth/sign-up` | Redirect → `/auth/sign-in` | Self-registration disabled |
 | `/account/profile` | `AccountView` | Profile management |
+
+**Username-to-email synthesis:** bare username (e.g. `pop`) is converted to `pop@nmt.local` before calling the Better Auth API. Users never see this internal email.
+
+**Password padding:** Better Auth enforces ≥8 char passwords server-side. Passwords shorter than 8 chars are padded with `_` characters (`padEnd(8, "_")`) both on sign-up (`apiCreateUser`) and sign-in (`auth.$pathname.tsx`) so admins can set 3-char passwords.
+
+**Demo users:** `pop` / `pop_1234`, `pok` / `pok_1234` (created via `npm run add-users`).
 
 ### 6.3 Future: Import Endpoint
 
@@ -482,8 +487,10 @@ A robust importer should:
 
 - ✅ Full React SPA with 7 pages and sidebar navigation.
 - ✅ TanStack Router with file-based routing.
-- ✅ **Neon Auth** — sign-in / sign-up / forgot-password / account management via `@neondatabase/neon-js`.
-- ✅ **Route protection** — `AppLayout` redirects unauthenticated users to `/auth/sign-in`. All `useQuery` calls gated with `enabled: !!session` to prevent unauthenticated API requests on first render.
+- ⚠️ **Auth temporarily disabled** — `AppLayout` session guard removed; app is publicly accessible without login. Custom login form (`auth.$pathname.tsx`) still exists and works but is not enforced.
+- ✅ **Custom login form** — `AuthView` replaced with hand-built username/password form using `authClient.signIn.email()`. Username converted to `@nmt.local` email. Password padded to 8 chars.
+- ✅ **Self-registration blocked** — `/auth/sign-up` redirects to `/auth/sign-in`. Only admin can create users via `/admin/users`.
+- ✅ **Forgot password disabled** — `credentials={{ forgotPassword: false }}` in `NeonAuthUIProvider`. Google social login removed (`providers: []`).
 - ✅ **Hydration** — `suppressHydrationWarning` on `<html>` to silence Neon Auth UI class injection mismatch.
 - ✅ **User management page** (`/admin/users`) — list all users, create new user (via Better Auth sign-up), delete user (cascades sessions/accounts).
 - ✅ **`scripts/add-users.js`** — CLI script to seed demo users (`npm run add-users`).
@@ -626,7 +633,7 @@ cmd /c npm run seed
 cmd /c npm run add-users
 ```
 
-Note: Neon Auth (Better Auth) enforces **minimum 8-character passwords**. Demo users are created with `name_1234` format passwords (e.g., `pop_1234`, `pok_1234`).
+Note: Neon Auth (Better Auth) enforces **minimum 8-character passwords** server-side. The UI allows 3-char minimum; passwords are automatically padded to 8 chars with `_` via `padEnd(8, "_")` before calling the API. Demo users: `pop` / `pop_1234`, `pok` / `pok_1234`.
 
 Both migration/seed scripts use the `pg` Node.js client with the direct PostgreSQL connection string. The connection string is **only in `scripts/*.js`** and never exposed to the browser.
 
@@ -672,6 +679,8 @@ When modifying this system:
 - **Never commit `.env`.** It contains the Neon Data API URL. Use environment variables in CI/CD.
 - **Keep component additions inside `src/components/`.** Add new shadcn/ui components via `npx shadcn@latest add <component>` to keep the `components.json` manifest in sync.
 - **Do not add duplicate Vite plugins.** `@lovable.dev/vite-tanstack-config` already bundles TanStack Start, React, Tailwind, tsconfig-paths, and Cloudflare plugins. See the comment at the top of `vite.config.ts`.
+- **`optimizeDeps.include` for `use-sync-external-store`** — `vite.config.ts` explicitly includes `use-sync-external-store/shim/with-selector` in `optimizeDeps.include` to force Vite to pre-bundle the CJS module into ESM. Without this, a `SyntaxError: does not provide an export named 'useSyncExternalStoreWithSelector'` occurs on first load. **Do not remove this entry.**
+- **Auth guard is currently disabled.** Do not re-enable `if (!session) return <RedirectToSignIn />` in `AppLayout.tsx` until the auth stability issues are resolved. See §9.1 for current auth status.
 - **All hooks in `DashboardPage` MUST be called before any early return.** Both `useCountUp` (×5) and all `useMemo` calls (×5: `stratSorted`, `progressSorted`, `yearSorted`, `deptSorted`, `tableSorted`) must precede the `if (isLoading)` and `if (error || !data)` guard blocks. All `useMemo` deps use optional chaining (`data?.byStrategy ?? []`) so they are safe when data is `undefined`. Violating this causes a React "Rendered more hooks than during the previous render" crash.
 - **Animate only `transform` and `opacity`.** Never animate `width`, `height`, `top`, `left`, or use `transition: all`. See `src/styles.css` keyframes for approved patterns.
 - **Recharts `Tooltip` must be aliased** as `ReTooltip` in `index.tsx` to avoid naming conflict with Radix UI `Tooltip` (imported as `TipRoot`).
@@ -691,6 +700,7 @@ When modifying this system:
 | 3.1 | 2026-04-21 | System analyst (AI) | Added user management: `/admin/users` page (list/create/delete), `apiGetUsers`/`apiCreateUser`/`apiDeleteUser` in `api.ts`, `scripts/add-users.js`, `npm run add-users`. Fixed hydration mismatch (`suppressHydrationWarning` on `<html>`). Added `enabled: !!session` gate to all `useQuery` calls to prevent unauthenticated API requests. Updated FR table (FR-16), routes, file map, nav, and deployment sections. |
 | 4.0 | 2026-04-23 | System analyst (AI) | **UX Enhancement release.** Added: interactive chart filtering (click any bar/slice/row → filters project table), multi-sort controls on all dashboard sections, strategy progress stacked bar chart, radar chart, Treemap, HoverCard on strategy rows, Radix Tooltip on KPI + stat cards, Sonner toast notifications (filter/copy actions), `useCountUp` animated KPI hook, micro-animation CSS utilities (fade-up, hover-lift, press-effect, stagger delays), `TooltipProvider` + `Toaster` in `AppLayout`. Added `ProjectFormDialog`, `EquipmentFormDialog`, `DeleteConfirmDialog` components. Added Excel import pipeline scripts (`import-projects.cjs`, `extract-textboxes.cjs`, `seed-textboxes.js`) + forensic analysis. Updated all section 7 subsections, FR-01, NFR-09/10, file map, guardrails, and change log. Fixed Rules of Hooks violation (moved `useCountUp` before early returns). |
 | 4.1 | 2026-04-23 | System analyst (AI) + User | **Chart polish + final Rules-of-Hooks fix.** (1) Moved all 5 `useMemo` hooks before early returns with `data?.xxx ?? []` optional-chaining deps — resolves "Rendered more hooks" crash. (2) Radar chart: `CustomPolarAngleTick` word-wrap component, full strategy names as `subject`, `outerRadius=90`, wider margins. (3) Treemap: SVG `<clipPath>` per cell to prevent text overflow, full `name` labels, `<title>` tooltip. (4) Strategy progress chart: Y-axis short codes `S1`–`S6` (`width=30`), `fullName` in tooltip payload. (5) Project table strategy column: `max-w-[160px] truncate` + `title` native tooltip. Updated §7.3 (sections 6–10), §7.4, §11.4 guardrails, and change log. |
+| 4.2 | 2026-04-27 | System analyst (AI) + User | **Auth overhaul + stability fixes.** (1) Replaced `AuthView` with custom username/password login form using `authClient.signIn.email()` — no email label shown to user; username auto-converted to `@nmt.local`. (2) Self-registration blocked: `/auth/sign-up` redirects to sign-in. (3) Forgot password + Google login disabled. (4) Password padding: `padEnd(8, "_")` in both `apiCreateUser` and login form allows 3-char passwords. (5) Fixed double `res.json()` call in `apiCreateUser` that prevented localStorage mirror from updating. (6) Added `optimizeDeps.include: ["use-sync-external-store/shim/with-selector"]` to `vite.config.ts` to fix recurring `SyntaxError: useSyncExternalStoreWithSelector` on dev server. (7) Auth guard temporarily disabled in `AppLayout.tsx` — app accessible without login pending auth stability review. Updated §3.1, §3.2 FR-12, §4.4, §6.2, §9.1, §10.4, §11.4, change log. |
 
 ---
 

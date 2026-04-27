@@ -1,7 +1,5 @@
-import { Outlet, Link, createRootRoute, HeadContent, Scripts, useNavigate } from "@tanstack/react-router";
+import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { NeonAuthUIProvider } from "@neondatabase/neon-js/auth/react";
-import { authClient } from "../auth";
 
 import appCss from "../styles.css?url";
 
@@ -78,17 +76,9 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
-  const navigate = useNavigate();
   return (
     <QueryClientProvider client={queryClient}>
-      <NeonAuthUIProvider
-        authClient={authClient}
-        navigate={(path) => navigate({ to: path })}
-        social={{ providers: [] }}
-        credentials={{ forgotPassword: false }}
-      >
-        <Outlet />
-      </NeonAuthUIProvider>
+      <Outlet />
     </QueryClientProvider>
   );
 }

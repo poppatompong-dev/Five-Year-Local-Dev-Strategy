@@ -84,15 +84,23 @@ export function ProjectFormDialog({
       )
     : plans;
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
+    const errs: Record<string, string> = {};
+    if (!name.trim()) errs.name = "กรุณาระบุชื่อโครงการ";
+    if (!planId) errs.planId = "กรุณาเลือกแผนงาน";
 
     const parsedBudgets: Record<number, number> = {};
     YEARS.forEach((y) => {
       const val = parseFloat((budgets[y] || "0").replace(/,/g, ""));
+      if (!isNaN(val) && val < 0) errs[`budget_${y}`] = "งบประมาณต้องไม่ติดลบ";
       if (!isNaN(val) && val > 0) parsedBudgets[y] = val;
     });
+
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    setErrors({});
 
     await onSubmit({
       name: name.trim(),
@@ -124,11 +132,12 @@ export function ProjectFormDialog({
             </label>
             <input
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => { setName(e.target.value); setErrors((p) => ({ ...p, name: "" })); }}
               required
               placeholder="ระบุชื่อโครงการ"
-              className="w-full bg-muted/50 border border-border rounded-lg px-3.5 py-2.5 text-sm placeholder:text-muted-foreground ring-focus"
+              className={`w-full bg-muted/50 border rounded-lg px-3.5 py-2.5 text-sm placeholder:text-muted-foreground ring-focus ${errors.name ? "border-destructive" : "border-border"}`}
             />
+            {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
           </div>
 
           {/* Strategy + Plan row */}
@@ -156,14 +165,15 @@ export function ProjectFormDialog({
             </div>
             <div>
               <label className="block text-sm font-medium mb-1.5">
-                แผนงาน
+                แผนงาน <span className="text-destructive">*</span>
               </label>
               <select
                 value={planId}
-                onChange={(e) =>
-                  setPlanId(e.target.value ? Number(e.target.value) : "")
-                }
-                className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2.5 text-sm ring-focus"
+                onChange={(e) => {
+                  setPlanId(e.target.value ? Number(e.target.value) : "");
+                  setErrors((p) => ({ ...p, planId: "" }));
+                }}
+                className={`w-full bg-muted/50 border rounded-lg px-3 py-2.5 text-sm ring-focus ${errors.planId ? "border-destructive" : "border-border"}`}
               >
                 <option value="">— เลือกแผนงาน —</option>
                 {availablePlans.map((p) => (
@@ -172,6 +182,7 @@ export function ProjectFormDialog({
                   </option>
                 ))}
               </select>
+              {errors.planId && <p className="text-xs text-destructive mt-1">{errors.planId}</p>}
             </div>
           </div>
 
@@ -306,7 +317,7 @@ export function ProjectFormDialog({
             >
               ยกเลิก
             </Button>
-            <Button type="submit" disabled={isSubmitting || !name.trim()}>
+            <Button type="submit" disabled={isSubmitting || !name.trim() || !planId}>
               {isSubmitting && <Loader2 className="size-4 animate-spin" />}
               {isEdit ? "บันทึกการเปลี่ยนแปลง" : "เพิ่มโครงการ"}
             </Button>

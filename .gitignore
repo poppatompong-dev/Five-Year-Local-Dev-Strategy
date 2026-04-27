@@ -25,6 +25,10 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Debug/test scripts with credentials
+scripts/get-anon-jwt.js
+scripts/test-data-api.js
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

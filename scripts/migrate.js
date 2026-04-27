@@ -6,8 +6,7 @@ import pg from "pg";
 const { Client } = pg;
 
 const client = new Client({
-  connectionString:
-    "postgresql://neondb_owner:npg_9S4KAqlyiCUO@ep-plain-darkness-ao06zq83-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+  connectionString: process.env.DATABASE_URL,
 });
 
 const DDL = `
@@ -186,6 +185,54 @@ CREATE TABLE IF NOT EXISTS staging_projects (
   validation_errors JSONB,
   committed_project_id INTEGER REFERENCES projects(id)
 );
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Departments table + FK (Data Integrity)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS departments (
+  id   SERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE
+);
+
+-- Populate from existing project departments
+INSERT INTO departments (name)
+  SELECT DISTINCT department FROM projects
+  WHERE department IS NOT NULL AND department <> ''
+ON CONFLICT (name) DO NOTHING;
+
+-- Add department_id FK column if not exists
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='projects' AND column_name='department_id') THEN
+    ALTER TABLE projects ADD COLUMN department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- Back-fill department_id from department text
+UPDATE projects p
+  SET department_id = d.id
+  FROM departments d
+  WHERE p.department = d.name AND p.department_id IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_projects_department_id ON projects(department_id);
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Audit Events table
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS audit_events (
+  id         SERIAL PRIMARY KEY,
+  action     TEXT NOT NULL CHECK (action IN ('create','update','delete','import','status_change')),
+  entity     TEXT NOT NULL,
+  entity_id  INTEGER,
+  before     JSONB,
+  after      JSONB,
+  timestamp  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_events_entity ON audit_events(entity, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_events_action ON audit_events(action);
+CREATE INDEX IF NOT EXISTS idx_audit_events_ts     ON audit_events(timestamp DESC);
 `;
 
 async function migrate() {

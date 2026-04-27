@@ -11,8 +11,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { formatBaht, STATUS_COLOR, YEARS, type Status } from "@/lib/mock-data";
 import { apiGetDashboard, apiGetProjects, apiGetProject, apiUpdateProject, apiPatchProjectStatus } from "@/lib/api";
+import { exportDashboardToExcel } from "@/lib/export";
 import type { ProjectRow, StrategyProgress, ProjectCreateInput } from "@/lib/api";
-import { authClient } from "@/auth";
 import {
   ResponsiveContainer,
   BarChart,
@@ -65,6 +65,7 @@ import {
   Sparkles,
   TrendingDown,
   AlertCircle,
+  Download,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -122,8 +123,6 @@ function useCountUp(target: number, duration = 900, enabled = true) {
 }
 
 function DashboardPage() {
-  const { data: session } = authClient.useSession();
-  const isAuthed = !!session;
 
   // ── Filter state ──────────────────────────────────────────────────────────
   const [filterStatus, setFilterStatus] = useState<FilterStatus>(null);
@@ -186,7 +185,6 @@ function DashboardPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard"],
     queryFn: apiGetDashboard,
-    enabled: isAuthed,
   });
 
   // Filtered projects query — depends on active filter
@@ -199,13 +197,13 @@ function DashboardPage() {
       strategy_id: filterStrategy ?? undefined,
       year: filterYear ?? undefined,
     }),
-    enabled: isAuthed && hasFilter,
+    enabled: hasFilter,
   });
 
   const { data: recentResult } = useQuery({
     queryKey: ["projects", "recent"],
     queryFn: () => apiGetProjects({ page: 1, limit: 6 }),
-    enabled: isAuthed && !hasFilter,
+    enabled: !hasFilter,
   });
 
   const tableRows: ProjectRow[] = hasFilter
@@ -390,9 +388,22 @@ function DashboardPage() {
               <div className="text-primary-foreground/70 text-xs">งบประมาณรวม 5 ปี</div>
               <div className="text-3xl font-bold tabular tracking-tight">{formatBaht(data.totalBudget, { compact: true })}</div>
               <div className="text-primary-foreground/70 text-xs">บาท · {data.totalProjects.toLocaleString("th-TH")} โครงการ</div>
-              <Link to="/projects" className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur px-3 py-1.5 text-xs font-medium ring-1 ring-white/20 transition">
-                ดูโครงการทั้งหมด <ArrowUpRight className="size-3.5" />
-              </Link>
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (data) {
+                      exportDashboardToExcel(data, `dashboard-${new Date().toISOString().slice(0, 10)}.xlsx`);
+                      toast.success("ส่งออกสรุปแดชบอร์ดแล้ว", { icon: "📄" });
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur px-3 py-1.5 text-xs font-medium ring-1 ring-white/20 transition"
+                >
+                  <Download className="size-3.5" /> ส่งออก
+                </button>
+                <Link to="/projects" className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur px-3 py-1.5 text-xs font-medium ring-1 ring-white/20 transition">
+                  ดูโครงการทั้งหมด <ArrowUpRight className="size-3.5" />
+                </Link>
+              </div>
             </div>
           </div>
         </section>

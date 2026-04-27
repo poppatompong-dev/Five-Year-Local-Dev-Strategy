@@ -13,11 +13,12 @@ import {
   formatBaht,
   type Status,
 } from "@/lib/mock-data";
-import { apiGetProjects, apiCreateProject, apiDeleteProject, type ProjectCreateInput } from "@/lib/api";
-import { authClient } from "@/auth";
+import { apiGetProjects, apiCreateProject, apiDeleteProject, apiLogAudit, type ProjectCreateInput } from "@/lib/api";
+import { toast } from "sonner";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { Search, Filter, ChevronLeft, ChevronRight, X, ArrowUpDown, Plus, Trash2 } from "lucide-react";
+import { exportProjectsToExcel } from "@/lib/export";
+import { Search, Filter, ChevronLeft, ChevronRight, X, ArrowUpDown, Plus, Trash2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/projects")({
@@ -46,23 +47,33 @@ function ProjectsPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleteName, setDeleteName] = useState("");
 
-  const { data: session } = authClient.useSession();
-  const isAuthed = !!session;
   const qc = useQueryClient();
 
   const createMutation = useMutation({
     mutationFn: (data: ProjectCreateInput) => apiCreateProject(data),
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
       qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
       setCreateOpen(false);
+      toast.success("เพิ่มโครงการสำเร็จ", { icon: "✅" });
+      apiLogAudit({ action: "create", entity: "project", after: variables }).catch(() => {});
+    },
+    onError: (err) => {
+      toast.error(`เพิ่มโครงการไม่สำเร็จ: ${err.message}`);
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => apiDeleteProject(id),
-    onSuccess: () => {
+    onSuccess: (_r, id) => {
       qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
       setDeleteId(null);
+      toast.success("ลบโครงการแล้ว", { icon: "🗑️" });
+      apiLogAudit({ action: "delete", entity: "project", entity_id: id }).catch(() => {});
+    },
+    onError: (err) => {
+      toast.error(`ลบโครงการไม่สำเร็จ: ${err.message}`);
     },
   });
 
@@ -83,7 +94,6 @@ function ProjectsPage() {
         page,
         limit: PAGE_SIZE,
       }),
-    enabled: isAuthed,
   });
 
   const pageItems = result?.data ?? [];
@@ -126,9 +136,24 @@ function ProjectsPage() {
               )}
             </p>
           </div>
-          <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
-            <Plus className="size-4" /> เพิ่มโครงการ
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (pageItems.length > 0) {
+                  exportProjectsToExcel(pageItems, `projects-${new Date().toISOString().slice(0, 10)}.xlsx`);
+                  toast.success("ส่งออกไฟล์ Excel แล้ว", { icon: "📄" });
+                }
+              }}
+              disabled={pageItems.length === 0}
+              className="gap-1.5"
+            >
+              <Download className="size-4" /> ส่งออก
+            </Button>
+            <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
+              <Plus className="size-4" /> เพิ่มโครงการ
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}

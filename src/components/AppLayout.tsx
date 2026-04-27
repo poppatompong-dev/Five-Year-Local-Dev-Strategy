@@ -1,8 +1,6 @@
-import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Wrench, Upload, Building2, Bell, Search, LogOut, Users } from "lucide-react";
+import { Link, Outlet, useLocation } from "@tanstack/react-router";
+import { LayoutDashboard, FolderKanban, Wrench, Upload, Building2, Bell, Search, Users, History } from "lucide-react";
 import type { ReactNode } from "react";
-import { RedirectToSignIn } from "@neondatabase/neon-js/auth/react/ui";
-import { authClient } from "../auth";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -15,32 +13,6 @@ const NAV = [
 
 export function AppLayout({ children }: { children?: ReactNode }) {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { data: session, isPending } = authClient.useSession();
-  const user = session?.user;
-
-  async function handleSignOut() {
-    try {
-      await authClient.signOut({
-        fetchOptions: { onError: () => {} },
-      });
-    } catch {
-      // suppress origin errors from dev proxy — session cleared client-side
-    }
-    navigate({ to: "/auth/$pathname", params: { pathname: "sign-in" } });
-  }
-
-  if (isPending) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="size-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!session) {
-    return <RedirectToSignIn />;
-  }
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -96,35 +68,43 @@ export function AppLayout({ children }: { children?: ReactNode }) {
             to="/admin/users"
             className={[
               "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 relative overflow-hidden",
-              location.pathname.startsWith("/admin")
+              location.pathname.startsWith("/admin/users")
                 ? "bg-gradient-to-r from-gold to-gold/80 text-gold-foreground font-semibold shadow-[0_2px_16px_-2px_oklch(0.74_0.12_88_/_0.55)]"
                 : "text-sidebar-foreground/70 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground",
             ].join(" ")}
           >
-            {location.pathname.startsWith("/admin") && (
+            {location.pathname.startsWith("/admin/users") && (
               <span className="absolute left-0 inset-y-2 w-0.5 rounded-full bg-white/40" />
             )}
-            <Users className="size-[17px] shrink-0" strokeWidth={location.pathname.startsWith("/admin") ? 2 : 1.75} />
+            <Users className="size-[17px] shrink-0" strokeWidth={location.pathname.startsWith("/admin/users") ? 2 : 1.75} />
             <span>จัดการผู้ใช้</span>
+          </Link>
+          <Link
+            to="/admin/audit"
+            className={[
+              "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 relative overflow-hidden",
+              location.pathname.startsWith("/admin/audit")
+                ? "bg-gradient-to-r from-gold to-gold/80 text-gold-foreground font-semibold shadow-[0_2px_16px_-2px_oklch(0.74_0.12_88_/_0.55)]"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground",
+            ].join(" ")}
+          >
+            {location.pathname.startsWith("/admin/audit") && (
+              <span className="absolute left-0 inset-y-2 w-0.5 rounded-full bg-white/40" />
+            )}
+            <History className="size-[17px] shrink-0" strokeWidth={location.pathname.startsWith("/admin/audit") ? 2 : 1.75} />
+            <span>ประวัติการใช้งาน</span>
           </Link>
         </nav>
 
         <div className="px-4 py-4 border-t border-sidebar-border">
-          <div className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-sidebar-accent/60 transition-colors group">
+          <div className="flex items-center gap-3 rounded-xl px-2 py-2">
             <div className="size-9 rounded-full bg-gradient-to-br from-gold/30 to-gold/10 ring-2 ring-gold/35 flex items-center justify-center text-gold text-sm font-bold shrink-0 shadow-[0_0_12px_-3px_oklch(0.74_0.12_88_/_0.5)]">
-              {user?.name?.charAt(0).toUpperCase() ?? user?.email?.charAt(0).toUpperCase() ?? "?"}
+              ท
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold truncate leading-tight">{user?.name ?? user?.email ?? "ผู้ใช้งาน"}</div>
-              <div className="text-[11px] text-sidebar-foreground/50 truncate mt-0.5">{user?.email ?? ""}</div>
+              <div className="text-sm font-semibold truncate leading-tight">เทศบาลนครนครสวรรค์</div>
+              <div className="text-[11px] text-sidebar-foreground/50 truncate mt-0.5">ผู้ดูแลระบบ</div>
             </div>
-            <button
-              onClick={handleSignOut}
-              title="ออกจากระบบ"
-              className="size-7 rounded-lg hover:bg-destructive/20 flex items-center justify-center text-sidebar-foreground/40 hover:text-destructive transition-all shrink-0 opacity-0 group-hover:opacity-100"
-            >
-              <LogOut className="size-3.5" strokeWidth={1.75} />
-            </button>
           </div>
         </div>
       </aside>

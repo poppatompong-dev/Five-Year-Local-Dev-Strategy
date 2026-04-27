@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { formatBaht, YEARS } from "@/lib/mock-data";
 import { apiGetEquipment, apiCreateEquipment, apiUpdateEquipment, apiDeleteEquipment, type EquipmentCreateInput, type DBEquipment } from "@/lib/api";
-import { authClient } from "@/auth";
 import { EquipmentFormDialog } from "@/components/EquipmentFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { Button } from "@/components/ui/button";
@@ -32,8 +31,6 @@ function EquipmentPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleteName, setDeleteName] = useState("");
 
-  const { data: session } = authClient.useSession();
-  const isAuthed = !!session;
   const qc = useQueryClient();
 
   const createMutation = useMutation({
@@ -63,7 +60,6 @@ function EquipmentPage() {
   const { data: result, isLoading } = useQuery({
     queryKey: ["equipment", { debouncedSearch, page }],
     queryFn: () => apiGetEquipment({ search: debouncedSearch || undefined, page, limit: PAGE_SIZE }),
-    enabled: isAuthed,
   });
 
   const items = result?.data ?? [];
