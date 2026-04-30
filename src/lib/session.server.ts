@@ -31,6 +31,11 @@ export async function getServerSession() {
 
 export async function requireAdmin() {
   const session = await getServerSession();
-  if (!session.data?.userId) throw new Error("UNAUTHORIZED");
+  if (!session.data?.userId) {
+    throw new Response(JSON.stringify({ error: "UNAUTHORIZED" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
   return session.data;
 }
