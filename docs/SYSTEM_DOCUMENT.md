@@ -2,9 +2,11 @@
 
 > **Document Type:** Combined Software Requirements Specification (SRS) + System Design Document (SDD)
 > **Target Audience:** AI development agents analyzing, maintaining, and extending this codebase
-> **Version:** 4.2
-> **Date:** 2026-04-27
+> **Version:** 5.0
+> **Date:** 2026-04-30
 > **Repository Root:** `C:\Users\PC\Documents\Projects\Five-Year Local Development Strategy`
+> **Production URL:** `https://five-year-local-dev-strategy.vercel.app`
+> **Repository:** `https://github.com/poppatompong-dev/Five-Year-Local-Dev-Strategy`
 
 ---
 
@@ -72,14 +74,17 @@ Provide a structured, scalable, user-friendly web application that:
 
 ### 3.1 Stakeholders and User Roles
 
-Authentication is currently **disabled** — the app is accessible without login. Auth was temporarily bypassed in `AppLayout.tsx` (v4.2) pending a stable auth implementation. When re-enabled, it will use Neon Auth (Better Auth). Role separation is not yet enforced at the API level.
+The app implements a **two-tier access model**:
+
+- **Public visitors** (no login) — read-only access to dashboard, projects, equipment.
+- **Admins** (login required) — full CRUD plus import, audit log, user management.
+
+There is no Neon Auth / Better Auth dependency anymore. Auth is custom session-cookie-based against an `admin_users` table (bcrypt-hashed passwords).
 
 | Role | Description | Primary use cases |
 |---|---|---|
-| Planning Officer | Day-to-day data entry and import | Import Excel, create/edit projects, update status |
-| Department Head | Owns a subset of projects | Review, status update, filtered reporting |
-| Executive | Reviews aggregate performance | Dashboard, budget-by-year, budget-by-strategy |
-| System Admin | Maintains reference data and users | Manage strategies, tactics, plans, user accounts |
+| Public visitor | Anyone with the URL | View dashboard, browse projects, read equipment list |
+| Admin (`pop`, `pok`) | Authenticated municipal officer | All public + create/edit/delete projects, bulk status update, import Excel, audit log |
 
 ### 3.2 Functional Requirements
 
@@ -88,19 +93,22 @@ Authentication is currently **disabled** — the app is accessible without login
 | FR-01 | System SHALL display an overview dashboard showing total projects, total budget, budget-by-year, budget-by-strategy, status breakdown, strategy progress, radar chart, top 10 departments, and a sortable project table. | ✅ Implemented |
 | FR-02 | System SHALL list all projects with pagination (default 12/page) and filters for search text, strategy, plan, department, status, and year. | ✅ Implemented |
 | FR-03 | System SHALL show a single-project detail view including hierarchy path, objective, target, KPI, expected result, department, and per-year budget. | ✅ Implemented |
-| FR-04 | System SHALL allow changing a project's status to one of: `planning`, `in_progress`, `completed`, `cancelled`. | ✅ Implemented — persisted to Neon via PATCH |
+| FR-04 | System SHALL allow changing a project's status to one of: `not_set`, `planning`, `in_progress`, `completed`, `cancelled`. | ✅ Implemented — admin-only, persisted via `serverPatchProjectStatus` |
+| FR-04b | System SHALL allow admins to bulk-update status for multiple selected projects at once. | ✅ Implemented — `serverBulkPatchProjectStatus` + checkbox toolbar on `/projects` |
 | FR-05 | System SHALL list equipment items with pagination and search. | ✅ Implemented — live from Neon DB |
 | FR-06 | System SHALL accept an `.xlsx` file upload and display import confirmation UI. | ✅ UI only — no backend wired |
 | FR-07 | System SHALL provide reference data (strategies, tactics, plans, departments) for filter dropdowns. | ✅ Implemented (static from mock-data; DB data used at runtime) |
-| FR-08 | System SHOULD support full project CRUD (create, edit, delete) through UI forms. | ❌ Missing |
+| FR-08 | System SHOULD support full project CRUD (create, edit, delete) through UI forms. | ✅ Implemented — admin-only, all dialogs wired to server functions |
 | FR-09 | System SHOULD support editing strategies, tactics, and plans through UI. | ❌ Missing |
-| FR-10 | System SHOULD support editing per-year budget rows directly on the project detail page. | ❌ Missing |
-| FR-11 | System SHOULD provide Excel export of filtered project lists and dashboard data. | ❌ Missing |
-| FR-12 | System SHOULD support user authentication and role-based permissions. | ⚠️ Auth temporarily disabled — `AppLayout` no longer redirects unauthenticated users. Custom login form exists at `/auth/sign-in` but is not enforced. |
-| FR-13 | System SHOULD provide an audit trail for all mutations (who changed what, when). | ❌ Missing |
-| FR-16 | System SHALL provide a user management page to list, create, and delete user accounts. | ✅ Implemented — `/admin/users` page with `apiGetUsers`, `apiCreateUser`, `apiDeleteUser` |
-| FR-14 | System SHOULD support multi-sheet import that respects the Strategy/Tactic/Plan hierarchy from source workbook structure. | ❌ Missing |
-| FR-15 | System SHOULD persist data mutations to a durable backend (database). | ✅ Implemented — Neon PostgreSQL via Neon Data API (PostgREST) |
+| FR-10 | System SHOULD support editing per-year budget rows directly on the project detail page. | ✅ Implemented — `BudgetPanel` with admin-only edit |
+| FR-11 | System SHOULD provide Excel export of filtered project lists and dashboard data. | ✅ Implemented — `src/lib/export.ts` |
+| FR-12 | System SHOULD support user authentication. | ✅ Implemented — custom `admin_users` table, bcrypt + sealed session cookies via `useSession()`. Public read-only / admin-CRUD split. |
+| FR-13 | System SHOULD provide an audit trail for all mutations (who changed what, when). | ✅ Implemented — `audit_events` table + `serverLogAudit` wrapper, viewable at `/admin/audit` |
+| FR-14 | System SHOULD support multi-sheet import that respects the Strategy/Tactic/Plan hierarchy from source workbook structure. | ✅ Implemented in `scripts/import-projects.cjs` (CLI only — UI upload handler still stub) |
+| FR-15 | System SHOULD persist data mutations to a durable backend (database). | ✅ Implemented — Neon PostgreSQL via `@neondatabase/serverless` driver inside server functions |
+| FR-16 | System SHALL provide an admin user management page. | ✅ Page exists at `/admin/users` (admin-only menu); user CRUD currently returns stubs since Better Auth was removed — re-implementation against `admin_users` table planned for v5.1. |
+| FR-17 | Public visitors SHALL NOT see admin-only menu items (Import, Users, Audit) or CRUD buttons (Add/Edit/Delete). | ✅ Implemented — `useAuth()` gates visibility throughout `AppLayout` and route components |
+| FR-18 | Database credentials SHALL NEVER be present in client-side JavaScript bundles. | ✅ Implemented — all SQL runs in `createServerFn` handlers; `DATABASE_URL` (no `VITE_` prefix) is server-only |
 
 ### 3.3 Non-Functional Requirements
 
@@ -137,33 +145,41 @@ Authentication is currently **disabled** — the app is accessible without login
 │                         Browser (Client)                         │
 │  React 19 · TanStack Router · TanStack Start · Vite 7           │
 │  TailwindCSS 4 · shadcn/ui · recharts · Lucide icons            │
-│  TanStack Query · @neondatabase/neon-js (Neon Auth)             │
-│  Served from  http://localhost:8080  (Vite dev)                 │
+│  TanStack Query                                                  │
+│  Production: https://five-year-local-dev-strategy.vercel.app    │
+│  Local dev:  http://localhost:8080                               │
 └─────────────────────────────────────────────────────────────────┘
-         │                              │
-         │ Auth (Better Auth)           │ Data (PostgREST HTTP)
-         ▼                              ▼
-┌──────────────────┐        ┌────────────────────────────────────┐
-│   Neon Auth      │        │   Neon Data API (PostgREST)        │
-│  (managed auth   │        │   Base URL: apirest.c-2.ap-…       │
-│   service)       │        │   JWT-authenticated REST API       │
-│  Issues JWT      │        │   maps to neondb tables            │
-└──────────────────┘        └───────────────┬────────────────────┘
-                                            │ SQL
-                                            ▼
-                             ┌──────────────────────────┐
-                             │  Neon PostgreSQL (neondb) │
-                             │  Region: ap-southeast-1  │
-                             │  6 tables, 248 projects   │
-                             └──────────────────────────┘
+         │
+         │ POST /_serverFn/{hash}  (TanStack Start RPC)
+         │ Cookie: admin_session=<sealed>
+         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│             Vercel Serverless Function (api/server.js)           │
+│  Wraps the TanStack Start H3 server bundle in dist/server/      │
+│  Routes /_serverFn/* to createServerFn handlers                 │
+│  Env: DATABASE_URL, SESSION_PASSWORD                             │
+└─────────────────────────────────────────────────────────────────┘
+         │
+         │ SQL via @neondatabase/serverless (HTTP fetch)
+         ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                   Neon PostgreSQL (neondb)                       │
+│      Pooler endpoint: ep-plain-darkness-ao06zq83-pooler          │
+│      Region: ap-southeast-1                                      │
+│      Tables: admin_users, strategies, tactics, plans, projects,  │
+│        project_budgets, project_annotations, equipment,          │
+│        departments, audit_events, sheet_metadata, …              │
+└──────────────────────────────────────────────────────────────────┘
 ```
+
+There is **no PostgREST / Neon Data API** layer anymore — all SQL runs server-side via the Neon serverless driver. Auth is local to this app (no Neon Auth / Better Auth). The browser never sees a database connection string.
 
 ### 4.3 Technology Stack
 
 | Layer | Choice | Version | Notes |
 |---|---|---|---|
 | Runtime | Node.js | ≥18 | |
-| Framework | TanStack Start | ^1.167 | File-based routing via `@tanstack/react-router` |
+| Framework | TanStack Start | ^1.167 | File-based routing via `@tanstack/react-router`; `createServerFn` for RPC |
 | Build tool | Vite | ^7.3 | Config via `@lovable.dev/vite-tanstack-config` |
 | UI framework | React | ^19.2 | |
 | Styling | TailwindCSS | ^4.2 | Via `@tailwindcss/vite` plugin |
@@ -172,19 +188,24 @@ Authentication is currently **disabled** — the app is accessible without login
 | Icons | Lucide React | ^0.575 | |
 | Forms | react-hook-form + zod | ^7.71 / ^3.24 | Available; not yet widely used |
 | State / fetch | TanStack Query | ^5 | Wired in all route pages; 5-min stale time |
-| Auth | Neon Auth (@neondatabase/neon-js) | ^0.2.0-beta | Better Auth-based; `src/auth.ts` + `NeonAuthUIProvider` |
-| Database | Neon PostgreSQL | — | `neondb` on ap-southeast-1; accessed via Data API |
-| Data API | Neon Data API (PostgREST) | — | REST endpoint with `Prefer: count=exact` for pagination |
+| Auth | Custom (`admin_users` + bcryptjs + sealed session cookies) | — | `useSession()` from `@tanstack/react-start/server` |
+| Password hashing | bcryptjs | ^3.0 | Pure-JS, runs in serverless |
+| Database | Neon PostgreSQL | — | `neondb` on ap-southeast-1, pooler endpoint |
+| DB driver | `@neondatabase/serverless` | ^1.1 | HTTP fetch-based; works on Vercel/edge runtimes |
 | Font | IBM Plex Sans Thai | — | Loaded from Google Fonts in `__root.tsx` |
-| Deployment target | Cloudflare Workers | — | `@cloudflare/vite-plugin` + `wrangler.jsonc` present |
+| Deployment target | Vercel | — | `vercel.json` + `api/server.js` Node serverless function wrapper |
 
 ### 4.4 Trade-offs (current state)
 
-- **`mock-data.ts` retained** — still exports static reference arrays (`strategies`, `tactics`, `plans`, `DEPARTMENTS`, `YEARS`, `STATUS_LABEL`, `STATUS_COLOR`, `formatBaht`) used by filter dropdowns and formatting. The generator functions (`getDashboardData`, `getProjectWithHierarchy`) are no longer called at runtime.
-- **Auth-gated data** — Auth guard is currently disabled. `AppLayout` no longer redirects unauthenticated users (v4.2). Data API requests still send a JWT if a session exists, but do not block if there is none.
-- **File-based routing** — TanStack Router auto-generates `src/routeTree.gen.ts` from the files in `src/routes/`. Never hand-edit `routeTree.gen.ts`.
-- **Import page** — UI exists; file upload is still a stub (no parsing/persistence).
-- **CORS** — Neon Data API must have this app's origin in its allowed-origins list (configure in Neon Console → Data API → Settings).
+- **Server-only DB access.** All SQL runs inside `createServerFn` handlers. Wrapper functions in `src/lib/api.ts` (e.g. `apiGetProjects`) call the corresponding server function via TanStack Start RPC. The `@neondatabase/serverless` driver is never imported into a file that ends up in the client bundle.
+- **`mock-data.ts` retained** — still exports static reference arrays (`strategies`, `tactics`, `plans`, `DEPARTMENTS`, `YEARS`, `STATUS_LABEL`, `STATUS_COLOR`, `formatBaht`) used by filter dropdowns and formatting. The generator functions are no longer called at runtime.
+- **Two-tier auth.** Public visitors get read access; admins get full CRUD. `useAuth()` (TanStack Query against `serverGetSession`) gates UI. `requireAdmin()` inside server functions gates writes. Admin-only menus and CRUD buttons are hidden for public users via `isLoggedIn` checks.
+- **`session.server.ts` is server-only** and must NOT be imported by any file that gets bundled for the client. TanStack Start's import-protection plugin will fail the build otherwise. `auth.ts` re-exports the public `serverLogin` / `serverLogout` / `serverGetSession` functions and is safe to import from client code.
+- **`requireAdmin` throws `Response`, not `Error`.** Throwing `Error` from a server function causes Seroval (TanStack Start's serializer) to fail with `Seroval Error (step: 3)` on Vercel. `throw new Response(JSON.stringify({error}), {status:401})` serializes correctly.
+- **`serverLogin` returns `{ok:true|false}` instead of throwing.** Same Seroval reason — credential errors are returned as a discriminated union, then `useAuth.login` rethrows on the client.
+- **File-based routing** — TanStack Router auto-generates `src/routeTree.gen.ts`. Never hand-edit.
+- **Import page** — UI exists; file upload is still a stub (no parsing/persistence). `scripts/import-projects.cjs` is a working CLI importer.
+- **CORS not applicable** — there is no separate API origin; everything is same-origin via the Vercel function.
 
 ---
 
@@ -204,8 +225,27 @@ equipment  (standalone — not linked to the hierarchy in current implementation
 
 #### `Status`
 ```ts
-type Status = "planning" | "in_progress" | "completed" | "cancelled";
+type Status = "not_set" | "planning" | "in_progress" | "completed" | "cancelled";
 ```
+
+`not_set` is the default for newly created projects and the value all 248 imported projects were reset to in v5.0. The DB enforces this via a CHECK constraint:
+```sql
+ALTER TABLE projects
+  ADD CONSTRAINT projects_status_check
+  CHECK (status IN ('not_set','planning','in_progress','completed','cancelled'));
+ALTER TABLE projects ALTER COLUMN status SET DEFAULT 'not_set';
+```
+
+#### `admin_users` (DB schema)
+```sql
+CREATE TABLE admin_users (
+  id            SERIAL PRIMARY KEY,
+  username      TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,           -- bcrypt
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+Seeded with `pop` and `pok` (password = username, bcrypt-hashed). The seeder uses `INSERT … ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash`, so re-running it rotates the password.
 
 #### `Project`
 ```ts
@@ -256,27 +296,51 @@ interface Equipment {
 | `STATUS_LABEL` | `Record<Status, string>` (Thai) | — |
 | `STATUS_COLOR` | `Record<Status, string>` (CSS vars) | — |
 
-### 5.3 API Layer (`src/lib/api.ts`)
+### 5.3 API Layer
 
-All data fetching goes through `src/lib/api.ts`, which wraps the Neon Data API:
+The data layer has three files with strict separation of concerns:
 
-| Function | Returns | Description |
+| File | Runs on | Purpose |
 |---|---|---|
-| `apiGetDashboard()` | `DashboardData` | Fetches all tables in parallel; aggregates stats client-side |
-| `apiGetProjects(params)` | `ProjectListResult` | Paginated + filtered project list with joins |
-| `apiGetProject(id)` | `ProjectDetail \| null` | Single project with full hierarchy |
-| `apiPatchProjectStatus(id, status)` | `void` | PATCH to Neon Data API |
-| `apiGetEquipment(params)` | `EquipmentListResult` | Paginated equipment list |
-| `apiGetStrategies()` | `DBStrategy[]` | All strategies |
-| `apiGetTactics()` | `DBTactic[]` | All tactics |
-| `apiGetPlans()` | `DBPlan[]` | All plans |
-| `apiGetUsers()` | `AuthUser[]` | All user accounts (from Better Auth `user` table) |
-| `apiCreateUser(data)` | `void` | Signs up a new user via Neon Auth `/sign-up/email` endpoint |
-| `apiDeleteUser(userId)` | `void` | Deletes user's sessions, accounts, verifications, then the user row |
+| `src/lib/db.ts` | Server only | Lazy-initialised Neon SQL client. Reads `process.env.DATABASE_URL`. Exports `getSql()`. |
+| `src/lib/server-fns.ts` | Server only (importable from client) | All `createServerFn` handlers — one per DB operation. Mutation handlers call `requireAdmin()` first. |
+| `src/lib/api.ts` | Both | Public API surface. Each `apiXxx()` thin-wraps the corresponding `serverXxx` call so route components stay unchanged. |
+| `src/lib/auth.ts` | Both | Exports `serverLogin`, `serverLogout`, `serverGetSession`. |
+| `src/lib/session.server.ts` | Server only | `getServerSession()` and `requireAdmin()` helpers. Must NOT be imported from client code. |
 
-`AuthUser` interface: `{ id, name, email, email_verified, image, created_at, updated_at }`.
+**Read functions (public — no auth required):**
 
-All functions call `getToken()` (from `authClient.getSession()`) and inject `Authorization: Bearer <JWT>`. Pagination uses `Prefer: count=exact` → reads `Content-Range` header.
+| Wrapper (`api.ts`) | Server fn (`server-fns.ts`) | Description |
+|---|---|---|
+| `apiGetDashboard()` | `serverGetDashboard` | All dashboard aggregates in one call |
+| `apiGetProjects(params)` | `serverGetProjects` | Paginated + filtered project list |
+| `apiGetProject(id)` | `serverGetProject` | Single project with full hierarchy + budgets |
+| `apiGetEquipment(params)` | `serverGetEquipment` | Paginated equipment list |
+| `apiGetStrategies/Tactics/Plans/Departments` | `serverGetStrategies/…` | Reference data |
+| `apiGetDepartmentsList()` | `serverGetDepartmentsList` | Normalized `departments` table |
+
+**Write functions (admin only — `requireAdmin()` inside handler):**
+
+| Wrapper | Server fn | Description |
+|---|---|---|
+| `apiPatchProjectStatus(id, status)` | `serverPatchProjectStatus` | Single project status |
+| `apiBulkPatchProjectStatus(ids, status)` | `serverBulkPatchProjectStatus` | Bulk status — `WHERE id = ANY($1::int[])` |
+| `apiCreateProject(input)` | `serverCreateProject` | Insert project + per-year budgets |
+| `apiUpdateProject(id, input)` | `serverUpdateProject` | Replace project fields + budgets |
+| `apiUpdateBudgets(projectId, budgets)` | `serverUpdateBudgets` | Replace budgets only |
+| `apiDeleteProject(id)` | `serverDeleteProject` | Cascade-delete project_budgets + annotations + project |
+| `apiBatchImportProjects(rows)` | `serverBatchImportProjects` | Multi-row insert with rollback on failure |
+| `apiCreateEquipment / apiUpdateEquipment / apiDeleteEquipment` | `serverCreateEquipment / …` | Equipment CRUD |
+| `apiCreateDepartment(name)` | `serverCreateDepartment` | Add department |
+| `apiLogAudit(event)` | `serverLogAudit` | Append `audit_events` row |
+
+**Auth functions:**
+
+| Wrapper / hook | Server fn | Description |
+|---|---|---|
+| `useAuth().login(u, p)` | `serverLogin` | Returns `{ok:true,username}` or throws on the client. Sets sealed `admin_session` cookie. |
+| `useAuth().logout()` | `serverLogout` | Clears session. |
+| `useAuth()` (auto on mount) | `serverGetSession` | Returns `{username}` or `null`. Drives `isLoggedIn` everywhere. |
 
 ### 5.4 Helper Functions (retained from `src/lib/mock-data.ts`)
 
@@ -297,49 +361,56 @@ All functions call `getToken()` (from `authClient.getSession()`) and inject `Aut
 
 ## 6. API Specification
 
-> **Current status: Neon Data API (PostgREST) is the live backend.** There is no custom Express/Hono server. All reads/writes go directly to the Neon database via its PostgREST-compatible REST API.
+There is no REST API. All client→server communication is over **TanStack Start RPC**: each `createServerFn` becomes a `POST /_serverFn/{contentHash}` endpoint. The hash is derived from the function's source location, which means it is stable across builds *of the same code*. Routing is set up in [vercel.json](../vercel.json):
 
-**Data API base URL:** `https://ep-plain-darkness-ao06zq83.apirest.c-2.ap-southeast-1.aws.neon.tech/neondb/rest/v1`
-**Auth URL:** `https://ep-plain-darkness-ao06zq83.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth`
-**Authentication:** Bearer JWT from Neon Auth session (`authClient.getSession().data.session.token`).
-**Env vars (in `.env`):** `VITE_NEON_AUTH_URL`, `VITE_NEON_DATA_API_URL`.
+```json
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/server" }]
+}
+```
 
-### 6.1 Data API Endpoints (PostgREST conventions)
+`api/server.js` wraps `dist/server/server.js` (the TanStack Start server bundle) and converts Vercel's Node `req/res` to a Web `Request`/`Response`.
 
-| Method | Path | Key params | Purpose |
-|---|---|---|---|
-| GET | `/projects` | `select`, `order`, `limit`, `offset`, filter cols, `Prefer: count=exact` | Paginated project list |
-| GET | `/projects?id=eq.{id}` | `select=*,plans(*,tactics(*,strategies(*)))` | Single project with joins |
-| PATCH | `/projects?id=eq.{id}` | JSON body `{status}` | Update project status |
-| GET | `/strategies` | `order=id.asc` | All strategies |
-| GET | `/tactics` | `order=code.asc` | All tactics |
-| GET | `/plans` | — | All plans |
-| GET | `/project_budgets` | `select=project_id,year,amount` | All budget rows |
-| GET | `/equipment` | `select=*`, `item_type=ilike.*q*`, `Prefer: count=exact` | Equipment list |
+### 6.1 Server-fn endpoint pattern
 
-All filtering uses PostgREST operators: `eq.`, `ilike.*val*`, `not.is.null`, etc.
-Pagination uses `Prefer: count=exact` header → reads `Content-Range: from-to/total` response header.
+```
+POST /_serverFn/{contentHash}
+Content-Type: application/json
+Cookie: admin_session=<sealed>          ← set by serverLogin
 
-### 6.2 Auth Endpoints (Neon Auth / Better Auth)
+Body: { "data": <typed input> }
+Response: <typed output>  (JSON, possibly via Seroval encoding)
 
-`auth.$pathname.tsx` now uses a **custom login form** (not `AuthView`) calling `authClient.signIn.email()` directly.
+Auth required for mutations: requireAdmin() throws Response 401 → request returns 401.
+```
+
+### 6.2 Auth Endpoints
+
+There is exactly one user-facing auth route:
 
 | Path | Component | Purpose |
 |---|---|---|
-| `/auth/sign-in` | Custom form | Username + password login — no email label shown |
-| `/auth/sign-up` | Redirect → `/auth/sign-in` | Self-registration disabled |
-| `/account/profile` | `AccountView` | Profile management |
+| `/login` | `LoginPage` (`src/routes/login.tsx`) | Username + password form. On success, full-page reload to `/` so the cookie + AppLayout state propagate cleanly. |
 
-**Username-to-email synthesis:** bare username (e.g. `pop`) is converted to `pop@nmt.local` before calling the Better Auth API. Users never see this internal email.
+After login, the sidebar gains the **Admin** section (Import / Users / Audit) and CRUD buttons appear in Projects / Equipment / Dashboard.
 
-**Password padding:** Better Auth enforces ≥8 char passwords server-side. Passwords shorter than 8 chars are padded with `_` characters (`padEnd(8, "_")`) both on sign-up (`apiCreateUser`) and sign-in (`auth.$pathname.tsx`) so admins can set 3-char passwords.
+**Demo users (seeded by v5.0 migration):**
 
-**Demo users:** `pop` / `pop_1234`, `pok` / `pok_1234` (created via `npm run add-users`).
+| Username | Password |
+|---|---|
+| `pop` | `pop` |
+| `pok` | `pok` |
 
-### 6.3 Future: Import Endpoint
+Sessions are sealed with the `SESSION_PASSWORD` env var (`useSession()` from TanStack Start uses iron-webcrypto under the hood — the cookie is encrypted+signed; corrupting it invalidates the session). Cookie is `httpOnly`, `sameSite=lax`, `secure` in production, `maxAge=7 days`.
 
-#### `POST /api/import` (not yet implemented)
-Multipart form with field `file` → `.xlsx`. Target flow described in §8.2.
+### 6.3 Required environment variables
+
+| Variable | Used by | Notes |
+|---|---|---|
+| `DATABASE_URL` | `src/lib/db.ts` | Pooler endpoint connection string. **Server-side only — no `VITE_` prefix.** |
+| `SESSION_PASSWORD` | `src/lib/session.server.ts` | Random 32+ char hex. Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. |
+
+Both must be set on Vercel under Project Settings → Environment Variables → all three scopes (Production, Preview, Development) → followed by a manual Redeploy (env var changes do not auto-redeploy).
 
 ---
 
@@ -349,15 +420,18 @@ Multipart form with field `file` → `.xlsx`. Target flow described in §8.2.
 
 Defined as files in `src/routes/`. `src/routeTree.gen.ts` is **auto-generated** — never edit manually.
 
-| File | Path | Component / Purpose |
-|---|---|---|
-| `__root.tsx` | (root shell) | HTML shell, Google Fonts, `<HeadContent>`, `<Scripts>`. |
-| `index.tsx` | `/` | Dashboard — stat cards + recharts visualizations. |
-| `projects.tsx` | `/projects` | Filterable, paginated project list. |
-| `projects.$projectId.tsx` | `/projects/:projectId` | Single project detail with hierarchy + budget chart. |
-| `equipment.tsx` | `/equipment` | Paginated equipment list with search. |
-| `import.tsx` | `/import` | Excel upload UI (no backend wired yet). |
-| `admin.users.tsx` | `/admin/users` | User management — list, add, delete users. |
+| File | Path | Visibility | Component / Purpose |
+|---|---|---|---|
+| `__root.tsx` | (root shell) | — | HTML shell, Google Fonts, `<HeadContent>`, `<Scripts>`. |
+| `index.tsx` | `/` | Public | Dashboard — stat cards + recharts visualizations. |
+| `projects.tsx` | `/projects` | Public | Project list. Bulk-status checkbox column visible only when `isLoggedIn`. |
+| `projects.$projectId.tsx` | `/projects/:projectId` | Public | Project detail. Edit/Delete buttons gated by `isLoggedIn`. `BudgetPanel` edit gated. |
+| `equipment.tsx` | `/equipment` | Public | Equipment list. Add/Edit/Delete gated by `isLoggedIn`. |
+| `login.tsx` | `/login` | Public | Username + password form for admin sign-in. |
+| `import.tsx` | `/import` | Admin only | Excel upload UI (stub). Hidden from public sidebar. |
+| `admin.users.tsx` | `/admin/users` | Admin only | User management page (currently stubbed pending v5.1 rewrite). |
+| `admin.audit.tsx` | `/admin/audit` | Admin only | Audit log viewer (`audit_events` table). |
+| `account.$pathname.tsx` | `/account/*` | — | Legacy Neon Auth account routes — no longer functional, scheduled for removal. |
 
 ### 7.2 Layout (`src/components/AppLayout.tsx`)
 
@@ -366,20 +440,23 @@ Defined as files in `src/routes/`. `src/routeTree.gen.ts` is **auto-generated** 
 - Main content area with `px-5 lg:px-8 py-7` padding.
 - Footer with copyright and version string.
 
-Navigation items:
+Navigation items (all admin items hidden until `isLoggedIn`):
 
-**เมนูหลัก**
+**เมนูหลัก** (always visible)
 | Label | Route | Icon |
 |---|---|---|
 | ภาพรวม | `/` | `LayoutDashboard` |
 | โครงการ | `/projects` | `FolderKanban` |
 | ครุภัณฑ์ | `/equipment` | `Wrench` |
-| นำเข้าข้อมูล | `/import` | `Upload` |
 
-**ผู้ดูแลระบบ**
+**ผู้ดูแลระบบ** (admin only)
 | Label | Route | Icon |
 |---|---|---|
+| นำเข้าข้อมูล | `/import` | `Upload` |
 | จัดการผู้ใช้ | `/admin/users` | `Users` |
+| ประวัติการใช้งาน | `/admin/audit` | `History` |
+
+The sidebar footer shows either an **"เข้าสู่ระบบผู้ดูแล"** button (linking to `/login`) or — for logged-in admins — the username avatar plus an **"ออกจากระบบ"** button.
 
 ### 7.3 Dashboard Composition (`src/routes/index.tsx`)
 
@@ -485,18 +562,21 @@ A robust importer should:
 
 ### 9.1 What Exists Today
 
-- ✅ Full React SPA with 7 pages and sidebar navigation.
-- ✅ TanStack Router with file-based routing.
-- ⚠️ **Auth temporarily disabled** — `AppLayout` session guard removed; app is publicly accessible without login. Custom login form (`auth.$pathname.tsx`) still exists and works but is not enforced.
-- ✅ **Custom login form** — `AuthView` replaced with hand-built username/password form using `authClient.signIn.email()`. Username converted to `@nmt.local` email. Password padded to 8 chars.
-- ✅ **Self-registration blocked** — `/auth/sign-up` redirects to `/auth/sign-in`. Only admin can create users via `/admin/users`.
-- ✅ **Forgot password disabled** — `credentials={{ forgotPassword: false }}` in `NeonAuthUIProvider`. Google social login removed (`providers: []`).
-- ✅ **Hydration** — `suppressHydrationWarning` on `<html>` to silence Neon Auth UI class injection mismatch.
-- ✅ **User management page** (`/admin/users`) — list all users, create new user (via Better Auth sign-up), delete user (cascades sessions/accounts).
-- ✅ **`scripts/add-users.js`** — CLI script to seed demo users (`npm run add-users`).
-- ✅ **Neon PostgreSQL** — 6-table schema live in `neondb`; seeded with 248 projects, 869 budget rows, 64 equipment items.
-- ✅ **TanStack Query** — all pages use `useQuery` / `useMutation` to fetch from the Neon Data API.
-- ✅ **Status mutation** — PATCH to Neon Data API is wired on the project detail page.
+- ✅ Full React SSR app on TanStack Start, file-based routing, 9 pages.
+- ✅ **Two-tier auth** — public read-only / admin CRUD. Custom username+password sign-in at `/login` against `admin_users` table; bcrypt hashing; sealed httpOnly session cookies via `useSession()`. Demo users `pop`/`pop` and `pok`/`pok` seeded.
+- ✅ **No client-exposed credentials** — `DATABASE_URL` and `SESSION_PASSWORD` are server-only. All SQL runs inside `createServerFn` handlers; the Neon serverless driver is never bundled into client JS. Verified by grep over `dist/client/`.
+- ✅ **`requireAdmin()` middleware** — every mutation server function calls it first; returns Response 401 (not Error) so Seroval serializes the response correctly.
+- ✅ **Vercel deployment** — `api/server.js` wraps the TanStack Start H3 bundle; `vercel.json` rewrites all paths through it. Production at `https://five-year-local-dev-strategy.vercel.app`.
+- ✅ **Neon PostgreSQL** — full schema seeded with 248 projects, 869 budget rows, 64 equipment items + new `admin_users` table.
+- ✅ **`not_set` status** added; all 248 imported projects reset to `not_set` (since the source Excel had no status column). DB CHECK constraint updated.
+- ✅ **Bulk status update** — `/projects` page has a checkbox column (admin only) and a bulk toolbar that calls `serverBulkPatchProjectStatus` (`WHERE id = ANY($1::int[])`).
+- ✅ **TanStack Query** — all pages use `useQuery` / `useMutation` against the `apiXxx` wrappers.
+- ✅ **Per-project status mutation** wired on detail page.
+- ✅ **Project CRUD** — Create / Edit / Delete with `ProjectFormDialog` + `DeleteConfirmDialog`, gated by `isLoggedIn`.
+- ✅ **Equipment CRUD** — same pattern with `EquipmentFormDialog`. Fixed v5.0 bug where DB-numeric columns were being string-concatenated in JS sums (`Number()` cast added; `formatBaht` is now defensive too).
+- ✅ **Audit log** (`/admin/audit`) — every mutation calls `apiLogAudit` which writes to `audit_events`.
+- ✅ **Excel export** (`src/lib/export.ts`) — dashboard + filtered project list.
+- ✅ **Login redirect uses `window.location.href`** — full reload after `serverLogin` so the `admin_session` cookie is included on the next render and `useAuth` returns `isLoggedIn=true` immediately.
 - ✅ Dashboard with recharts visualizations (live data).
 - ✅ **Interactive chart filtering** — clicking any chart bar/slice/row instantly filters the project table below. Active filter shown as a dismissible chip.
 - ✅ **Multi-sort** on every dashboard section (strategies, progress, departments, years, project table) — dedicated `<SortSelect>` controls.
@@ -520,74 +600,76 @@ A robust importer should:
 - ✅ IBM Plex Sans Thai font.
 - ✅ `ProjectFormDialog`, `EquipmentFormDialog`, `DeleteConfirmDialog` components (wired to pages).
 
-### 9.2 What is Missing (v1.0 → v1.1)
+### 9.2 What is Missing
 
-- ❌ Project create/edit/delete UI and API calls.
-- ❌ Per-year budget editing UI.
-- ❌ Strategy / Tactic / Plan management UI.
-- ❌ Functional Excel import processing (parse + upsert).
-- ❌ Hierarchy-aware multi-sheet importer.
-- ❌ Excel export of filtered views.
-- ❌ Role-based access control (currently any authenticated user can access `/admin/users` and all pages).
-- ❌ Audit log.
-- ❌ CORS configuration in Neon Console for non-localhost origins.
+- ❌ Strategy / Tactic / Plan management UI (CLI only).
+- ❌ Functional Excel **upload** (`/import` page UI is a stub; `scripts/import-projects.cjs` is a working CLI importer).
+- ❌ `/admin/users` page is wired to `apiGetUsers` / `apiCreateUser` / `apiDeleteUser` which currently return stubs (`Auth disabled`) — needs reimplementation against the `admin_users` table for v5.1.
+- ❌ Account routes (`/account/*`) are leftover from the Better Auth era and no longer functional. Remove or rewrite.
+- ❌ Granular admin roles (currently every admin has full power).
 - ❌ Unit / integration tests.
 
 ### 9.3 File Map
 
 ```
 C:\Users\PC\Documents\Projects\Five-Year Local Development Strategy\
+├── api/
+│   └── server.js                    # Vercel serverless wrapper around dist/server/server.js
 ├── docs/
 │   ├── SYSTEM_DOCUMENT.md           # This file
 │   └── FORENSIC_IMPORT_ANALYSIS.md  # Deep analysis of source Excel workbook structure
 ├── src/
 │   ├── components/
-│   │   ├── AppLayout.tsx            # Sidebar + header + layout shell; TooltipProvider + Toaster
-│   │   ├── StatusBadge.tsx          # Thai status pill component
-│   │   ├── ProjectFormDialog.tsx    # Create/edit project Dialog form
-│   │   ├── EquipmentFormDialog.tsx  # Create/edit equipment Dialog form
-│   │   ├── DeleteConfirmDialog.tsx  # Generic delete confirmation Dialog
-│   │   └── ui/                      # 45+ shadcn/ui components incl. tooltip, hover-card, sonner
+│   │   ├── AppLayout.tsx            # Sidebar + header + Login/Logout button + admin nav gating
+│   │   ├── StatusBadge.tsx          # Thai status pill (incl. not_set style)
+│   │   ├── ProjectFormDialog.tsx    # Create/edit project Dialog
+│   │   ├── EquipmentFormDialog.tsx  # Create/edit equipment Dialog
+│   │   ├── DeleteConfirmDialog.tsx  # Generic delete confirmation
+│   │   └── ui/                      # shadcn/ui primitives
 │   ├── hooks/
-│   │   └── use-mobile.tsx           # useIsMobile() hook
+│   │   ├── use-mobile.tsx           # useIsMobile()
+│   │   └── use-auth.ts              # useAuth() — TanStack Query against serverGetSession + login/logout
 │   ├── lib/
-│   │   ├── api.ts                   # All Neon Data API fetch helpers + types
-│   │   ├── mock-data.ts             # Static reference arrays + formatBaht
+│   │   ├── api.ts                   # Public wrappers (apiXxx) calling server functions
+│   │   ├── server-fns.ts            # All createServerFn handlers — DB queries + requireAdmin guards
+│   │   ├── auth.ts                  # serverLogin / serverLogout / serverGetSession
+│   │   ├── session.server.ts        # getServerSession() + requireAdmin() — server-only import
+│   │   ├── db.ts                    # Lazy Neon SQL client (getSql()) — server-only
+│   │   ├── mock-data.ts             # Static reference arrays + formatBaht (defensive Number cast)
+│   │   ├── export.ts                # Excel export helpers (xlsx-js-style)
 │   │   └── utils.ts                 # cn() helper
 │   ├── routes/
-│   │   ├── __root.tsx               # HTML shell, NeonAuthUIProvider, QueryClientProvider
-│   │   ├── index.tsx                # Dashboard page — charts, filters, animations, HoverCard, Toast
-│   │   ├── projects.tsx             # Project list page (server-side filter + pagination)
-│   │   ├── projects.$projectId.tsx  # Project detail page (status PATCH to Neon)
-│   │   ├── equipment.tsx            # Equipment list page
-│   │   ├── import.tsx               # Excel import page (stub)
-│   │   ├── admin.users.tsx          # User management page (list / create / delete)
-│   │   ├── auth.$pathname.tsx       # Sign-in / sign-up / forgot-password views
-│   │   └── account.$pathname.tsx    # Account management views
-│   ├── auth.ts                      # Neon Auth client (createAuthClient)
+│   │   ├── __root.tsx               # HTML shell, QueryClientProvider, fonts
+│   │   ├── index.tsx                # Dashboard
+│   │   ├── projects.tsx             # Project list + bulk-status toolbar (admin)
+│   │   ├── projects.$projectId.tsx  # Project detail (status, edit, delete, budget edit — admin)
+│   │   ├── equipment.tsx            # Equipment list (with admin CRUD)
+│   │   ├── login.tsx                # Admin login form
+│   │   ├── import.tsx               # Excel upload UI (stub)
+│   │   ├── admin.users.tsx          # User mgmt (currently stubbed pending v5.1)
+│   │   ├── admin.audit.tsx          # Audit log viewer
+│   │   └── account.$pathname.tsx    # LEGACY (Better Auth) — non-functional, slated for removal
 │   ├── routeTree.gen.ts             # AUTO-GENERATED — do not edit
-│   ├── router.tsx                   # createRouter() + error boundary
-│   └── styles.css                   # TailwindCSS 4 + animation utilities + Neon Auth UI styles
-├── scripts/
-│   ├── migrate.js                   # DDL migration (node scripts/migrate.js)
-│   ├── seed.js                      # Seed data from mock arrays (node scripts/seed.js)
-│   ├── add-users.js                 # Create demo users via Neon Auth API
-│   ├── import-projects.cjs          # Full Excel import pipeline (548 projects, 33 sheets)
-│   ├── extract-textboxes.cjs        # Extracts 212 text box annotations from source workbook
-│   ├── seed-textboxes.js            # Seeds project_annotations, sheet_metadata, document_metadata
-│   ├── forensic-extract.cjs         # Workbook forensic analysis + report
-│   ├── sheet-inventory.cjs          # Sheet inventory tool
-│   └── lib/
-│       └── textbox-lookup.cjs       # Reusable Map<sheet, Map<row, annotations>> lookup
-├── .env                             # VITE_NEON_AUTH_URL, VITE_NEON_DATA_API_URL (gitignored)
-├── package.json                     # npm scripts: dev, build, preview, lint, migrate, seed,
-│                                    #   add-users, extract-textboxes, seed-textboxes, import-projects
-├── skills-lock.json                 # Windsurf installed skills manifest
-├── vite.config.ts                   # @lovable.dev/vite-tanstack-config
+│   ├── router.tsx                   # createRouter()
+│   └── styles.css                   # TailwindCSS 4 + animation utilities
+├── scripts/                         # CLI tools — connect to DB via DATABASE_URL
+│   ├── migrate.js                   # DDL migration
+│   ├── seed.js                      # Seed reference data
+│   ├── add-users.js                 # Legacy Neon Auth seed (kept for reference)
+│   ├── import-projects.cjs          # Excel → DB import pipeline
+│   ├── extract-textboxes.cjs        # Excel text box extraction
+│   ├── seed-textboxes.js            # Annotations + sheet metadata seed
+│   ├── forensic-extract.cjs         # Workbook forensic analysis
+│   ├── sheet-inventory.cjs          # Sheet inventory
+│   └── lib/textbox-lookup.cjs       # Reusable text box lookup
+├── .env                             # DATABASE_URL, SESSION_PASSWORD (gitignored)
+├── .env.example
+├── vercel.json                      # Single rewrite rule → /api/server
+├── package.json
+├── vite.config.ts                   # @lovable.dev/vite-tanstack-config (cloudflare:false)
 ├── tsconfig.json
 ├── components.json                  # shadcn/ui config
-├── eslint.config.js
-└── wrangler.jsonc                   # Cloudflare Workers deploy config
+└── eslint.config.js
 ```
 
 ---
@@ -597,76 +679,67 @@ C:\Users\PC\Documents\Projects\Five-Year Local Development Strategy\
 ### 10.1 Local Development
 
 ```bash
-# Install dependencies (use cmd on Windows if PowerShell execution policy blocks npm)
-cmd /c npm install
-
-# Start Vite dev server → http://localhost:8080
-cmd /c npm run dev
+npm install
+npm run dev          # Vite dev server → http://localhost:8080
 ```
 
-> On Windows, PowerShell may block `.ps1` scripts. Use `cmd /c npm ...` as a workaround, or enable PowerShell script execution with `Set-ExecutionPolicy RemoteSigned`.
+`.env` must contain `DATABASE_URL` and `SESSION_PASSWORD`. See `.env.example`.
 
 ### 10.2 Production Build
 
 ```bash
-cmd /c npm run build    # outputs to dist/
-cmd /c npm run preview  # serves dist/ locally for verification
+npm run build        # outputs dist/client and dist/server
+npm run preview      # serves the build locally
 ```
 
-### 10.3 Cloudflare Workers Deployment
+### 10.3 Vercel Deployment
 
-`wrangler.jsonc` and `@cloudflare/vite-plugin` are preconfigured. Deploy with:
-```bash
-cmd /c npx wrangler deploy
-```
+The repo is connected to Vercel (project `five-year-local-dev-strategy`). Every push to `main` triggers an automatic build + deploy.
+
+**Required env vars on Vercel** (Settings → Environment Variables, all three scopes):
+
+| Variable | Notes |
+|---|---|
+| `DATABASE_URL` | Same Neon pooler endpoint as local `.env` |
+| `SESSION_PASSWORD` | 32+ char hex; must match what was used to seal existing cookies, otherwise users are silently logged out |
+
+After changing env vars, manually **Redeploy** the latest deployment — env var changes do not auto-redeploy. Verify a deploy used the new values by hitting any `/_serverFn/*` endpoint and confirming you don't get the `DATABASE_URL is not set` error message.
 
 ### 10.4 Database Migrations
 
 ```bash
-# Re-run schema (idempotent — uses CREATE TABLE IF NOT EXISTS)
-cmd /c npm run migrate
-
-# Re-seed all tables (destructive — TRUNCATE first)
-cmd /c npm run seed
-
-# Add demo users to Neon Auth (idempotent — skips existing)
-cmd /c npm run add-users
+npm run migrate                 # CREATE TABLE IF NOT EXISTS — idempotent
+npm run seed                    # Reference data + 248 projects
+npm run import-projects         # Full Excel pipeline (project source workbook)
 ```
 
-Note: Neon Auth (Better Auth) enforces **minimum 8-character passwords** server-side. The UI allows 3-char minimum; passwords are automatically padded to 8 chars with `_` via `padEnd(8, "_")` before calling the API. Demo users: `pop` / `pop_1234`, `pok` / `pok_1234`.
+Admin user seeding is currently **inline** (run via the Node REPL with the `--env-file=.env` flag). A dedicated `scripts/seed-admins.js` is a v5.1 follow-up.
 
-Both migration/seed scripts use the `pg` Node.js client with the direct PostgreSQL connection string. The connection string is **only in `scripts/*.js`** and never exposed to the browser.
-
-### 10.5 Configuring CORS for Production
-
-1. Open [console.neon.tech](https://console.neon.tech) → your project → **Data API** → **Settings**.
-2. Add your production domain (e.g., `https://myapp.pages.dev`) to the allowed origins list.
-3. For local dev, `localhost` origins are typically permitted by default.
+All scripts use `@neondatabase/serverless` with `process.env.DATABASE_URL`. The connection string is never bundled into client code.
 
 ---
 
 ## 11. Extension Points and Roadmap
 
-### 11.1 Near-Term (v1.1)
+### 11.1 Near-Term (v5.1)
 
-1. **Project CRUD** — `ProjectFormDialog` exists; wire `POST /projects` and `DELETE /projects?id=eq.{id}` via Data API.
-2. **Functional Excel import** — `scripts/import-projects.cjs` pipeline exists for Node.js; wire to UI upload handler on `/import` page.
-3. **Replace static filter dropdowns** — Replace `strategies`, `tactics`, `plans` arrays from `mock-data.ts` with `useQuery(apiGetStrategies)` etc.
-4. **CORS for production** — Configure Neon Data API allowed origins before deploying.
-5. **Role-based access control** — Gate `/admin/users` and mutation endpoints to `admin` role only.
+1. **Re-implement `/admin/users`** against the `admin_users` table — list, create (with password set), reset password, delete. The existing page is wired to stub server functions returning `[]` / throwing.
+2. **Functional Excel upload** — wire `/import` page to `serverBatchImportProjects` using the parsing logic already in `scripts/import-projects.cjs`.
+3. **Remove leftover `/account/*` routes** — Better Auth artefacts that no longer work.
+4. **Replace static filter dropdowns** — `strategies`, `tactics`, `plans` arrays in `mock-data.ts` should come from `useQuery(apiGetStrategies)` etc.
+5. **`scripts/seed-admins.js`** — convert the inline admin seed into a checked-in script.
 
-### 11.2 Mid-Term (v1.2)
+### 11.2 Mid-Term (v5.2)
 
-6. **Per-year budget editing** — Inline-editable budget rows on the project detail page.
-7. **Excel export** — Filtered project list and dashboard export via SheetJS.
-8. **Auth + roles** — Session-based; `users` table; role enum `{admin, officer, viewer}`.
-9. **Audit log** — `audit_events(id, actor, action, entity, entity_id, diff, at)`.
+6. **Granular admin roles** — `admin_users.role` column with `super_admin` / `editor` / `viewer`.
+7. **Audit log filters + diff viewer** in `/admin/audit`.
+8. **`projects.status_changed_at`** — track when a status was last updated and by whom.
 
-### 11.3 Long-Term (v2.0)
+### 11.3 Long-Term (v6.0)
 
-10. **Approval workflow** — `draft → submitted → approved → active → completed`.
-11. **Actual vs. planned tracking** — `project_disbursements(project_id, year, quarter, amount, note)`.
-12. **Citizen-facing view** — Read-only subset at `/public` with no auth.
+9. **Approval workflow** — `draft → submitted → approved → active → completed`.
+10. **Actual vs. planned tracking** — `project_disbursements(project_id, year, quarter, amount, note)`.
+11. **Citizen-facing view** — Already exists implicitly (the public read-only mode).
 
 ### 11.4 Guardrails for Future Agents
 
@@ -680,7 +753,17 @@ When modifying this system:
 - **Keep component additions inside `src/components/`.** Add new shadcn/ui components via `npx shadcn@latest add <component>` to keep the `components.json` manifest in sync.
 - **Do not add duplicate Vite plugins.** `@lovable.dev/vite-tanstack-config` already bundles TanStack Start, React, Tailwind, tsconfig-paths, and Cloudflare plugins. See the comment at the top of `vite.config.ts`.
 - **`optimizeDeps.include` for `use-sync-external-store`** — `vite.config.ts` explicitly includes `use-sync-external-store/shim/with-selector` in `optimizeDeps.include` to force Vite to pre-bundle the CJS module into ESM. Without this, a `SyntaxError: does not provide an export named 'useSyncExternalStoreWithSelector'` occurs on first load. **Do not remove this entry.**
-- **Auth guard is currently disabled.** Do not re-enable `if (!session) return <RedirectToSignIn />` in `AppLayout.tsx` until the auth stability issues are resolved. See §9.1 for current auth status.
+- **DB credentials must never reach the client.** Never import `db.ts`, `session.server.ts`, or anything from `@neondatabase/serverless` into a file that is reachable from the client. The TanStack Start import-protection plugin will fail the build and `dist/client/` will be scanned in CI for `neondb_owner` / `npg_` to verify. Use `*.server.ts` suffix for files that must be server-only.
+- **Server functions must throw `Response`, not `Error`, for HTTP-shaped errors.** Throwing `new Error(...)` causes Seroval (TanStack Start's error serializer) to fail with `Seroval Error (step: 3)` 500 on Vercel. Pattern:
+  ```ts
+  if (!session.data?.userId) {
+    throw new Response(JSON.stringify({ error: "UNAUTHORIZED" }), { status: 401 });
+  }
+  ```
+  For *expected* failure cases (e.g. wrong password), return a discriminated-union result instead of throwing — see `serverLogin` in `src/lib/auth.ts`.
+- **Login flow uses `window.location.href = "/"`, not `navigate()`.** A SPA navigation does not refetch the session cookie reliably; a full reload guarantees the new `admin_session` cookie is read on first render and `useAuth` returns `isLoggedIn=true` immediately.
+- **Never `+` Postgres `numeric` columns directly.** The Neon serverless driver returns numerics as strings. Always `Number(x)` first, or use `formatBaht` which already does the cast. Bug fixed in v5.0 was equipment totals showing `526000067400030700000…` (string concat).
+- **Don't add a `not_set` arm to `STATUS_COLOR` charts that hardcode 4 statuses.** `byStrategyProgress` in `serverGetDashboard` intentionally omits `not_set` from the stacked-bar chart to keep the existing visualization compact. If you want to surface `not_set` counts, do it as a separate KPI.
 - **All hooks in `DashboardPage` MUST be called before any early return.** Both `useCountUp` (×5) and all `useMemo` calls (×5: `stratSorted`, `progressSorted`, `yearSorted`, `deptSorted`, `tableSorted`) must precede the `if (isLoading)` and `if (error || !data)` guard blocks. All `useMemo` deps use optional chaining (`data?.byStrategy ?? []`) so they are safe when data is `undefined`. Violating this causes a React "Rendered more hooks than during the previous render" crash.
 - **Animate only `transform` and `opacity`.** Never animate `width`, `height`, `top`, `left`, or use `transition: all`. See `src/styles.css` keyframes for approved patterns.
 - **Recharts `Tooltip` must be aliased** as `ReTooltip` in `index.tsx` to avoid naming conflict with Radix UI `Tooltip` (imported as `TipRoot`).
@@ -701,6 +784,7 @@ When modifying this system:
 | 4.0 | 2026-04-23 | System analyst (AI) | **UX Enhancement release.** Added: interactive chart filtering (click any bar/slice/row → filters project table), multi-sort controls on all dashboard sections, strategy progress stacked bar chart, radar chart, Treemap, HoverCard on strategy rows, Radix Tooltip on KPI + stat cards, Sonner toast notifications (filter/copy actions), `useCountUp` animated KPI hook, micro-animation CSS utilities (fade-up, hover-lift, press-effect, stagger delays), `TooltipProvider` + `Toaster` in `AppLayout`. Added `ProjectFormDialog`, `EquipmentFormDialog`, `DeleteConfirmDialog` components. Added Excel import pipeline scripts (`import-projects.cjs`, `extract-textboxes.cjs`, `seed-textboxes.js`) + forensic analysis. Updated all section 7 subsections, FR-01, NFR-09/10, file map, guardrails, and change log. Fixed Rules of Hooks violation (moved `useCountUp` before early returns). |
 | 4.1 | 2026-04-23 | System analyst (AI) + User | **Chart polish + final Rules-of-Hooks fix.** (1) Moved all 5 `useMemo` hooks before early returns with `data?.xxx ?? []` optional-chaining deps — resolves "Rendered more hooks" crash. (2) Radar chart: `CustomPolarAngleTick` word-wrap component, full strategy names as `subject`, `outerRadius=90`, wider margins. (3) Treemap: SVG `<clipPath>` per cell to prevent text overflow, full `name` labels, `<title>` tooltip. (4) Strategy progress chart: Y-axis short codes `S1`–`S6` (`width=30`), `fullName` in tooltip payload. (5) Project table strategy column: `max-w-[160px] truncate` + `title` native tooltip. Updated §7.3 (sections 6–10), §7.4, §11.4 guardrails, and change log. |
 | 4.2 | 2026-04-27 | System analyst (AI) + User | **Auth overhaul + stability fixes.** (1) Replaced `AuthView` with custom username/password login form using `authClient.signIn.email()` — no email label shown to user; username auto-converted to `@nmt.local`. (2) Self-registration blocked: `/auth/sign-up` redirects to sign-in. (3) Forgot password + Google login disabled. (4) Password padding: `padEnd(8, "_")` in both `apiCreateUser` and login form allows 3-char passwords. (5) Fixed double `res.json()` call in `apiCreateUser` that prevented localStorage mirror from updating. (6) Added `optimizeDeps.include: ["use-sync-external-store/shim/with-selector"]` to `vite.config.ts` to fix recurring `SyntaxError: useSyncExternalStoreWithSelector` on dev server. (7) Auth guard temporarily disabled in `AppLayout.tsx` — app accessible without login pending auth stability review. Updated §3.1, §3.2 FR-12, §4.4, §6.2, §9.1, §10.4, §11.4, change log. |
+| 5.0 | 2026-04-30 | System analyst (AI) + User | **Backend rearchitecture + Vercel deployment + custom auth + read-only public mode.** (1) Removed Neon Auth / Better Auth / PostgREST entirely. All SQL now runs inside `createServerFn` handlers via `@neondatabase/serverless`. New files: `src/lib/db.ts` (lazy `getSql()`), `src/lib/server-fns.ts` (all DB queries), `src/lib/auth.ts` (login/logout/session), `src/lib/session.server.ts` (`requireAdmin`). `src/lib/api.ts` becomes a thin wrapper. Eliminates security regression where DB credentials had been bundled into client JS via `VITE_DATABASE_URL`. (2) Two-tier auth: public read-only / admin CRUD. New `admin_users` table with bcrypt hashes; demo users `pop`/`pop` and `pok`/`pok`. Sealed httpOnly session cookies via `useSession()`. New `/login` route. Sidebar gates Admin section + CRUD buttons by `useAuth().isLoggedIn`. (3) Vercel deployment: `api/server.js` wrapper + `vercel.json` rewrites. Required env vars: `DATABASE_URL`, `SESSION_PASSWORD`. (4) New `not_set` status (default for new projects); reset all 248 existing projects; DB CHECK constraint updated. (5) Bulk status update on `/projects` (admin only) — `serverBulkPatchProjectStatus` with `WHERE id = ANY($1::int[])`. (6) Bug fixes: equipment budget columns were string-concatenating in JS sums (`Number()` cast added); `formatBaht` is now defensive. (7) Server functions throw `Response`, not `Error` — Seroval cannot serialize Error correctly on Vercel; `serverLogin` returns discriminated-union result. (8) Login uses `window.location.href` for full reload after success so cookie + AppLayout state propagate cleanly. (9) Updated all sections: Topology diagram, tech stack (Vercel, no PostgREST, no Better Auth), data model (`Status` adds `not_set`, `admin_users` table), API spec (server-fn RPC), routes (`/login`, admin gating), file map, deployment, roadmap, guardrails. |
 
 ---
 
