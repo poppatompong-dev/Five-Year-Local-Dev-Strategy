@@ -1,18 +1,35 @@
-import { Link, Outlet, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Wrench, Upload, Building2, Bell, Search, Users, History } from "lucide-react";
+import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
+import { LayoutDashboard, FolderKanban, Wrench, Upload, Building2, Bell, Search, Users, History, LogIn, LogOut } from "lucide-react";
 import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useAuth } from "@/hooks/use-auth";
+import { toast } from "sonner";
 
-const NAV = [
+const PUBLIC_NAV = [
   { to: "/", label: "ภาพรวม", icon: LayoutDashboard },
   { to: "/projects", label: "โครงการ", icon: FolderKanban },
   { to: "/equipment", label: "ครุภัณฑ์", icon: Wrench },
+] as const;
+
+const ADMIN_NAV = [
   { to: "/import", label: "นำเข้าข้อมูล", icon: Upload },
 ] as const;
 
 export function AppLayout({ children }: { children?: ReactNode }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isLoggedIn, username, logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success("ออกจากระบบแล้ว");
+      navigate({ to: "/" });
+    } catch {
+      toast.error("ออกจากระบบไม่สำเร็จ");
+    }
+  };
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -37,7 +54,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
 
         <nav className="flex-1 px-3 py-5 space-y-0.5 overflow-y-auto">
           <div className="px-3 pb-2 text-[10px] uppercase tracking-widest text-sidebar-foreground/40 font-medium">เมนูหลัก</div>
-          {NAV.map((item) => {
+          {PUBLIC_NAV.map((item) => {
             const Icon = item.icon;
             const active =
               item.to === "/"
@@ -63,49 +80,92 @@ export function AppLayout({ children }: { children?: ReactNode }) {
             );
           })}
 
-          <div className="px-3 pt-5 pb-2 text-[10px] uppercase tracking-widest text-sidebar-foreground/40 font-medium">ผู้ดูแลระบบ</div>
-          <Link
-            to="/admin/users"
-            className={[
-              "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 relative overflow-hidden",
-              location.pathname.startsWith("/admin/users")
-                ? "bg-gradient-to-r from-gold to-gold/80 text-gold-foreground font-semibold shadow-[0_2px_16px_-2px_oklch(0.74_0.12_88_/_0.55)]"
-                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground",
-            ].join(" ")}
-          >
-            {location.pathname.startsWith("/admin/users") && (
-              <span className="absolute left-0 inset-y-2 w-0.5 rounded-full bg-white/40" />
-            )}
-            <Users className="size-[17px] shrink-0" strokeWidth={location.pathname.startsWith("/admin/users") ? 2 : 1.75} />
-            <span>จัดการผู้ใช้</span>
-          </Link>
-          <Link
-            to="/admin/audit"
-            className={[
-              "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 relative overflow-hidden",
-              location.pathname.startsWith("/admin/audit")
-                ? "bg-gradient-to-r from-gold to-gold/80 text-gold-foreground font-semibold shadow-[0_2px_16px_-2px_oklch(0.74_0.12_88_/_0.55)]"
-                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground",
-            ].join(" ")}
-          >
-            {location.pathname.startsWith("/admin/audit") && (
-              <span className="absolute left-0 inset-y-2 w-0.5 rounded-full bg-white/40" />
-            )}
-            <History className="size-[17px] shrink-0" strokeWidth={location.pathname.startsWith("/admin/audit") ? 2 : 1.75} />
-            <span>ประวัติการใช้งาน</span>
-          </Link>
+          {isLoggedIn && (
+            <>
+              <div className="px-3 pt-5 pb-2 text-[10px] uppercase tracking-widest text-sidebar-foreground/40 font-medium">ผู้ดูแลระบบ</div>
+              {ADMIN_NAV.map((item) => {
+                const Icon = item.icon;
+                const active = location.pathname.startsWith(item.to);
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={[
+                      "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 relative overflow-hidden",
+                      active
+                        ? "bg-gradient-to-r from-gold to-gold/80 text-gold-foreground font-semibold shadow-[0_2px_16px_-2px_oklch(0.74_0.12_88_/_0.55)]"
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground",
+                    ].join(" ")}
+                  >
+                    {active && <span className="absolute left-0 inset-y-2 w-0.5 rounded-full bg-white/40" />}
+                    <Icon className="size-[17px] shrink-0" strokeWidth={active ? 2 : 1.75} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+              <Link
+                to="/admin/users"
+                className={[
+                  "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 relative overflow-hidden",
+                  location.pathname.startsWith("/admin/users")
+                    ? "bg-gradient-to-r from-gold to-gold/80 text-gold-foreground font-semibold shadow-[0_2px_16px_-2px_oklch(0.74_0.12_88_/_0.55)]"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground",
+                ].join(" ")}
+              >
+                {location.pathname.startsWith("/admin/users") && (
+                  <span className="absolute left-0 inset-y-2 w-0.5 rounded-full bg-white/40" />
+                )}
+                <Users className="size-[17px] shrink-0" strokeWidth={location.pathname.startsWith("/admin/users") ? 2 : 1.75} />
+                <span>จัดการผู้ใช้</span>
+              </Link>
+              <Link
+                to="/admin/audit"
+                className={[
+                  "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 relative overflow-hidden",
+                  location.pathname.startsWith("/admin/audit")
+                    ? "bg-gradient-to-r from-gold to-gold/80 text-gold-foreground font-semibold shadow-[0_2px_16px_-2px_oklch(0.74_0.12_88_/_0.55)]"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground",
+                ].join(" ")}
+              >
+                {location.pathname.startsWith("/admin/audit") && (
+                  <span className="absolute left-0 inset-y-2 w-0.5 rounded-full bg-white/40" />
+                )}
+                <History className="size-[17px] shrink-0" strokeWidth={location.pathname.startsWith("/admin/audit") ? 2 : 1.75} />
+                <span>ประวัติการใช้งาน</span>
+              </Link>
+            </>
+          )}
         </nav>
 
         <div className="px-4 py-4 border-t border-sidebar-border">
-          <div className="flex items-center gap-3 rounded-xl px-2 py-2">
-            <div className="size-9 rounded-full bg-gradient-to-br from-gold/30 to-gold/10 ring-2 ring-gold/35 flex items-center justify-center text-gold text-sm font-bold shrink-0 shadow-[0_0_12px_-3px_oklch(0.74_0.12_88_/_0.5)]">
-              ท
+          {isLoggedIn ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 rounded-xl px-2 py-2">
+                <div className="size-9 rounded-full bg-gradient-to-br from-gold/30 to-gold/10 ring-2 ring-gold/35 flex items-center justify-center text-gold text-sm font-bold shrink-0 shadow-[0_0_12px_-3px_oklch(0.74_0.12_88_/_0.5)]">
+                  {username?.charAt(0).toUpperCase() ?? "ท"}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold truncate leading-tight">{username}</div>
+                  <div className="text-[11px] text-sidebar-foreground/50 truncate mt-0.5">ผู้ดูแลระบบ</div>
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground transition-colors"
+              >
+                <LogOut className="size-[17px] shrink-0" strokeWidth={1.75} />
+                <span>ออกจากระบบ</span>
+              </button>
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold truncate leading-tight">เทศบาลนครนครสวรรค์</div>
-              <div className="text-[11px] text-sidebar-foreground/50 truncate mt-0.5">ผู้ดูแลระบบ</div>
-            </div>
-          </div>
+          ) : (
+            <Link
+              to="/login"
+              className="w-full flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm bg-sidebar-accent/60 hover:bg-sidebar-accent text-sidebar-foreground transition-colors border border-sidebar-border/60"
+            >
+              <LogIn className="size-[17px] shrink-0" strokeWidth={1.75} />
+              <span>เข้าสู่ระบบผู้ดูแล</span>
+            </Link>
+          )}
         </div>
       </aside>
 

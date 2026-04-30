@@ -20,6 +20,7 @@ import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { exportProjectsToExcel } from "@/lib/export";
 import { Search, Filter, ChevronLeft, ChevronRight, X, ArrowUpDown, Plus, Trash2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/projects")({
   head: () => ({
@@ -34,6 +35,7 @@ export const Route = createFileRoute("/projects")({
 const PAGE_SIZE = 12;
 
 function ProjectsPage() {
+  const { isLoggedIn } = useAuth();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [strategyId, setStrategyId] = useState<number | "">("");
@@ -150,9 +152,11 @@ function ProjectsPage() {
             >
               <Download className="size-4" /> ส่งออก
             </Button>
-            <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
-              <Plus className="size-4" /> เพิ่มโครงการ
-            </Button>
+            {isLoggedIn && (
+              <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
+                <Plus className="size-4" /> เพิ่มโครงการ
+              </Button>
+            )}
           </div>
         </div>
 
@@ -289,17 +293,19 @@ function ProjectsPage() {
                           <StatusBadge status={p.status} />
                         </td>
                         <td className="px-3 py-4">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteId(p.id);
-                              setDeleteName(p.name);
-                            }}
-                            className="size-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition opacity-0 group-hover:opacity-100"
-                            title="ลบโครงการ"
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
+                          {isLoggedIn && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteId(p.id);
+                                setDeleteName(p.name);
+                              }}
+                              className="size-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition opacity-0 group-hover:opacity-100"
+                              title="ลบโครงการ"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );

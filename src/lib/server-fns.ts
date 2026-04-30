@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "./db";
+import { requireAdmin } from "./session.server";
 import type {
   DBStrategy, DBTactic, DBPlan, DBProject, DBProjectBudget,
   DBProjectAnnotation, DBDepartment, DBAuditEvent, DBEquipment,
@@ -122,6 +123,7 @@ export const serverGetProject = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const serverPatchProjectStatus = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { id: number; status: Status } }) => {
+    await requireAdmin();
     await getSql()`UPDATE projects SET status = ${data.status} WHERE id = ${data.id}`;
   });
 
@@ -130,6 +132,7 @@ export const serverPatchProjectStatus = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const serverCreateProject = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: ProjectCreateInput }) => {
+    await requireAdmin();
     const { budgets, ...p } = data;
     const rows = await getSql()`
       INSERT INTO projects (name, objective, target, kpi, expected_result, department, plan_id, status, source_sheet, amendment_version)
@@ -154,6 +157,7 @@ export const serverCreateProject = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const serverUpdateProject = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { id: number } & ProjectCreateInput }) => {
+    await requireAdmin();
     const { id, budgets, ...p } = data;
     await getSql()`
       UPDATE projects SET
@@ -179,6 +183,7 @@ export const serverUpdateProject = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const serverUpdateBudgets = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { projectId: number; budgets: Record<number, number> } }) => {
+    await requireAdmin();
     await getSql()`DELETE FROM project_budgets WHERE project_id = ${data.projectId}`;
     for (const [year, amount] of Object.entries(data.budgets)) {
       if (Number(amount) > 0) {
@@ -192,6 +197,7 @@ export const serverUpdateBudgets = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const serverDeleteProject = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { id: number } }) => {
+    await requireAdmin();
     await getSql()`DELETE FROM project_budgets WHERE project_id = ${data.id}`;
     await getSql()`DELETE FROM project_annotations WHERE project_id = ${data.id}`;
     await getSql()`DELETE FROM projects WHERE id = ${data.id}`;
@@ -202,6 +208,7 @@ export const serverDeleteProject = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const serverBatchImportProjects = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { rows: ProjectCreateInput[] } }) => {
+    await requireAdmin();
     const result: ImportResult = { inserted: 0, updated: 0, warnings: [], errors: [] };
     const createdIds: number[] = [];
     try {
@@ -269,6 +276,7 @@ export const serverGetEquipment = createServerFn({ method: "POST" })
 
 export const serverCreateEquipment = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: EquipmentCreateInput }) => {
+    await requireAdmin();
     const rows = await getSql()`
       INSERT INTO equipment (plan_name, category, item_type, target, department, budget_2566, budget_2567, budget_2568, budget_2569, budget_2570)
       VALUES (${data.plan_name ?? null}, ${data.category ?? null}, ${data.item_type ?? null},
@@ -282,6 +290,7 @@ export const serverCreateEquipment = createServerFn({ method: "POST" })
 
 export const serverUpdateEquipment = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { id: number } & EquipmentCreateInput }) => {
+    await requireAdmin();
     await getSql()`
       UPDATE equipment SET
         plan_name = ${data.plan_name ?? null}, category = ${data.category ?? null},
@@ -296,6 +305,7 @@ export const serverUpdateEquipment = createServerFn({ method: "POST" })
 
 export const serverDeleteEquipment = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { id: number } }) => {
+    await requireAdmin();
     await getSql()`DELETE FROM equipment WHERE id = ${data.id}`;
   });
 
@@ -403,6 +413,7 @@ export const serverGetDepartmentsList = createServerFn({ method: "GET" })
 
 export const serverCreateDepartment = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { name: string } }) => {
+    await requireAdmin();
     const rows = await getSql()`INSERT INTO departments (name) VALUES (${data.name}) RETURNING *`;
     return rows[0] as DBDepartment;
   });
@@ -412,6 +423,7 @@ export const serverCreateDepartment = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const serverLogAudit = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { action: DBAuditEvent["action"]; entity: string; entity_id?: number | null; before?: any; after?: any } }) => {
+    await requireAdmin();
     await getSql()`
       INSERT INTO audit_events (action, entity, entity_id, before, after)
       VALUES (${data.action}, ${data.entity}, ${data.entity_id ?? null},
@@ -422,6 +434,7 @@ export const serverLogAudit = createServerFn({ method: "POST" })
 
 export const serverGetAuditEvents = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { entity?: string; entity_id?: number; limit?: number } }) => {
+    await requireAdmin();
     const lim = data.limit ?? 50;
     if (data.entity && data.entity_id) {
       return (await getSql()`SELECT * FROM audit_events WHERE entity = ${data.entity} AND entity_id = ${data.entity_id} ORDER BY timestamp DESC LIMIT ${lim}`) as DBAuditEvent[];

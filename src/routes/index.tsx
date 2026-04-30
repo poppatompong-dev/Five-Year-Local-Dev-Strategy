@@ -13,6 +13,7 @@ import { formatBaht, STATUS_COLOR, YEARS, type Status } from "@/lib/mock-data";
 import { apiGetDashboard, apiGetProjects, apiGetProject, apiUpdateProject, apiPatchProjectStatus } from "@/lib/api";
 import { exportDashboardToExcel } from "@/lib/export";
 import type { ProjectRow, StrategyProgress, ProjectCreateInput } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import {
   ResponsiveContainer,
   BarChart,
@@ -973,6 +974,7 @@ function DashboardPage() {
 
 // ─── Project Detail Sheet ─────────────────────────────────────────────────────
 function ProjectDetailSheet({ projectId, onClose }: { projectId: number | null; onClose: () => void }) {
+  const { isLoggedIn } = useAuth();
   const qc = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
 
@@ -1146,17 +1148,19 @@ function ProjectDetailSheet({ projectId, onClose }: { projectId: number | null; 
           {/* ── Fixed footer ─────────────────────────────────── */}
           {project && (
             <div className="shrink-0 bg-background/95 backdrop-blur border-t border-border px-6 py-4 flex items-center gap-3">
-              <button
-                onClick={() => setEditOpen(true)}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground px-4 py-2.5 text-sm font-semibold hover:bg-primary/90 transition press-effect"
-              >
-                <Pencil className="size-3.5" />
-                แก้ไขโครงการ
-              </button>
+              {isLoggedIn && (
+                <button
+                  onClick={() => setEditOpen(true)}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground px-4 py-2.5 text-sm font-semibold hover:bg-primary/90 transition press-effect"
+                >
+                  <Pencil className="size-3.5" />
+                  แก้ไขโครงการ
+                </button>
+              )}
               <Link
                 to="/projects/$projectId"
                 params={{ projectId: String(project.id) }}
-                className="flex items-center justify-center gap-2 rounded-xl border border-border bg-background hover:bg-muted px-4 py-2.5 text-sm font-medium transition"
+                className="flex items-center justify-center gap-2 rounded-xl border border-border bg-background hover:bg-muted px-4 py-2.5 text-sm font-medium transition flex-1"
               >
                 <ExternalLink className="size-3.5" />
                 ดูเต็มหน้า
@@ -1182,6 +1186,7 @@ function ProjectDetailSheet({ projectId, onClose }: { projectId: number | null; 
 
 // ─── Quick action dropdown menu ───────────────────────────────────────────────
 function QuickMenu({ projectId, projectName }: { projectId: number; projectName: string }) {
+  const { isLoggedIn } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -1217,15 +1222,17 @@ function QuickMenu({ projectId, projectName }: { projectId: number; projectName:
             <Eye className="size-3.5 text-muted-foreground" />
             ดูรายละเอียด
           </Link>
-          <Link
-            to="/projects/$projectId"
-            params={{ projectId: String(projectId) }}
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-muted/60 transition-colors"
-          >
-            <Pencil className="size-3.5 text-muted-foreground" />
-            แก้ไขโครงการ
-          </Link>
+          {isLoggedIn && (
+            <Link
+              to="/projects/$projectId"
+              params={{ projectId: String(projectId) }}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-muted/60 transition-colors"
+            >
+              <Pencil className="size-3.5 text-muted-foreground" />
+              แก้ไขโครงการ
+            </Link>
+          )}
           <div className="border-t border-border/50 mt-1 pt-1">
             <button
               onClick={async () => {

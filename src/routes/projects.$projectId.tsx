@@ -18,6 +18,7 @@ import { ChevronLeft, ChevronRight, FileText, Target, Award, TrendingUp, Buildin
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/projects/$projectId")({
   head: ({ params }) => ({
@@ -229,6 +230,7 @@ function StatusStepper({
 }
 
 function ProjectDetailPage() {
+  const { isLoggedIn } = useAuth();
   const { projectId } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -370,24 +372,26 @@ function ProjectDetailPage() {
                   {formatBaht(project.total_budget)}
                 </div>
                 <div className="text-xs text-primary-foreground/70 mt-0.5">บาท</div>
-                <div className="flex items-center gap-2 justify-end pt-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => setEditOpen(true)}
-                    className="gap-1 bg-white/15 text-white border-white/20 hover:bg-white/25"
-                  >
-                    <Pencil className="size-3.5" /> แก้ไข
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => setDeleteOpen(true)}
-                    className="gap-1"
-                  >
-                    <Trash2 className="size-3.5" /> ลบ
-                  </Button>
-                </div>
+                {isLoggedIn && (
+                  <div className="flex items-center gap-2 justify-end pt-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setEditOpen(true)}
+                      className="gap-1 bg-white/15 text-white border-white/20 hover:bg-white/25"
+                    >
+                      <Pencil className="size-3.5" /> แก้ไข
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => setDeleteOpen(true)}
+                      className="gap-1"
+                    >
+                      <Trash2 className="size-3.5" /> ลบ
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -530,6 +534,7 @@ function BudgetPanel({
   budgets: Record<number, number>;
   totalBudget: number;
 }) {
+  const { isLoggedIn } = useAuth();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<number, string>>({});
@@ -578,7 +583,7 @@ function BudgetPanel({
     <div className="bg-card rounded-2xl border border-border p-5 shadow-soft">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">สรุปงบประมาณ</h3>
-        {!editing && (
+        {!editing && isLoggedIn && (
           <button
             onClick={startEdit}
             className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition font-medium"

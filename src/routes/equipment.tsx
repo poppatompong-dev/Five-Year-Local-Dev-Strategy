@@ -8,6 +8,7 @@ import { EquipmentFormDialog } from "@/components/EquipmentFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Search, ChevronLeft, ChevronRight, Wrench, Package, Plus, Pencil, Trash2 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/equipment")({
   head: () => ({
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/equipment")({
 const PAGE_SIZE = 10;
 
 function EquipmentPage() {
+  const { isLoggedIn } = useAuth();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -90,9 +92,11 @@ function EquipmentPage() {
               {isLoading ? "กำลังโหลด..." : `${totalCount.toLocaleString("th-TH")} รายการ`}
             </p>
           </div>
-          <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
-            <Plus className="size-4" /> เพิ่มครุภัณฑ์
-          </Button>
+          {isLoggedIn && (
+            <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
+              <Plus className="size-4" /> เพิ่มครุภัณฑ์
+            </Button>
+          )}
         </div>
 
         {/* Stat row */}
@@ -171,25 +175,27 @@ function EquipmentPage() {
                         {total.toLocaleString("th-TH")}
                       </td>
                       <td className="px-3 py-4">
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                          <button
-                            onClick={() => setEditItem(e)}
-                            className="size-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition"
-                            title="แก้ไข"
-                          >
-                            <Pencil className="size-3.5" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setDeleteId(e.id);
-                              setDeleteName(e.item_type || "");
-                            }}
-                            className="size-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition"
-                            title="ลบ"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </button>
-                        </div>
+                        {isLoggedIn && (
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                            <button
+                              onClick={() => setEditItem(e)}
+                              className="size-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition"
+                              title="แก้ไข"
+                            >
+                              <Pencil className="size-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setDeleteId(e.id);
+                                setDeleteName(e.item_type || "");
+                              }}
+                              className="size-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition"
+                              title="ลบ"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );

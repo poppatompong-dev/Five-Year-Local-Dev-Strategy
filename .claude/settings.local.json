@@ -21,7 +21,21 @@
       "Bash(curl -s -X POST \"https://ep-plain-darkness-ao06zq83.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth/token\" -H \"Content-Type: application/json\" -H \"Origin: http://localhost:8080\" -H \"Cookie: __Secure-neon-auth.session_token=Ty5lmJ6LdTRKJrizzNfLfDCPUxscf0BC\" -d '{}')",
       "Bash(git add *)",
       "Bash(git commit -m 'fix: chart warnings, dialog aria, row click, filter UX & user management *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git fetch *)",
+      "Bash(grep -v \"^$\")",
+      "Bash(git commit -m ' *)",
+      "Bash(npx vercel *)",
+      "Bash(grep -c \"await sql\\\\`\\\\|= await sql\\\\`\\\\|sql\\\\`SELECT\\\\|sql\\\\`INSERT\\\\|sql\\\\`UPDATE\\\\|sql\\\\`DELETE\" src/lib/server-fns.ts)",
+      "Bash(grep -n \"sql\\\\`\\\\|getSql\" '/c/Users/PC/Documents/Projects/Five-Year Local Development Strategy/src/lib/server-fns.ts')",
+      "Bash(node -e ' *)",
+      "Bash(node --env-file=.env -e ' *)",
+      "Bash(npm ls *)",
+      "Bash(npm install *)",
+      "Bash(grep -E \"^\\(h3|cookie|srvx\\)$\")",
+      "Bash(npm uninstall *)",
+      "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('hex'\\)\\)\")",
+      "Bash(curl -s http://localhost:8080/ -o /dev/null -w \"%{http_code}\\\\n\")"
     ]
   }
 }
