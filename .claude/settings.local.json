@@ -35,7 +35,12 @@
       "Bash(grep -E \"^\\(h3|cookie|srvx\\)$\")",
       "Bash(npm uninstall *)",
       "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('hex'\\)\\)\")",
-      "Bash(curl -s http://localhost:8080/ -o /dev/null -w \"%{http_code}\\\\n\")"
+      "Bash(curl -s http://localhost:8080/ -o /dev/null -w \"%{http_code}\\\\n\")",
+      "Bash(curl -s -c /tmp/cookies.txt -b /tmp/cookies.txt -X POST \"https://five-year-local-dev-strategy.vercel.app/_serverFn/$\\(cat dist/server/assets/auth-*.js)",
+      "Bash(grep -oE 'serverFn/[a-zA-Z0-9_-]{20,}' dist/client/assets/login-BeHf-iYP.js dist/client/assets/use-auth-9beKExNK.js)",
+      "Bash(curl -s -i -X POST https://five-year-local-dev-strategy.vercel.app/_serverFn/a5684245feb247d564c19878331280ee7574d35fcda07eb05299bd5c610b9864 -H 'Content-Type: application/json' -d '{\"data\":{\"username\":\"pop\",\"password\":\"pop\"}}')",
+      "Bash(curl -s -i \"https://five-year-local-dev-strategy.vercel.app/_serverFn/ca1c190d023fa7fe9fd1384dcf38dc3fdf13a03def64adb409376375dc2b8fa9\")",
+      "Bash(curl -s -i -X POST https://five-year-local-dev-strategy.vercel.app/_serverFn/a5684245feb247d564c19878331280ee7574d35fcda07eb05299bd5c610b9864 -H 'Content-Type: application/json' -d '{\"data\":{\"username\":\"nonexistent\",\"password\":\"x\"}}')"
     ]
   }
 }

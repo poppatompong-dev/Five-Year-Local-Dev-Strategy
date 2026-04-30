@@ -15,6 +15,7 @@ export function useAuth() {
     isLoading,
     login: async (username: string, password: string) => {
       const r = await serverLogin({ data: { username, password } });
+      if (!r.ok) throw new Error(r.error);
       await qc.invalidateQueries({ queryKey: ["session"] });
       return r;
     },
