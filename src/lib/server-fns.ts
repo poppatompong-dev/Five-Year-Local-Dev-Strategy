@@ -304,6 +304,7 @@ export const serverDeleteEquipment = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const serverGetDashboard = createServerFn({ method: "GET" })
   .handler(async () => {
+    const sql = getSql();
     const [projects, strategies, plans, budgets, tactics] = await Promise.all([
       sql`SELECT id, status, department, plan_id FROM projects`,
       sql`SELECT * FROM strategies ORDER BY id`,
