@@ -127,6 +127,15 @@ export const serverPatchProjectStatus = createServerFn({ method: "POST" })
     await getSql()`UPDATE projects SET status = ${data.status} WHERE id = ${data.id}`;
   });
 
+export const serverBulkPatchProjectStatus = createServerFn({ method: "POST" })
+  .handler(async ({ data }: { data: { ids: number[]; status: Status } }) => {
+    await requireAdmin();
+    if (!data.ids.length) return { updated: 0 };
+    const sql = getSql();
+    const r = await sql`UPDATE projects SET status = ${data.status} WHERE id = ANY(${data.ids}::int[]) RETURNING id`;
+    return { updated: r.length };
+  });
+
 // ---------------------------------------------------------------------------
 // Create project
 // ---------------------------------------------------------------------------
@@ -334,10 +343,10 @@ export const serverGetDashboard = createServerFn({ method: "GET" })
     });
 
     const STATUS_LABEL: Record<Status, string> = {
-      planning: "วางแผน", in_progress: "ดำเนินการ", completed: "เสร็จสิ้น", cancelled: "ยกเลิก",
+      not_set: "ยังไม่ได้ปรับสถานะ", planning: "วางแผน", in_progress: "ดำเนินการ", completed: "เสร็จสิ้น", cancelled: "ยกเลิก",
     };
 
-    const byStatus = (["planning", "in_progress", "completed", "cancelled"] as Status[]).map((s) => ({
+    const byStatus = (["not_set", "planning", "in_progress", "completed", "cancelled"] as Status[]).map((s) => ({
       status: s, label: STATUS_LABEL[s], count: projects.filter((p: any) => p.status === s).length,
     }));
 

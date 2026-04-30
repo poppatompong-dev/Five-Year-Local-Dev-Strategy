@@ -1,7 +1,7 @@
 import type { Status } from "./mock-data";
 import {
   serverGetStrategies, serverGetTactics, serverGetPlans, serverGetDepartments,
-  serverGetProjects, serverGetProject, serverPatchProjectStatus,
+  serverGetProjects, serverGetProject, serverPatchProjectStatus, serverBulkPatchProjectStatus,
   serverCreateProject, serverUpdateProject, serverUpdateBudgets, serverDeleteProject,
   serverBatchImportProjects,
   serverGetEquipment, serverCreateEquipment, serverUpdateEquipment, serverDeleteEquipment,
@@ -205,6 +205,10 @@ export async function apiGetProject(id: number): Promise<ProjectDetail | null> {
 
 export async function apiPatchProjectStatus(id: number, status: Status): Promise<void> {
   await serverPatchProjectStatus({ data: { id, status } });
+}
+
+export async function apiBulkPatchProjectStatus(ids: number[], status: Status): Promise<{ updated: number }> {
+  return serverBulkPatchProjectStatus({ data: { ids, status } });
 }
 
 export interface ProjectCreateInput {

@@ -70,7 +70,7 @@ function EquipmentPage() {
   const totalCount = result?.total ?? 0;
 
   const totalBudget = items.reduce(
-    (s, e) => s + e.budget_2566 + e.budget_2567 + e.budget_2568 + e.budget_2569 + e.budget_2570,
+    (s, e) => s + Number(e.budget_2566) + Number(e.budget_2567) + Number(e.budget_2568) + Number(e.budget_2569) + Number(e.budget_2570),
     0,
   );
 
@@ -100,22 +100,22 @@ function EquipmentPage() {
         </div>
 
         {/* Stat row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <MiniStat label="รายการทั้งหมด" value={totalCount.toString()} icon={<Package className="size-4" />} />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <MiniStat
+            label="รายการทั้งหมด"
+            value={totalCount.toLocaleString("th-TH")}
+            sub="รายการ"
+            icon={<Package className="size-4" />}
+          />
           <MiniStat
             label="งบประมาณหน้านี้"
             value={formatBaht(totalBudget, { compact: true })}
             sub="บาท"
-            icon={<Package className="size-4" />}
+            icon={<Wrench className="size-4" />}
           />
           <MiniStat
             label="แสดงหน้า"
             value={`${safePage} / ${totalPages}`}
-            icon={<Wrench className="size-4" />}
-          />
-          <MiniStat
-            label="รายการทั้งหมด"
-            value={totalCount.toString()}
             icon={<Wrench className="size-4" />}
           />
         </div>
@@ -149,7 +149,8 @@ function EquipmentPage() {
               </thead>
               <tbody>
                 {items.map((e) => {
-                  const total = e.budget_2566 + e.budget_2567 + e.budget_2568 + e.budget_2569 + e.budget_2570;
+                  const budgets = [Number(e.budget_2566), Number(e.budget_2567), Number(e.budget_2568), Number(e.budget_2569), Number(e.budget_2570)];
+                  const total = budgets.reduce((a, b) => a + b, 0);
                   return (
                     <tr key={e.id} className="border-b border-border/50 hover:bg-muted/40 transition group">
                       <td className="px-5 py-4 max-w-[300px]">
@@ -160,17 +161,15 @@ function EquipmentPage() {
                         </div>
                       </td>
                       <td className="px-5 py-4 text-foreground/80">{e.department}</td>
-                      {([e.budget_2566, e.budget_2567, e.budget_2568, e.budget_2569, e.budget_2570] as const).map(
-                        (b, i) => (
-                          <td key={i} className="px-3 py-4 text-right tabular text-sm">
-                            {b > 0 ? (
-                              b.toLocaleString("th-TH")
-                            ) : (
-                              <span className="text-muted-foreground/40">—</span>
-                            )}
-                          </td>
-                        ),
-                      )}
+                      {budgets.map((b, i) => (
+                        <td key={i} className="px-3 py-4 text-right tabular text-sm">
+                          {b > 0 ? (
+                            b.toLocaleString("th-TH")
+                          ) : (
+                            <span className="text-muted-foreground/40">—</span>
+                          )}
+                        </td>
+                      ))}
                       <td className="px-5 py-4 text-right tabular font-semibold text-primary">
                         {total.toLocaleString("th-TH")}
                       </td>

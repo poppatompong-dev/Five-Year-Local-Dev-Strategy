@@ -90,6 +90,7 @@ type FilterYear     = number | null;
 type SelectedProject = number | null;
 
 const STATUS_LABEL: Record<Status, string> = {
+  not_set: "ยังไม่ได้ปรับสถานะ",
   planning: "วางแผน",
   in_progress: "ดำเนินการ",
   completed: "เสร็จสิ้น",

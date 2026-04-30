@@ -13,12 +13,12 @@ import {
   formatBaht,
   type Status,
 } from "@/lib/mock-data";
-import { apiGetProjects, apiCreateProject, apiDeleteProject, apiLogAudit, type ProjectCreateInput } from "@/lib/api";
+import { apiGetProjects, apiCreateProject, apiDeleteProject, apiLogAudit, apiBulkPatchProjectStatus, type ProjectCreateInput } from "@/lib/api";
 import { toast } from "sonner";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { exportProjectsToExcel } from "@/lib/export";
-import { Search, Filter, ChevronLeft, ChevronRight, X, ArrowUpDown, Plus, Trash2, Download } from "lucide-react";
+import { Search, Filter, ChevronLeft, ChevronRight, X, ArrowUpDown, Plus, Trash2, Download, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -48,8 +48,21 @@ function ProjectsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleteName, setDeleteName] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const qc = useQueryClient();
+
+  const bulkStatusMutation = useMutation({
+    mutationFn: ({ ids, status }: { ids: number[]; status: Status }) => apiBulkPatchProjectStatus(ids, status),
+    onSuccess: (r, vars) => {
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      setSelectedIds(new Set());
+      toast.success(`อัปเดตสถานะ ${r.updated} โครงการแล้ว`, { icon: "✅" });
+      apiLogAudit({ action: "status_change", entity: "project", after: { ids: vars.ids, status: vars.status } }).catch(() => {});
+    },
+    onError: (err) => toast.error(`อัปเดตไม่สำเร็จ: ${err.message}`),
+  });
 
   const createMutation = useMutation({
     mutationFn: (data: ProjectCreateInput) => apiCreateProject(data),
@@ -229,12 +242,62 @@ function ProjectsPage() {
           </div>
         </div>
 
+        {/* Bulk toolbar (admin only) */}
+        {isLoggedIn && selectedIds.size > 0 && (
+          <div className="bg-primary/5 border border-primary/30 rounded-xl px-4 py-2.5 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <CheckSquare className="size-4 text-primary" />
+              เลือก {selectedIds.size} โครงการ
+            </div>
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-xs text-muted-foreground">ปรับสถานะเป็น:</span>
+              <select
+                onChange={(e) => {
+                  const v = e.target.value as Status;
+                  if (v) {
+                    bulkStatusMutation.mutate({ ids: [...selectedIds], status: v });
+                    e.target.value = "";
+                  }
+                }}
+                disabled={bulkStatusMutation.isPending}
+                className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+                defaultValue=""
+              >
+                <option value="" disabled>เลือกสถานะ...</option>
+                <option value="not_set">ยังไม่ได้ปรับสถานะ</option>
+                <option value="planning">วางแผน</option>
+                <option value="in_progress">ดำเนินการ</option>
+                <option value="completed">เสร็จสิ้น</option>
+                <option value="cancelled">ยกเลิก</option>
+              </select>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+                ยกเลิก
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Project list */}
         <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground bg-muted/30 border-b border-border">
+                  {isLoggedIn && (
+                    <th className="px-3 py-3.5 w-10">
+                      <input
+                        type="checkbox"
+                        className="size-4 cursor-pointer"
+                        checked={pageItems.length > 0 && pageItems.every((p) => selectedIds.has(p.id))}
+                        onChange={(e) => {
+                          const next = new Set(selectedIds);
+                          if (e.target.checked) pageItems.forEach((p) => next.add(p.id));
+                          else pageItems.forEach((p) => next.delete(p.id));
+                          setSelectedIds(next);
+                        }}
+                      />
+                    </th>
+                  )}
                   <th className="px-5 py-3.5 font-medium">โครงการ</th>
                   <th className="px-5 py-3.5 font-medium">หน่วยงาน</th>
                   <th className="px-5 py-3.5 font-medium">ยุทธศาสตร์</th>
@@ -250,7 +313,7 @@ function ProjectsPage() {
               <tbody>
                 {pageItems.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-16 text-center text-muted-foreground">
+                    <td colSpan={isLoggedIn ? 7 : 6} className="px-5 py-16 text-center text-muted-foreground">
                       <Filter className="size-8 mx-auto mb-2 opacity-40" />
                       ไม่พบโครงการที่ตรงกับเงื่อนไข
                     </td>
@@ -260,6 +323,22 @@ function ProjectsPage() {
                     const budget = p.total_budget;
                     return (
                       <tr key={p.id} className="border-b border-border/50 hover:bg-muted/40 transition group">
+                        {isLoggedIn && (
+                          <td className="px-3 py-4">
+                            <input
+                              type="checkbox"
+                              className="size-4 cursor-pointer"
+                              checked={selectedIds.has(p.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => {
+                                const next = new Set(selectedIds);
+                                if (e.target.checked) next.add(p.id);
+                                else next.delete(p.id);
+                                setSelectedIds(next);
+                              }}
+                            />
+                          </td>
+                        )}
                         <td className="px-5 py-4 max-w-[420px]">
                           <Link
                             to="/projects/$projectId"

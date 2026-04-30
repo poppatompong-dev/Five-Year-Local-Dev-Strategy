@@ -1,6 +1,7 @@
 import { STATUS_LABEL, type Status } from "@/lib/mock-data";
 
 const STYLES: Record<Status, string> = {
+  not_set:     "bg-muted/40 text-muted-foreground ring-1 ring-inset ring-border",
   planning:    "bg-info/10 text-info ring-1 ring-inset ring-info/25",
   in_progress: "bg-warning/12 text-warning ring-1 ring-inset ring-warning/30",
   completed:   "bg-success/10 text-success ring-1 ring-inset ring-success/25",

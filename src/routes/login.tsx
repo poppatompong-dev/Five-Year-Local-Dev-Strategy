@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,10 +20,9 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  if (isLoggedIn) {
-    navigate({ to: "/" });
-    return null;
-  }
+  useEffect(() => {
+    if (isLoggedIn) navigate({ to: "/" });
+  }, [isLoggedIn, navigate]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,10 +31,9 @@ function LoginPage() {
     try {
       await login(username, password);
       toast.success("เข้าสู่ระบบสำเร็จ");
-      navigate({ to: "/" });
+      window.location.href = "/";
     } catch (err: any) {
       toast.error(err?.message || "เข้าสู่ระบบไม่สำเร็จ");
-    } finally {
       setSubmitting(false);
     }
   }

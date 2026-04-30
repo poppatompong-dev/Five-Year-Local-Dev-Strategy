@@ -1,9 +1,10 @@
 // Mock data for the Local Development Plan management system
 // Thai municipal planning data — fiscal years 2566-2570 B.E.
 
-export type Status = "planning" | "in_progress" | "completed" | "cancelled";
+export type Status = "not_set" | "planning" | "in_progress" | "completed" | "cancelled";
 
 export const STATUS_LABEL: Record<Status, string> = {
+  not_set: "ยังไม่ได้ปรับสถานะ",
   planning: "วางแผน",
   in_progress: "ดำเนินการ",
   completed: "เสร็จสิ้น",
@@ -11,6 +12,7 @@ export const STATUS_LABEL: Record<Status, string> = {
 };
 
 export const STATUS_COLOR: Record<Status, string> = {
+  not_set: "var(--color-muted-foreground)",
   planning: "var(--color-info)",
   in_progress: "var(--color-warning)",
   completed: "var(--color-success)",
@@ -259,13 +261,14 @@ export function getDashboardData() {
   };
 }
 
-export function formatBaht(n: number, options: { compact?: boolean } = {}) {
+export function formatBaht(n: number | string, options: { compact?: boolean } = {}) {
+  const num = Number(n) || 0;
   if (options.compact) {
-    if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toLocaleString("th-TH", { maximumFractionDigits: 2 })} พันล้าน`;
-    if (n >= 1_000_000) return `${(n / 1_000_000).toLocaleString("th-TH", { maximumFractionDigits: 2 })} ล้าน`;
-    if (n >= 1_000) return `${(n / 1_000).toLocaleString("th-TH", { maximumFractionDigits: 1 })} พัน`;
+    if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toLocaleString("th-TH", { maximumFractionDigits: 2 })} พันล้าน`;
+    if (num >= 1_000_000) return `${(num / 1_000_000).toLocaleString("th-TH", { maximumFractionDigits: 2 })} ล้าน`;
+    if (num >= 1_000) return `${(num / 1_000).toLocaleString("th-TH", { maximumFractionDigits: 1 })} พัน`;
   }
-  return n.toLocaleString("th-TH");
+  return num.toLocaleString("th-TH");
 }
 
 export const DEPARTMENTS = departments;
