@@ -3,6 +3,31 @@ import { YEARS } from "./mock-data";
 import type { ProjectRow } from "./api";
 import type { DashboardData } from "./api";
 
+function sanitizeExcelString(value: unknown) {
+  if (typeof value !== "string") return value;
+  return /^[=+\-@]/.test(value.trimStart()) ? `'${value}` : value;
+}
+
+function sanitizeExcelRow(row: unknown[]) {
+  return row.map(sanitizeExcelString);
+}
+
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatReportBaht(value: number) {
+  return Number(value || 0).toLocaleString("th-TH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export function exportProjectsToExcel(projects: ProjectRow[], filename = "projects.xlsx") {
   const header = [
     "ID",
@@ -16,7 +41,7 @@ export function exportProjectsToExcel(projects: ProjectRow[], filename = "projec
     "งบรวม",
   ];
 
-  const rows = projects.map((p) => [
+  const rows = projects.map((p) => sanitizeExcelRow([
     p.id,
     p.name,
     p.department ?? "",
@@ -26,9 +51,9 @@ export function exportProjectsToExcel(projects: ProjectRow[], filename = "projec
     p.status,
     ...YEARS.map((y) => (p as any).project_budgets?.find?.((b: any) => b.year === y)?.amount ?? 0),
     p.total_budget,
-  ]);
+  ]));
 
-  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  const ws = XLSX.utils.aoa_to_sheet([sanitizeExcelRow(header), ...rows]);
 
   // Auto-width columns
   ws["!cols"] = header.map((h, i) => ({
@@ -38,6 +63,256 @@ export function exportProjectsToExcel(projects: ProjectRow[], filename = "projec
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "โครงการ");
   XLSX.writeFile(wb, filename);
+}
+
+export function exportOfficialDashboardPdf(data: DashboardData) {
+  const generatedAt = new Date();
+  const reportNo = `NSW-${generatedAt.toISOString().slice(0, 10).replaceAll("-", "")}-${String(generatedAt.getHours()).padStart(2, "0")}${String(generatedAt.getMinutes()).padStart(2, "0")}`;
+  const printWindow = window.open("", "_blank", "width=1024,height=768");
+  if (!printWindow) {
+    throw new Error("POPUP_BLOCKED");
+  }
+
+  const statusRows = data.byStatus.map((s) => `
+    <tr>
+      <td>${escapeHtml(s.label)}</td>
+      <td class="num">${s.count.toLocaleString("th-TH")}</td>
+    </tr>
+  `).join("");
+
+  const yearRows = data.byYear.map((y) => `
+    <tr>
+      <td class="center">${escapeHtml(y.label)}</td>
+      <td class="num">${formatReportBaht(y.total)}</td>
+      <td class="num">${y.project_count.toLocaleString("th-TH")}</td>
+    </tr>
+  `).join("");
+
+  const strategyRows = data.byStrategyProgress.map((s, index) => `
+    <tr>
+      <td class="center">${index + 1}</td>
+      <td>${escapeHtml(s.full_name)}</td>
+      <td class="num">${s.project_count.toLocaleString("th-TH")}</td>
+      <td class="num">${formatReportBaht(s.total_budget)}</td>
+      <td class="num">${s.completion_rate.toLocaleString("th-TH")}%</td>
+    </tr>
+  `).join("");
+
+  const deptRows = data.topDepts.map((d, index) => `
+    <tr>
+      <td class="center">${index + 1}</td>
+      <td>${escapeHtml(d.department)}</td>
+      <td class="num">${d.count.toLocaleString("th-TH")}</td>
+      <td class="num">${formatReportBaht(d.budget)}</td>
+    </tr>
+  `).join("");
+
+  const html = `<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <title>รายงานภาพรวมแผนพัฒนาท้องถิ่น ${reportNo}</title>
+  <style>
+    @page { size: A4; margin: 16mm 14mm 16mm 14mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #111827;
+      background: #f3f4f6;
+      font-family: "TH Sarabun New", "IBM Plex Sans Thai", "Sarabun", Arial, sans-serif;
+      line-height: 1.42;
+    }
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 18mm 16mm;
+      background: white;
+      border-top: 6px solid #0f513f;
+    }
+    .header {
+      display: grid;
+      grid-template-columns: 72px 1fr 150px;
+      gap: 16px;
+      align-items: center;
+      padding-bottom: 14px;
+      border-bottom: 2px solid #1f2937;
+    }
+    .logo { width: 66px; height: 66px; object-fit: contain; }
+    .kicker { font-size: 14px; letter-spacing: .08em; color: #6b7280; text-transform: uppercase; }
+    h1 { margin: 2px 0 0; font-size: 24px; line-height: 1.15; color: #0f513f; }
+    .subtitle { margin-top: 4px; font-size: 15px; color: #374151; }
+    .doc-meta { font-size: 12px; color: #374151; text-align: right; }
+    .doc-meta div { margin: 2px 0; }
+    .section { margin-top: 16px; }
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 8px;
+      font-size: 17px;
+      color: #0f513f;
+      font-weight: 700;
+    }
+    .section-title::before { content: ""; width: 4px; height: 20px; background: #c9a84c; display: inline-block; }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .summary-card {
+      border: 1px solid #d1d5db;
+      padding: 10px;
+      min-height: 74px;
+      background: #fbfbf8;
+    }
+    .summary-label { font-size: 12px; color: #6b7280; }
+    .summary-value { margin-top: 4px; font-size: 20px; font-weight: 800; color: #111827; }
+    .summary-note { margin-top: 2px; font-size: 11px; color: #6b7280; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; page-break-inside: auto; }
+    th, td { border: 1px solid #9ca3af; padding: 6px 7px; vertical-align: top; }
+    th { background: #0f513f; color: white; font-weight: 700; text-align: left; }
+    tr { page-break-inside: avoid; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .center { text-align: center; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .official-note {
+      border: 1px solid #d1d5db;
+      background: #f9fafb;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #374151;
+    }
+    .signatures {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 30px;
+      font-size: 13px;
+      text-align: center;
+    }
+    .sig-line { border-top: 1px solid #374151; padding-top: 6px; margin-top: 42px; }
+    .footer {
+      margin-top: 24px;
+      padding-top: 8px;
+      border-top: 1px solid #d1d5db;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: #6b7280;
+      font-size: 11px;
+    }
+    .screen-actions {
+      position: sticky;
+      top: 0;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px;
+      background: #111827;
+      z-index: 10;
+    }
+    .screen-actions button {
+      border: 0;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: white;
+      background: #0f766e;
+      cursor: pointer;
+      font: inherit;
+    }
+    .screen-actions button.secondary { background: #4b5563; }
+    @media print {
+      body { background: white; }
+      .screen-actions { display: none; }
+      .page { width: auto; min-height: auto; margin: 0; padding: 0; border-top: 0; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="screen-actions">
+    <button onclick="window.print()">พิมพ์ / บันทึกเป็น PDF</button>
+    <button class="secondary" onclick="window.close()">ปิดหน้าต่าง</button>
+  </div>
+  <main class="page">
+    <header class="header">
+      <img class="logo" src="/agency-logo.png" onerror="this.onerror=null;this.src='/agency-logo.svg'" alt="ตราหน่วยงาน" />
+      <div>
+        <div class="kicker">เอกสารประกอบการเสนอเรื่อง</div>
+        <h1>รายงานภาพรวมแผนพัฒนาท้องถิ่น พ.ศ. 2566-2570</h1>
+        <div class="subtitle">เทศบาลนครนครสวรรค์</div>
+      </div>
+      <div class="doc-meta">
+        <div><strong>เลขที่รายงาน</strong></div>
+        <div>${reportNo}</div>
+        <div><strong>วันที่จัดทำ</strong></div>
+        <div>${generatedAt.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })}</div>
+      </div>
+    </header>
+
+    <section class="section">
+      <h2 class="section-title">สรุปสำหรับผู้บริหาร</h2>
+      <div class="summary-grid">
+        <div class="summary-card"><div class="summary-label">จำนวนโครงการทั้งหมด</div><div class="summary-value">${data.totalProjects.toLocaleString("th-TH")}</div><div class="summary-note">โครงการ</div></div>
+        <div class="summary-card"><div class="summary-label">งบประมาณรวม</div><div class="summary-value">${formatReportBaht(data.totalBudget)}</div><div class="summary-note">บาท</div></div>
+        <div class="summary-card"><div class="summary-label">จำนวนยุทธศาสตร์</div><div class="summary-value">${data.totalStrategies.toLocaleString("th-TH")}</div><div class="summary-note">ยุทธศาสตร์</div></div>
+        <div class="summary-card"><div class="summary-label">หน่วยงานรับผิดชอบ</div><div class="summary-value">${data.totalDepartments.toLocaleString("th-TH")}</div><div class="summary-note">หน่วยงาน</div></div>
+      </div>
+    </section>
+
+    <section class="section two-col">
+      <div>
+        <h2 class="section-title">สถานะโครงการ</h2>
+        <table><thead><tr><th>สถานะ</th><th class="num">จำนวน</th></tr></thead><tbody>${statusRows}</tbody></table>
+      </div>
+      <div>
+        <h2 class="section-title">งบประมาณรายปี</h2>
+        <table><thead><tr><th class="center">ปีงบประมาณ</th><th class="num">งบประมาณ (บาท)</th><th class="num">จำนวนโครงการ</th></tr></thead><tbody>${yearRows}</tbody></table>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">ผลสรุปรายยุทธศาสตร์</h2>
+      <table>
+        <thead><tr><th class="center" style="width:42px">ลำดับ</th><th>ยุทธศาสตร์</th><th class="num">โครงการ</th><th class="num">งบประมาณ (บาท)</th><th class="num">สำเร็จ</th></tr></thead>
+        <tbody>${strategyRows}</tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">หน่วยงานที่มีโครงการสูงสุด</h2>
+      <table>
+        <thead><tr><th class="center" style="width:42px">ลำดับ</th><th>หน่วยงาน</th><th class="num">โครงการ</th><th class="num">งบประมาณ (บาท)</th></tr></thead>
+        <tbody>${deptRows}</tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <div class="official-note">
+        เอกสารฉบับนี้จัดทำจากระบบบริหารแผนพัฒนาท้องถิ่น เพื่อใช้ประกอบการพิจารณา เสนอเรื่อง และติดตามภาพรวมการดำเนินงานตามแผนพัฒนาท้องถิ่นของหน่วยงาน
+      </div>
+      <div class="signatures">
+        <div><div class="sig-line">ผู้จัดทำรายงาน</div></div>
+        <div><div class="sig-line">ผู้ตรวจสอบข้อมูล</div></div>
+        <div><div class="sig-line">ผู้อนุมัติ / ผู้รับรอง</div></div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div>ระบบบริหารแผนพัฒนาท้องถิ่น เทศบาลนครนครสวรรค์</div>
+      <div>เครดิต: นักวิชาการคอมพิวเตอร์ · คิดเป็นระบบ เขียนเป็นจริง ขับเคลื่อนเมืองด้วยข้อมูล</div>
+    </footer>
+  </main>
+  <script>
+    window.addEventListener("load", () => setTimeout(() => window.print(), 350));
+  </script>
+</body>
+</html>`;
+
+  printWindow.document.open();
+  printWindow.document.write(html);
+  printWindow.document.close();
 }
 
 export function exportDashboardToExcel(data: DashboardData, filename = "dashboard.xlsx") {
@@ -56,13 +331,13 @@ export function exportDashboardToExcel(data: DashboardData, filename = "dashboar
     ["สถานะ", "จำนวน"],
     ...data.byStatus.map((s) => [s.label, s.count]),
   ];
-  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData.map(sanitizeExcelRow));
   wsSummary["!cols"] = [{ wch: 30 }, { wch: 20 }];
   XLSX.utils.book_append_sheet(wb, wsSummary, "สรุป");
 
   // Sheet 2: By Strategy
   const stratHeader = ["ยุทธศาสตร์", "จำนวนโครงการ", "งบประมาณรวม", "วางแผน", "ดำเนินการ", "เสร็จสิ้น", "ยกเลิก", "% เสร็จสิ้น"];
-  const stratRows = data.byStrategyProgress.map((s) => [
+  const stratRows = data.byStrategyProgress.map((s) => sanitizeExcelRow([
     s.full_name,
     s.project_count,
     s.total_budget,
@@ -71,22 +346,22 @@ export function exportDashboardToExcel(data: DashboardData, filename = "dashboar
     s.completed,
     s.cancelled,
     s.completion_rate,
-  ]);
-  const wsStrat = XLSX.utils.aoa_to_sheet([stratHeader, ...stratRows]);
+  ]));
+  const wsStrat = XLSX.utils.aoa_to_sheet([sanitizeExcelRow(stratHeader), ...stratRows]);
   wsStrat["!cols"] = stratHeader.map((h) => ({ wch: Math.max(h.length + 2, 14) }));
   XLSX.utils.book_append_sheet(wb, wsStrat, "ยุทธศาสตร์");
 
   // Sheet 3: By Year
   const yearHeader = ["ปีงบประมาณ", "งบประมาณ (บาท)", "จำนวนโครงการ"];
-  const yearRows = data.byYear.map((y) => [y.label, y.total, y.project_count]);
-  const wsYear = XLSX.utils.aoa_to_sheet([yearHeader, ...yearRows]);
+  const yearRows = data.byYear.map((y) => sanitizeExcelRow([y.label, y.total, y.project_count]));
+  const wsYear = XLSX.utils.aoa_to_sheet([sanitizeExcelRow(yearHeader), ...yearRows]);
   wsYear["!cols"] = [{ wch: 15 }, { wch: 20 }, { wch: 15 }];
   XLSX.utils.book_append_sheet(wb, wsYear, "งบรายปี");
 
   // Sheet 4: Top Departments
   const deptHeader = ["หน่วยงาน", "จำนวนโครงการ", "งบประมาณ (บาท)"];
-  const deptRows = data.topDepts.map((d) => [d.department, d.count, d.budget]);
-  const wsDept = XLSX.utils.aoa_to_sheet([deptHeader, ...deptRows]);
+  const deptRows = data.topDepts.map((d) => sanitizeExcelRow([d.department, d.count, d.budget]));
+  const wsDept = XLSX.utils.aoa_to_sheet([sanitizeExcelRow(deptHeader), ...deptRows]);
   wsDept["!cols"] = [{ wch: 30 }, { wch: 15 }, { wch: 20 }];
   XLSX.utils.book_append_sheet(wb, wsDept, "หน่วยงาน");
 

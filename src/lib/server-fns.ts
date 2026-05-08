@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import bcrypt from "bcryptjs";
 import { getSql } from "./db";
 import { requireAdmin } from "./session.server";
 import type {
@@ -9,6 +10,40 @@ import type {
   EquipmentListResult, DashboardData, ImportResult, StrategyProgress,
 } from "./api";
 import type { Status } from "./mock-data";
+
+const VALID_STATUSES: Status[] = ["not_set", "planning", "in_progress", "completed", "cancelled"];
+
+type AdminSession = Awaited<ReturnType<typeof requireAdmin>>;
+
+function actorFromSession(session: AdminSession) {
+  return {
+    userId: session.userId ?? null,
+    username: session.username ?? null,
+  };
+}
+
+function auditSystemMeta(entity: string, action: DBAuditEvent["action"]) {
+  return {
+    eventId: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    source: "server-fn",
+    entity,
+    action,
+    recordedAt: new Date().toISOString(),
+  };
+}
+
+async function insertAuditEvent(
+  sql: any,
+  session: AdminSession,
+  data: { action: DBAuditEvent["action"]; entity: string; entity_id?: number | null; before?: any; after?: any },
+) {
+  await sql`
+    INSERT INTO audit_events (action, entity, entity_id, before, after)
+    VALUES (${data.action}, ${data.entity}, ${data.entity_id ?? null},
+            ${data.before ? JSON.stringify(data.before) : null},
+            ${JSON.stringify({ system: auditSystemMeta(data.entity, data.action), actor: actorFromSession(session), ...(data.after ?? {}) })})
+  `;
+}
 
 // ---------------------------------------------------------------------------
 // Reference data
@@ -33,7 +68,7 @@ export const serverGetDepartments = createServerFn({ method: "GET" })
 // ---------------------------------------------------------------------------
 export const serverGetProjects = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: ProjectListParams }) => {
-    const { page = 1, limit = 12, search, status, strategy_id, plan_id, department } = data ?? {};
+    const { page = 1, limit = 12, search, status, strategy_id, plan_id, department, year } = data ?? {};
     const offset = (page - 1) * limit;
 
     const allProjects = await getSql()`
@@ -44,7 +79,8 @@ export const serverGetProjects = createServerFn({ method: "POST" })
         t.name AS tactic_name,
         s.id AS strategy_id,
         s.name AS strategy_name,
-        COALESCE((SELECT SUM(pb.amount) FROM project_budgets pb WHERE pb.project_id = p.id), 0)::numeric AS total_budget
+        COALESCE((SELECT SUM(pb.amount) FROM project_budgets pb WHERE pb.project_id = p.id), 0)::numeric AS total_budget,
+        COALESCE((SELECT SUM(pb.amount) FROM project_budgets pb WHERE pb.project_id = p.id AND pb.year = ${year ?? null}), 0)::numeric AS year_budget
       FROM projects p
       LEFT JOIN plans pl ON p.plan_id = pl.id
       LEFT JOIN tactics t ON pl.tactic_id = t.id
@@ -67,11 +103,12 @@ export const serverGetProjects = createServerFn({ method: "POST" })
     } else if (strategy_id) {
       filtered = filtered.filter((r) => r.strategy_id === strategy_id);
     }
+    if (year) filtered = filtered.filter((r) => Number(r.year_budget) > 0);
 
     const total = filtered.length;
     const paged = filtered.slice(offset, offset + limit);
     const result: ProjectListResult = {
-      data: paged.map((r: any) => ({ ...r, total_budget: Number(r.total_budget) })) as ProjectRow[],
+      data: paged.map((r: any) => ({ ...r, total_budget: Number(year ? r.year_budget : r.total_budget) })) as ProjectRow[],
       total,
       page,
       limit,
@@ -123,16 +160,43 @@ export const serverGetProject = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const serverPatchProjectStatus = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { id: number; status: Status } }) => {
-    await requireAdmin();
-    await getSql()`UPDATE projects SET status = ${data.status} WHERE id = ${data.id}`;
+    const session = await requireAdmin();
+    if (!VALID_STATUSES.includes(data.status)) {
+      throw new Response(JSON.stringify({ error: "INVALID_STATUS" }), { status: 400 });
+    }
+    const sql = getSql();
+    const beforeRows = await sql`SELECT id, name, status FROM projects WHERE id = ${data.id} LIMIT 1`;
+    const rows = await sql`UPDATE projects SET status = ${data.status} WHERE id = ${data.id} RETURNING id, status`;
+    if (!rows.length) {
+      throw new Response(JSON.stringify({ error: "PROJECT_NOT_FOUND" }), { status: 404 });
+    }
+    await insertAuditEvent(sql, session, {
+      action: "status_change",
+      entity: "project",
+      entity_id: data.id,
+      before: beforeRows[0] ?? null,
+      after: { status: (rows[0] as any).status },
+    });
+    return { updated: rows.length };
   });
 
 export const serverBulkPatchProjectStatus = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { ids: number[]; status: Status } }) => {
-    await requireAdmin();
+    const session = await requireAdmin();
     if (!data.ids.length) return { updated: 0 };
+    if (!VALID_STATUSES.includes(data.status)) {
+      throw new Response(JSON.stringify({ error: "INVALID_STATUS" }), { status: 400 });
+    }
     const sql = getSql();
+    const beforeRows = await sql`SELECT id, name, status FROM projects WHERE id = ANY(${data.ids}::int[]) ORDER BY id`;
     const r = await sql`UPDATE projects SET status = ${data.status} WHERE id = ANY(${data.ids}::int[]) RETURNING id`;
+    await insertAuditEvent(sql, session, {
+      action: "status_change",
+      entity: "project",
+      entity_id: null,
+      before: { projects: beforeRows },
+      after: { ids: r.map((row: any) => row.id), status: data.status },
+    });
     return { updated: r.length };
   });
 
@@ -141,9 +205,10 @@ export const serverBulkPatchProjectStatus = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const serverCreateProject = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: ProjectCreateInput }) => {
-    await requireAdmin();
+    const session = await requireAdmin();
+    const sql = getSql();
     const { budgets, ...p } = data;
-    const rows = await getSql()`
+    const rows = await sql`
       INSERT INTO projects (name, objective, target, kpi, expected_result, department, plan_id, status, source_sheet, amendment_version)
       VALUES (${p.name}, ${p.objective ?? null}, ${p.target ?? null}, ${p.kpi ?? null},
               ${p.expected_result ?? null}, ${p.department ?? null}, ${p.plan_id ?? null},
@@ -154,10 +219,16 @@ export const serverCreateProject = createServerFn({ method: "POST" })
     if (budgets) {
       for (const [year, amount] of Object.entries(budgets)) {
         if (Number(amount) > 0) {
-          await getSql()`INSERT INTO project_budgets (project_id, year, amount) VALUES (${created.id}, ${Number(year)}, ${Number(amount)})`;
+          await sql`INSERT INTO project_budgets (project_id, year, amount) VALUES (${created.id}, ${Number(year)}, ${Number(amount)})`;
         }
       }
     }
+    await insertAuditEvent(sql, session, {
+      action: "create",
+      entity: "project",
+      entity_id: created.id,
+      after: { project: created, budgets: budgets ?? {} },
+    });
     return created;
   });
 
@@ -166,9 +237,12 @@ export const serverCreateProject = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const serverUpdateProject = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { id: number } & ProjectCreateInput }) => {
-    await requireAdmin();
+    const session = await requireAdmin();
+    const sql = getSql();
     const { id, budgets, ...p } = data;
-    await getSql()`
+    const beforeProject = await sql`SELECT * FROM projects WHERE id = ${id} LIMIT 1`;
+    const beforeBudgets = await sql`SELECT * FROM project_budgets WHERE project_id = ${id} ORDER BY year`;
+    await sql`
       UPDATE projects SET
         name = ${p.name}, objective = ${p.objective ?? null}, target = ${p.target ?? null},
         kpi = ${p.kpi ?? null}, expected_result = ${p.expected_result ?? null},
@@ -178,13 +252,22 @@ export const serverUpdateProject = createServerFn({ method: "POST" })
       WHERE id = ${id}
     `;
     if (budgets) {
-      await getSql()`DELETE FROM project_budgets WHERE project_id = ${id}`;
+      await sql`DELETE FROM project_budgets WHERE project_id = ${id}`;
       for (const [year, amount] of Object.entries(budgets)) {
         if (Number(amount) > 0) {
-          await getSql()`INSERT INTO project_budgets (project_id, year, amount) VALUES (${id}, ${Number(year)}, ${Number(amount)})`;
+          await sql`INSERT INTO project_budgets (project_id, year, amount) VALUES (${id}, ${Number(year)}, ${Number(amount)})`;
         }
       }
     }
+    const afterProject = await sql`SELECT * FROM projects WHERE id = ${id} LIMIT 1`;
+    const afterBudgets = await sql`SELECT * FROM project_budgets WHERE project_id = ${id} ORDER BY year`;
+    await insertAuditEvent(sql, session, {
+      action: "update",
+      entity: "project",
+      entity_id: id,
+      before: { project: beforeProject[0] ?? null, budgets: beforeBudgets },
+      after: { project: afterProject[0] ?? null, budgets: afterBudgets },
+    });
   });
 
 // ---------------------------------------------------------------------------
@@ -192,13 +275,23 @@ export const serverUpdateProject = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const serverUpdateBudgets = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { projectId: number; budgets: Record<number, number> } }) => {
-    await requireAdmin();
-    await getSql()`DELETE FROM project_budgets WHERE project_id = ${data.projectId}`;
+    const session = await requireAdmin();
+    const sql = getSql();
+    const beforeBudgets = await sql`SELECT * FROM project_budgets WHERE project_id = ${data.projectId} ORDER BY year`;
+    await sql`DELETE FROM project_budgets WHERE project_id = ${data.projectId}`;
     for (const [year, amount] of Object.entries(data.budgets)) {
       if (Number(amount) > 0) {
-        await getSql()`INSERT INTO project_budgets (project_id, year, amount) VALUES (${data.projectId}, ${Number(year)}, ${Number(amount)})`;
+        await sql`INSERT INTO project_budgets (project_id, year, amount) VALUES (${data.projectId}, ${Number(year)}, ${Number(amount)})`;
       }
     }
+    const afterBudgets = await sql`SELECT * FROM project_budgets WHERE project_id = ${data.projectId} ORDER BY year`;
+    await insertAuditEvent(sql, session, {
+      action: "update",
+      entity: "project_budget",
+      entity_id: data.projectId,
+      before: { budgets: beforeBudgets },
+      after: { budgets: afterBudgets },
+    });
   });
 
 // ---------------------------------------------------------------------------
@@ -206,10 +299,25 @@ export const serverUpdateBudgets = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const serverDeleteProject = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { id: number } }) => {
-    await requireAdmin();
-    await getSql()`DELETE FROM project_budgets WHERE project_id = ${data.id}`;
-    await getSql()`DELETE FROM project_annotations WHERE project_id = ${data.id}`;
-    await getSql()`DELETE FROM projects WHERE id = ${data.id}`;
+    const session = await requireAdmin();
+    const sql = getSql();
+    const beforeProject = await sql`SELECT * FROM projects WHERE id = ${data.id} LIMIT 1`;
+    const beforeBudgets = await sql`SELECT * FROM project_budgets WHERE project_id = ${data.id} ORDER BY year`;
+    const beforeAnnotations = await sql`SELECT COUNT(*)::int AS count FROM project_annotations WHERE project_id = ${data.id}`;
+    await sql`DELETE FROM project_budgets WHERE project_id = ${data.id}`;
+    await sql`DELETE FROM project_annotations WHERE project_id = ${data.id}`;
+    await sql`DELETE FROM projects WHERE id = ${data.id}`;
+    await insertAuditEvent(sql, session, {
+      action: "delete",
+      entity: "project",
+      entity_id: data.id,
+      before: {
+        project: beforeProject[0] ?? null,
+        budgets: beforeBudgets,
+        annotations: (beforeAnnotations[0] as any)?.count ?? 0,
+      },
+      after: { deleted: true },
+    });
   });
 
 // ---------------------------------------------------------------------------
@@ -217,14 +325,15 @@ export const serverDeleteProject = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const serverBatchImportProjects = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { rows: ProjectCreateInput[] } }) => {
-    await requireAdmin();
+    const session = await requireAdmin();
+    const sql = getSql();
     const result: ImportResult = { inserted: 0, updated: 0, warnings: [], errors: [] };
     const createdIds: number[] = [];
     try {
       for (let i = 0; i < data.rows.length; i++) {
         const { budgets, ...p } = data.rows[i];
         try {
-          const created = await getSql()`
+          const created = await sql`
             INSERT INTO projects (name, objective, target, kpi, expected_result, department, plan_id, status, source_sheet, amendment_version)
             VALUES (${p.name}, ${p.objective ?? null}, ${p.target ?? null}, ${p.kpi ?? null},
                     ${p.expected_result ?? null}, ${p.department ?? null}, ${p.plan_id ?? null},
@@ -237,7 +346,7 @@ export const serverBatchImportProjects = createServerFn({ method: "POST" })
           if (budgets) {
             for (const [year, amount] of Object.entries(budgets)) {
               if (Number(amount) > 0) {
-                await getSql()`INSERT INTO project_budgets (project_id, year, amount) VALUES (${projId}, ${Number(year)}, ${Number(amount)})`;
+                await sql`INSERT INTO project_budgets (project_id, year, amount) VALUES (${projId}, ${Number(year)}, ${Number(amount)})`;
               }
             }
           }
@@ -248,12 +357,25 @@ export const serverBatchImportProjects = createServerFn({ method: "POST" })
     } catch (err: any) {
       for (const cid of createdIds) {
         try {
-          await getSql()`DELETE FROM project_budgets WHERE project_id = ${cid}`;
-          await getSql()`DELETE FROM projects WHERE id = ${cid}`;
+          await sql`DELETE FROM project_budgets WHERE project_id = ${cid}`;
+          await sql`DELETE FROM projects WHERE id = ${cid}`;
         } catch { /* best effort */ }
       }
       result.errors.push(`การนำเข้าล้มเหลว (rollback แล้ว): ${err.message}`);
       result.inserted = 0;
+    }
+    if (result.inserted > 0 || result.errors.length > 0) {
+      await insertAuditEvent(sql, session, {
+        action: "import",
+        entity: "project",
+        entity_id: null,
+        after: {
+          requested: data.rows.length,
+          inserted: result.inserted,
+          errors: result.errors.length,
+          createdIds,
+        },
+      });
     }
     return result;
   });
@@ -285,8 +407,9 @@ export const serverGetEquipment = createServerFn({ method: "POST" })
 
 export const serverCreateEquipment = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: EquipmentCreateInput }) => {
-    await requireAdmin();
-    const rows = await getSql()`
+    const session = await requireAdmin();
+    const sql = getSql();
+    const rows = await sql`
       INSERT INTO equipment (plan_name, category, item_type, target, department, budget_2566, budget_2567, budget_2568, budget_2569, budget_2570)
       VALUES (${data.plan_name ?? null}, ${data.category ?? null}, ${data.item_type ?? null},
               ${data.target ?? null}, ${data.department ?? null},
@@ -294,13 +417,22 @@ export const serverCreateEquipment = createServerFn({ method: "POST" })
               ${data.budget_2569 ?? 0}, ${data.budget_2570 ?? 0})
       RETURNING *
     `;
-    return rows[0] as DBEquipment;
+    const created = rows[0] as DBEquipment;
+    await insertAuditEvent(sql, session, {
+      action: "create",
+      entity: "equipment",
+      entity_id: created.id,
+      after: { equipment: created },
+    });
+    return created;
   });
 
 export const serverUpdateEquipment = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { id: number } & EquipmentCreateInput }) => {
-    await requireAdmin();
-    await getSql()`
+    const session = await requireAdmin();
+    const sql = getSql();
+    const beforeRows = await sql`SELECT * FROM equipment WHERE id = ${data.id} LIMIT 1`;
+    await sql`
       UPDATE equipment SET
         plan_name = ${data.plan_name ?? null}, category = ${data.category ?? null},
         item_type = ${data.item_type ?? null}, target = ${data.target ?? null},
@@ -310,12 +442,29 @@ export const serverUpdateEquipment = createServerFn({ method: "POST" })
         budget_2570 = ${data.budget_2570 ?? 0}
       WHERE id = ${data.id}
     `;
+    const afterRows = await sql`SELECT * FROM equipment WHERE id = ${data.id} LIMIT 1`;
+    await insertAuditEvent(sql, session, {
+      action: "update",
+      entity: "equipment",
+      entity_id: data.id,
+      before: beforeRows[0] ?? null,
+      after: { equipment: afterRows[0] ?? null },
+    });
   });
 
 export const serverDeleteEquipment = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { id: number } }) => {
-    await requireAdmin();
-    await getSql()`DELETE FROM equipment WHERE id = ${data.id}`;
+    const session = await requireAdmin();
+    const sql = getSql();
+    const beforeRows = await sql`SELECT * FROM equipment WHERE id = ${data.id} LIMIT 1`;
+    await sql`DELETE FROM equipment WHERE id = ${data.id}`;
+    await insertAuditEvent(sql, session, {
+      action: "delete",
+      entity: "equipment",
+      entity_id: data.id,
+      before: beforeRows[0] ?? null,
+      after: { deleted: true },
+    });
   });
 
 // ---------------------------------------------------------------------------
@@ -422,9 +571,17 @@ export const serverGetDepartmentsList = createServerFn({ method: "GET" })
 
 export const serverCreateDepartment = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { name: string } }) => {
-    await requireAdmin();
-    const rows = await getSql()`INSERT INTO departments (name) VALUES (${data.name}) RETURNING *`;
-    return rows[0] as DBDepartment;
+    const session = await requireAdmin();
+    const sql = getSql();
+    const rows = await sql`INSERT INTO departments (name) VALUES (${data.name}) RETURNING *`;
+    const created = rows[0] as DBDepartment;
+    await insertAuditEvent(sql, session, {
+      action: "create",
+      entity: "department",
+      entity_id: created.id,
+      after: { department: created },
+    });
+    return created;
   });
 
 // ---------------------------------------------------------------------------
@@ -432,13 +589,8 @@ export const serverCreateDepartment = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const serverLogAudit = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { action: DBAuditEvent["action"]; entity: string; entity_id?: number | null; before?: any; after?: any } }) => {
-    await requireAdmin();
-    await getSql()`
-      INSERT INTO audit_events (action, entity, entity_id, before, after)
-      VALUES (${data.action}, ${data.entity}, ${data.entity_id ?? null},
-              ${data.before ? JSON.stringify(data.before) : null},
-              ${data.after ? JSON.stringify(data.after) : null})
-    `;
+    const session = await requireAdmin();
+    await insertAuditEvent(getSql(), session, data);
   });
 
 export const serverGetAuditEvents = createServerFn({ method: "POST" })
@@ -451,4 +603,89 @@ export const serverGetAuditEvents = createServerFn({ method: "POST" })
       return (await getSql()`SELECT * FROM audit_events WHERE entity = ${data.entity} ORDER BY timestamp DESC LIMIT ${lim}`) as DBAuditEvent[];
     }
     return (await getSql()`SELECT * FROM audit_events ORDER BY timestamp DESC LIMIT ${lim}`) as DBAuditEvent[];
+  });
+
+// ---------------------------------------------------------------------------
+// Admin users
+// ---------------------------------------------------------------------------
+function normalizeUsername(value: string) {
+  return value.trim().toLowerCase().split("@")[0].replace(/[^a-z0-9._-]/g, "");
+}
+
+function toAuthUser(row: any): AuthUser {
+  const username = String(row.username ?? "");
+  return {
+    id: String(row.id),
+    name: username,
+    email: `${username}@nakhonsawan.local`,
+    email_verified: true,
+    image: null,
+    created_at: row.created_at,
+    updated_at: row.created_at,
+    role: "admin",
+    banned: false,
+  };
+}
+
+export const serverGetUsers = createServerFn({ method: "GET" })
+  .handler(async () => {
+    await requireAdmin();
+    const rows = await getSql()`SELECT id, username, created_at FROM admin_users ORDER BY id`;
+    return rows.map(toAuthUser);
+  });
+
+export const serverCreateUser = createServerFn({ method: "POST" })
+  .handler(async ({ data }: { data: { username: string; password: string } }) => {
+    const session = await requireAdmin();
+    const sql = getSql();
+    const username = normalizeUsername(data.username);
+    if (!username) {
+      throw new Response(JSON.stringify({ error: "INVALID_USERNAME" }), { status: 400 });
+    }
+    if (!data.password || data.password.length < 3) {
+      throw new Response(JSON.stringify({ error: "PASSWORD_TOO_SHORT" }), { status: 400 });
+    }
+    const passwordHash = await bcrypt.hash(data.password, 10);
+    const rows = await sql`
+      INSERT INTO admin_users (username, password_hash)
+      VALUES (${username}, ${passwordHash})
+      ON CONFLICT (username) DO NOTHING
+      RETURNING id, username, created_at
+    `;
+    if (!rows.length) {
+      throw new Response(JSON.stringify({ error: "USER_EXISTS" }), { status: 409 });
+    }
+    await insertAuditEvent(sql, session, {
+      action: "create",
+      entity: "admin_user",
+      entity_id: (rows[0] as any).id,
+      after: { username },
+    });
+    return toAuthUser(rows[0]);
+  });
+
+export const serverDeleteUser = createServerFn({ method: "POST" })
+  .handler(async ({ data }: { data: { id: string } }) => {
+    const session = await requireAdmin();
+    const id = Number(data.id);
+    if (!Number.isInteger(id)) {
+      throw new Response(JSON.stringify({ error: "INVALID_USER_ID" }), { status: 400 });
+    }
+    if (id === session.userId) {
+      throw new Response(JSON.stringify({ error: "CANNOT_DELETE_SELF" }), { status: 400 });
+    }
+    const sql = getSql();
+    const beforeRows = await sql`SELECT id, username, created_at FROM admin_users WHERE id = ${id} LIMIT 1`;
+    const remaining = await sql`SELECT COUNT(*)::int AS count FROM admin_users WHERE id <> ${id}`;
+    if (Number((remaining[0] as any).count) === 0) {
+      throw new Response(JSON.stringify({ error: "CANNOT_DELETE_LAST_ADMIN" }), { status: 400 });
+    }
+    await sql`DELETE FROM admin_users WHERE id = ${id}`;
+    await insertAuditEvent(sql, session, {
+      action: "delete",
+      entity: "admin_user",
+      entity_id: id,
+      before: beforeRows[0] ?? null,
+      after: { deleted: true },
+    });
   });

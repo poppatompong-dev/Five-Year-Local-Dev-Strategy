@@ -2,8 +2,8 @@
 
 > **Document Type:** Combined Software Requirements Specification (SRS) + System Design Document (SDD)
 > **Target Audience:** AI development agents analyzing, maintaining, and extending this codebase
-> **Version:** 5.0
-> **Date:** 2026-04-30
+> **Version:** 5.3
+> **Date:** 2026-05-08
 > **Repository Root:** `C:\Users\PC\Documents\Projects\Five-Year Local Development Strategy`
 > **Production URL:** `https://five-year-local-dev-strategy.vercel.app`
 > **Repository:** `https://github.com/poppatompong-dev/Five-Year-Local-Dev-Strategy`
@@ -96,17 +96,17 @@ There is no Neon Auth / Better Auth dependency anymore. Auth is custom session-c
 | FR-04 | System SHALL allow changing a project's status to one of: `not_set`, `planning`, `in_progress`, `completed`, `cancelled`. | ✅ Implemented — admin-only, persisted via `serverPatchProjectStatus` |
 | FR-04b | System SHALL allow admins to bulk-update status for multiple selected projects at once. | ✅ Implemented — `serverBulkPatchProjectStatus` + checkbox toolbar on `/projects` |
 | FR-05 | System SHALL list equipment items with pagination and search. | ✅ Implemented — live from Neon DB |
-| FR-06 | System SHALL accept an `.xlsx` file upload and display import confirmation UI. | ✅ UI only — no backend wired |
+| FR-06 | System SHALL accept an `.xlsx` / `.xls` file upload, parse the Simple 8-column project format, preview rows, validate common data issues, and persist imports through an admin-only server mutation. | ✅ Implemented — `/import` uses client-side `xlsx` parsing + `serverBatchImportProjects` |
 | FR-07 | System SHALL provide reference data (strategies, tactics, plans, departments) for filter dropdowns. | ✅ Implemented (static from mock-data; DB data used at runtime) |
 | FR-08 | System SHOULD support full project CRUD (create, edit, delete) through UI forms. | ✅ Implemented — admin-only, all dialogs wired to server functions |
 | FR-09 | System SHOULD support editing strategies, tactics, and plans through UI. | ❌ Missing |
 | FR-10 | System SHOULD support editing per-year budget rows directly on the project detail page. | ✅ Implemented — `BudgetPanel` with admin-only edit |
-| FR-11 | System SHOULD provide Excel export of filtered project lists and dashboard data. | ✅ Implemented — `src/lib/export.ts` |
+| FR-11 | System SHOULD provide export of filtered project lists and dashboard data, including official PDF-ready reports for administrative proposals. | ✅ Implemented — Excel + official print-to-PDF template in `src/lib/export.ts` |
 | FR-12 | System SHOULD support user authentication. | ✅ Implemented — custom `admin_users` table, bcrypt + sealed session cookies via `useSession()`. Public read-only / admin-CRUD split. |
-| FR-13 | System SHOULD provide an audit trail for all mutations (who changed what, when). | ✅ Implemented — `audit_events` table + `serverLogAudit` wrapper, viewable at `/admin/audit` |
-| FR-14 | System SHOULD support multi-sheet import that respects the Strategy/Tactic/Plan hierarchy from source workbook structure. | ✅ Implemented in `scripts/import-projects.cjs` (CLI only — UI upload handler still stub) |
+| FR-13 | System SHOULD provide a detailed audit trail for important system actions (who changed what, when, before/after where practical, and server-generated event metadata). | ✅ Implemented — project/equipment/user/import/auth/export events write server-side audit details; `/admin/audit` displays the log |
+| FR-14 | System SHOULD support multi-sheet import that respects the Strategy/Tactic/Plan hierarchy from source workbook structure. | ✅ Implemented in `scripts/import-projects.cjs` (CLI only); UI currently supports the Simple 8-column template |
 | FR-15 | System SHOULD persist data mutations to a durable backend (database). | ✅ Implemented — Neon PostgreSQL via `@neondatabase/serverless` driver inside server functions |
-| FR-16 | System SHALL provide an admin user management page. | ✅ Page exists at `/admin/users` (admin-only menu); user CRUD currently returns stubs since Better Auth was removed — re-implementation against `admin_users` table planned for v5.1. |
+| FR-16 | System SHALL provide an admin user management page. | ✅ Implemented against `admin_users` for list/create/delete. Password reset and granular roles remain future work. |
 | FR-17 | Public visitors SHALL NOT see admin-only menu items (Import, Users, Audit) or CRUD buttons (Add/Edit/Delete). | ✅ Implemented — `useAuth()` gates visibility throughout `AppLayout` and route components |
 | FR-18 | Database credentials SHALL NEVER be present in client-side JavaScript bundles. | ✅ Implemented — all SQL runs in `createServerFn` handlers; `DATABASE_URL` (no `VITE_` prefix) is server-only |
 
@@ -204,7 +204,7 @@ There is **no PostgREST / Neon Data API** layer anymore — all SQL runs server-
 - **`requireAdmin` throws `Response`, not `Error`.** Throwing `Error` from a server function causes Seroval (TanStack Start's serializer) to fail with `Seroval Error (step: 3)` on Vercel. `throw new Response(JSON.stringify({error}), {status:401})` serializes correctly.
 - **`serverLogin` returns `{ok:true|false}` instead of throwing.** Same Seroval reason — credential errors are returned as a discriminated union, then `useAuth.login` rethrows on the client.
 - **File-based routing** — TanStack Router auto-generates `src/routeTree.gen.ts`. Never hand-edit.
-- **Import page** — UI exists; file upload is still a stub (no parsing/persistence). `scripts/import-projects.cjs` is a working CLI importer.
+- **Import page** — `/import` is admin-gated and functional for the Simple 8-column format. It can download `project-import-template-2566-2570.xlsx`, parse `.xlsx` / `.xls` files in the browser, reject files over 10 MB, preview rows/warnings, and persist projects through `serverBatchImportProjects`. `scripts/import-projects.cjs` remains the fuller CLI importer for legacy multi-sheet workbooks.
 - **CORS not applicable** — there is no separate API origin; everything is same-origin via the Vercel function.
 
 ---
@@ -428,14 +428,16 @@ Defined as files in `src/routes/`. `src/routeTree.gen.ts` is **auto-generated** 
 | `projects.$projectId.tsx` | `/projects/:projectId` | Public | Project detail. Edit/Delete buttons gated by `isLoggedIn`. `BudgetPanel` edit gated. |
 | `equipment.tsx` | `/equipment` | Public | Equipment list. Add/Edit/Delete gated by `isLoggedIn`. |
 | `login.tsx` | `/login` | Public | Username + password form for admin sign-in. |
-| `import.tsx` | `/import` | Admin only | Excel upload UI (stub). Hidden from public sidebar. |
-| `admin.users.tsx` | `/admin/users` | Admin only | User management page (currently stubbed pending v5.1 rewrite). |
+| `import.tsx` | `/import` | Admin only | Simple 8-column Excel template download, upload, preview, validation, and import. Hidden from public sidebar and gated on direct access. |
+| `admin.users.tsx` | `/admin/users` | Admin only | User management page backed by `admin_users` list/create/delete. |
 | `admin.audit.tsx` | `/admin/audit` | Admin only | Audit log viewer (`audit_events` table). |
 | `account.$pathname.tsx` | `/account/*` | — | Legacy Neon Auth account routes — no longer functional, scheduled for removal. |
 
 ### 7.2 Layout (`src/components/AppLayout.tsx`)
 
 - Fixed left sidebar (280 px on `lg+`, hidden on smaller screens) — branding, nav, user footer.
+- Agency branding uses `src/components/AgencyLogo.tsx`. It first tries `/agency-logo.png` (for the official uploaded logo), then falls back to `/agency-logo.svg`.
+- The global footer credits `นักวิชาการคอมพิวเตอร์` with the slogan: `คิดเป็นระบบ เขียนเป็นจริง ขับเคลื่อนเมืองด้วยข้อมูล`.
 - Sticky top header — search bar, notification bell, current fiscal year badge.
 - Main content area with `px-5 lg:px-8 py-7` padding.
 - Footer with copyright and version string.
@@ -539,10 +541,13 @@ All pages use **TanStack Query** (`useQuery` / `useMutation`) with query keys sc
 ### 8.1 Current State
 
 The import page (`/import`) provides:
+- Admin-only route UI. Public users who open the route directly see a login-required message.
+- `project-import-template-2566-2570.xlsx` download generated with the existing `xlsx` dependency.
 - Drag-and-drop or file-picker for `.xlsx` / `.xls`.
-- File validation (extension check).
-- UI state machine: `idle → uploading → success | error`.
-- **No actual file processing** — the upload handler is a stub (simulated delay).
+- File validation: extension check and 10 MB size limit before parsing.
+- Browser-side Simple 8-column parser with preview table, warnings, and import result.
+- Persistence through `serverBatchImportProjects`, which is also protected by `requireAdmin()`.
+- Server-side audit event for each import attempt that inserts rows or produces errors.
 
 ### 8.2 Target (Hierarchy-Aware) Flow
 
@@ -574,8 +579,8 @@ A robust importer should:
 - ✅ **Per-project status mutation** wired on detail page.
 - ✅ **Project CRUD** — Create / Edit / Delete with `ProjectFormDialog` + `DeleteConfirmDialog`, gated by `isLoggedIn`.
 - ✅ **Equipment CRUD** — same pattern with `EquipmentFormDialog`. Fixed v5.0 bug where DB-numeric columns were being string-concatenated in JS sums (`Number()` cast added; `formatBaht` is now defensive too).
-- ✅ **Audit log** (`/admin/audit`) — every mutation calls `apiLogAudit` which writes to `audit_events`.
-- ✅ **Excel export** (`src/lib/export.ts`) — dashboard + filtered project list.
+- ✅ **Audit log** (`/admin/audit`) — important project/status/import mutations write authoritative audit events server-side with actor data from the admin session.
+- ✅ **Excel export** (`src/lib/export.ts`) — dashboard + filtered project list; string cells are sanitized against Excel formula injection.
 - ✅ **Login redirect uses `window.location.href`** — full reload after `serverLogin` so the `admin_session` cookie is included on the next render and `useAuth` returns `isLoggedIn=true` immediately.
 - ✅ Dashboard with recharts visualizations (live data).
 - ✅ **Interactive chart filtering** — clicking any chart bar/slice/row instantly filters the project table below. Active filter shown as a dismissible chip.
@@ -593,7 +598,7 @@ A robust importer should:
 - ✅ Project list with server-side filters + pagination (12/page) via PostgREST.
 - ✅ Project detail with hierarchy path + budget bar chart (live data).
 - ✅ Equipment list with pagination + search (live data).
-- ✅ Import page UI (file picker, drag-and-drop, validation — stub).
+- ✅ Import page UI (file picker, drag-and-drop, Simple 8-column parser, 10 MB client-side size guard, preview, import result).
 - ✅ Thai locale number formatting (`formatBaht`).
 - ✅ shadcn/ui component library (45+ components).
 - ✅ TailwindCSS 4 theming with custom CSS properties + animation utilities.
@@ -603,8 +608,8 @@ A robust importer should:
 ### 9.2 What is Missing
 
 - ❌ Strategy / Tactic / Plan management UI (CLI only).
-- ❌ Functional Excel **upload** (`/import` page UI is a stub; `scripts/import-projects.cjs` is a working CLI importer).
-- ❌ `/admin/users` page is wired to `apiGetUsers` / `apiCreateUser` / `apiDeleteUser` which currently return stubs (`Auth disabled`) — needs reimplementation against the `admin_users` table for v5.1.
+- ❌ Official multi-sheet workbook upload in the UI. `/import` currently supports the Simple 8-column template; `scripts/import-projects.cjs` remains the working CLI importer for richer legacy workbooks.
+- ❌ Password reset / role management in `/admin/users` (list/create/delete exists).
 - ❌ Account routes (`/account/*`) are leftover from the Better Auth era and no longer functional. Remove or rewrite.
 - ❌ Granular admin roles (currently every admin has full power).
 - ❌ Unit / integration tests.
@@ -636,7 +641,7 @@ C:\Users\PC\Documents\Projects\Five-Year Local Development Strategy\
 │   │   ├── session.server.ts        # getServerSession() + requireAdmin() — server-only import
 │   │   ├── db.ts                    # Lazy Neon SQL client (getSql()) — server-only
 │   │   ├── mock-data.ts             # Static reference arrays + formatBaht (defensive Number cast)
-│   │   ├── export.ts                # Excel export helpers (xlsx-js-style)
+│   │   ├── export.ts                # Excel export + official print-to-PDF report helpers
 │   │   └── utils.ts                 # cn() helper
 │   ├── routes/
 │   │   ├── __root.tsx               # HTML shell, QueryClientProvider, fonts
@@ -645,8 +650,8 @@ C:\Users\PC\Documents\Projects\Five-Year Local Development Strategy\
 │   │   ├── projects.$projectId.tsx  # Project detail (status, edit, delete, budget edit — admin)
 │   │   ├── equipment.tsx            # Equipment list (with admin CRUD)
 │   │   ├── login.tsx                # Admin login form
-│   │   ├── import.tsx               # Excel upload UI (stub)
-│   │   ├── admin.users.tsx          # User mgmt (currently stubbed pending v5.1)
+│   │   ├── import.tsx               # Excel template + Simple 8-column import UI
+│   │   ├── admin.users.tsx          # User mgmt backed by admin_users
 │   │   ├── admin.audit.tsx          # Audit log viewer
 │   │   └── account.$pathname.tsx    # LEGACY (Better Auth) — non-functional, slated for removal
 │   ├── routeTree.gen.ts             # AUTO-GENERATED — do not edit
@@ -713,7 +718,7 @@ npm run seed                    # Reference data + 248 projects
 npm run import-projects         # Full Excel pipeline (project source workbook)
 ```
 
-Admin user seeding is currently **inline** (run via the Node REPL with the `--env-file=.env` flag). A dedicated `scripts/seed-admins.js` is a v5.1 follow-up.
+Admin user seeding is handled by `npm run seed-admins`, which runs `scripts/seed-admins.js` with `.env` loaded. In non-production local development, missing `ADMIN_USERS` still seeds the legacy convenience users `pop` / `pop` and `pok` / `pok`. In `NODE_ENV=production`, missing `ADMIN_USERS` fails immediately before database connection or dependency loading, so default admin credentials cannot be seeded by accident. To seed custom admins, set `ADMIN_USERS` as comma-separated `username:password` pairs before running the script.
 
 All scripts use `@neondatabase/serverless` with `process.env.DATABASE_URL`. The connection string is never bundled into client code.
 
@@ -723,11 +728,11 @@ All scripts use `@neondatabase/serverless` with `process.env.DATABASE_URL`. The 
 
 ### 11.1 Near-Term (v5.1)
 
-1. **Re-implement `/admin/users`** against the `admin_users` table — list, create (with password set), reset password, delete. The existing page is wired to stub server functions returning `[]` / throwing.
-2. **Functional Excel upload** — wire `/import` page to `serverBatchImportProjects` using the parsing logic already in `scripts/import-projects.cjs`.
-3. **Remove leftover `/account/*` routes** — Better Auth artefacts that no longer work.
-4. **Replace static filter dropdowns** — `strategies`, `tactics`, `plans` arrays in `mock-data.ts` should come from `useQuery(apiGetStrategies)` etc.
-5. **`scripts/seed-admins.js`** — convert the inline admin seed into a checked-in script.
+1. **Admin user management hardening** — `/admin/users` is reimplemented against `admin_users` for list/create/delete; reset password UI and role separation remain future work.
+2. **Legacy multi-sheet Excel upload** — `/import` now supports the Simple 8-column template. Future work is to add an official multi-sheet workbook import path that respects the full source workbook hierarchy.
+3. **Remove leftover `/account/*` routes** — current route redirects to `/login` for compatibility with the checked-in route tree; remove the file after TanStack route generation is healthy.
+4. **Replace remaining static reference dropdowns** — project and equipment create/edit flows now use DB-backed reference queries; audit future forms before adding new `mock-data.ts` dependencies.
+5. **Build environment cleanup** — current Google Drive workspace has a damaged `node_modules` install; prefer a local non-synced path for full `npm install` / `npm run build`.
 
 ### 11.2 Mid-Term (v5.2)
 
@@ -773,10 +778,229 @@ When modifying this system:
 
 ---
 
-## 12. Change Log
+## 12. Status Management Deep Dive
+
+This section documents the current project-status workflow for future analysis and debugging.
+
+### 12.1 Status Values
+
+`Status` is defined in `src/lib/mock-data.ts` and used across DB rows, API types, dashboard charts, badges, filters, and mutations.
+
+| Value | Thai label | Intended meaning |
+|---|---|---|
+| `not_set` | ยังไม่ได้ปรับสถานะ | Imported or newly reset project whose operational status has not been reviewed. |
+| `planning` | วางแผน | Project is planned but not yet active. |
+| `in_progress` | ดำเนินการ | Project is currently active. |
+| `completed` | เสร็จสิ้น | Project has finished. |
+| `cancelled` | ยกเลิก | Project is cancelled but retained for reporting. |
+
+The database CHECK constraint must include all five values. `scripts/migrate.js` now drops and recreates `projects_status_check` to include `not_set`.
+
+### 12.2 Server Functions
+
+Status writes are server-only and require an admin session.
+
+| Function | File | Purpose |
+|---|---|---|
+| `serverPatchProjectStatus` | `src/lib/server-fns.ts` | Updates one project status, validates the status value, returns `{ updated }`, and throws `Response` for invalid status or missing project. |
+| `serverBulkPatchProjectStatus` | `src/lib/server-fns.ts` | Updates many selected project IDs with one status using `WHERE id = ANY(...)`, validates the status value, returns `{ updated }`. |
+| `apiPatchProjectStatus` | `src/lib/api.ts` | Client-safe wrapper for single status update. |
+| `apiBulkPatchProjectStatus` | `src/lib/api.ts` | Client-safe wrapper for bulk status update. |
+
+Important guardrails:
+
+- Never call DB writes from client code directly.
+- `requireAdmin()` must remain inside both server functions.
+- Error paths must throw `Response`, not `Error`, because TanStack Start serialization has failed on Vercel with thrown `Error` objects.
+- Always invalidate `["project", id]`, `["projects"]`, and `["dashboard"]` after a successful status write when the page has access to those caches.
+
+### 12.3 Project Detail UX
+
+File: `src/routes/projects.$projectId.tsx`.
+
+The detail page uses `StatusStepper` for a guided workflow:
+
+1. Normal forward flow is `planning -> in_progress -> completed`.
+2. `not_set` is treated as a pre-workflow state; the primary next action moves it to `planning`.
+3. `cancelled` is an exception state outside the normal step flow.
+4. Moving backward, cancelling, and reactivating use confirmation dialogs.
+5. Public visitors can see the current status but cannot change it.
+6. Admin controls are disabled while a mutation is pending.
+
+Persistence behavior:
+
+- The UI sets `localStatus` only while the mutation is in flight.
+- Success clears `localStatus`, invalidates caches, and shows the success toast after the server confirms the update.
+- Failure clears `localStatus` so the badge/stepper roll back to the DB-backed project value and shows an error toast.
+
+This fixes the previous failure mode where the UI immediately showed a successful status change even when the server rejected the write, such as when a public visitor clicked a control or the session cookie was missing.
+
+### 12.4 Project List UX
+
+File: `src/routes/projects.tsx`.
+
+Admins have two status controls on the list page:
+
+- **Row-level select:** Each project row exposes a compact status dropdown. It calls `apiPatchProjectStatus(id, status)` and waits for server success before showing a success toast.
+- **Bulk toolbar:** Selecting one or more checkboxes opens the bulk toolbar. The toolbar calls `apiBulkPatchProjectStatus(ids, status)`, clears selection after success, and invalidates project/dashboard queries.
+
+Public visitors continue to see `StatusBadge` only.
+
+### 12.5 Audit Logging
+
+Status changes are audited inside the server mutation itself. `serverPatchProjectStatus` reads the current row before update, writes the new status, then inserts an `audit_events` row with `action="status_change"`, `entity="project"`, `entity_id`, `before`, `after.status`, and the actor resolved from the admin session. `serverBulkPatchProjectStatus` follows the same pattern for many IDs and stores the affected project IDs in `after.ids`.
+
+Client routes no longer call `apiLogAudit` for project status/create/update/delete/import flows. This prevents a modified client from skipping or spoofing those important logs. `serverLogAudit` still exists as a compatibility/manual wrapper, but important project mutations should log through the mutation function that owns the write.
+
+Current limitation: the write and audit insert are sequenced in one server function but are not wrapped in an explicit SQL transaction. If audit failure becomes compliance-critical, convert the mutation paths to explicit transactions or add a narrow stored procedure.
+
+### 12.6 Known Follow-ups
+
+- Add `projects.status_changed_at` and optionally `projects.status_changed_by`.
+- Add request IP/user-agent to audit logs when request context is available.
+- Add dashboard surfacing for `not_set` outside the compact stacked strategy progress chart.
+- Add a proper status history table if status transitions become compliance-significant.
+- Consider limiting illegal transitions if the business process later requires approval rules.
+
+---
+
+## 13. Import and Security Hardening (v5.2)
+
+This section captures the current import template and security changes implemented on 2026-05-08 for future analysis.
+
+### 13.1 Import Template
+
+Route: `src/routes/import.tsx`.
+
+The admin import page provides a downloadable workbook named `project-import-template-2566-2570.xlsx`. It is generated client-side with the existing `xlsx` dependency, so no new package is required.
+
+Workbook structure:
+
+| Sheet | Purpose |
+|---|---|
+| `template` | Simple 8-column import sheet with headers: `ชื่อโครงการ`, `หน่วยงานรับผิดชอบ`, `plan_id`, `งบปี 2566`, `งบปี 2567`, `งบปี 2568`, `งบปี 2569`, `งบปี 2570`. Includes one editable example row. |
+| `instructions` | Short operator guidance: fill from row 2, `plan_id` examples, no negative budgets, blank rows are skipped, and only the Simple 8-column format is supported. |
+
+Parser compatibility:
+
+- The parser still reads the first sheet with `XLSX.utils.sheet_to_json(..., { header: 1, defval: "" })`.
+- Row index 0 is treated as the header.
+- Columns 0-2 map to project name, department, and `plan_id`.
+- Columns 3-7 map to `YEARS` (`2566` through `2570`).
+
+### 13.2 Import Hardening
+
+The import UI is now explicitly admin-only:
+
+- Public users who open `/import` directly see a login-required message and no drop zone.
+- Server persistence remains protected by `requireAdmin()` inside `serverBatchImportProjects`.
+- File extension is restricted to `.xlsx` / `.xls`.
+- File size is enforced at 10 MB before browser parsing.
+- Blank rows are skipped.
+- Missing project name skips the row with a warning.
+- Non-numeric `plan_id` is warned and imported as `null` to preserve existing compatibility.
+- Non-numeric or negative budget cells are warned and ignored; positive numeric values are imported.
+
+### 13.3 Server-Side Audit Ownership
+
+Important project mutations now own their audit logs server-side:
+
+| Mutation | Audit behavior |
+|---|---|
+| `serverPatchProjectStatus` | Reads previous status, updates one project, writes `status_change` with before/after + actor. |
+| `serverBulkPatchProjectStatus` | Reads previous statuses for selected IDs, updates many, writes one `status_change` event with affected IDs + actor. |
+| `serverCreateProject` | Writes `create` with created project/budget payload + actor. |
+| `serverUpdateProject` | Reads previous project/budgets, updates, writes `update` with before/after + actor. |
+| `serverUpdateBudgets` | Reads previous budget rows, replaces them, writes `update` on `project_budget`. |
+| `serverDeleteProject` | Reads project/budgets/annotation count, deletes rows, writes `delete` with before + actor. |
+| `serverBatchImportProjects` | Writes `import` with requested row count, inserted count, error count, created IDs + actor. |
+
+`apiLogAudit` / `serverLogAudit` remain available, but client routes should not use them to log important project writes. The mutation that changes data should be the mutation that writes the audit event.
+
+### 13.4 Excel Formula Injection Guard
+
+File: `src/lib/export.ts`.
+
+Excel export sanitizes string values before writing workbook cells. If a string begins with `=`, `+`, `-`, or `@` after leading whitespace, the exporter prefixes an apostrophe (`'`) so Excel opens it as text rather than a formula. This applies to project exports and dashboard export sheets.
+
+### 13.5 Remaining Security Follow-ups
+
+- Add explicit SQL transactions or stored procedures for write+audit atomicity if audit integrity becomes compliance-critical.
+- Add audit diff UI in `/admin/audit`.
+- Consider server-side MIME sniffing if file uploads are later moved from browser parse to server parse.
+- Consider stricter import rejection rules for invalid `plan_id` / invalid budget if business users prefer fail-fast imports over warning-based compatibility.
+
+## 14. Official Reporting and Branding (v5.3)
+
+### 14.1 Agency Logo
+
+The application now renders the agency mark through `src/components/AgencyLogo.tsx`.
+
+Resolution order:
+
+1. `/agency-logo.png` — intended location for the real official logo file supplied by the user/agency.
+2. `/agency-logo.svg` — checked-in fallback seal so the UI and report template never render blank.
+3. Lucide `Building2` icon — last-resort runtime fallback if both image files fail.
+
+Logo placements:
+
+- Desktop sidebar brand block.
+- Mobile header brand block.
+- Official PDF report header.
+
+### 14.2 Official PDF Report Template
+
+File: `src/lib/export.ts`.
+
+`exportOfficialDashboardPdf(data)` opens a print-ready A4 report in a new browser window and calls `window.print()`. Operators can choose **Save as PDF** from the browser print dialog. This avoids adding a heavy PDF dependency while producing a formal government-style document.
+
+Report contents:
+
+- Agency logo and report metadata.
+- Executive summary KPI cards.
+- Status breakdown.
+- Budget by fiscal year.
+- Strategy progress table.
+- Top department table.
+- Official note and three signature lines.
+- Footer credit: `นักวิชาการคอมพิวเตอร์ · คิดเป็นระบบ เขียนเป็นจริง ขับเคลื่อนเมืองด้วยข้อมูล`.
+
+The dashboard button logs an `export` audit event with template name, format, total projects, and total budget before opening the report.
+
+### 14.3 Detailed Audit Logging
+
+Audit actions now include:
+
+| Action | Typical entity | Purpose |
+|---|---|---|
+| `login` | `auth` | Successful and failed login attempts, excluding passwords. |
+| `logout` | `auth` | Admin logout events. |
+| `export` | `official_report` | Official report/PDF export events. |
+| `create` / `update` / `delete` | `project`, `equipment`, `department`, `admin_user` | Data mutations with before/after payloads where practical. |
+| `import` | `project` | Import attempts with requested rows, inserted rows, errors, and created IDs. |
+| `status_change` | `project` | Single and bulk status changes. |
+
+Each server-owned audit payload includes a `system` object:
+
+```json
+{
+  "eventId": "uuid-or-fallback",
+  "source": "server-fn",
+  "entity": "project",
+  "action": "update",
+  "recordedAt": "2026-05-08T00:00:00.000Z"
+}
+```
+
+Important limitation: request IP address and user-agent are not captured yet because the current server function layer does not expose request headers in the project code. Add request-context capture later if a TanStack Start upgrade or middleware layer makes that available.
+
+## 15. Change Log
 
 | Version | Date | Author | Change |
 |---|---|---|---|
+| 5.3 | 2026-05-08 | System analyst (AI) + User | **Official reporting + branding + detailed logs.** (1) Added agency logo rendering via `AgencyLogo`, with `/agency-logo.png` first and checked-in `/agency-logo.svg` fallback. (2) Added official A4 print-to-PDF report template for dashboard summaries, with government-style header, KPI/table sections, signature lines, and footer credit. (3) Added dashboard PDF export button and `export` audit event. (4) Expanded audit action set to `login`, `logout`, and `export`; login/logout events are now written without storing passwords. (5) Expanded server-side audit coverage to equipment CRUD, department create, admin user create/delete, and richer `system` metadata. (6) Footer now credits `นักวิชาการคอมพิวเตอร์` with the slogan `คิดเป็นระบบ เขียนเป็นจริง ขับเคลื่อนเมืองด้วยข้อมูล`. |
+| 5.2 | 2026-05-08 | System analyst (AI) + User | **Import template + security hardening.** (1) `/import` now provides a downloadable Simple 8-column Excel template with `template` and `instructions` sheets. (2) `/import` is admin-gated in UI, enforces 10 MB file size before parse, validates required project name / numeric `plan_id` / non-negative numeric budgets, and still persists through `serverBatchImportProjects`. (3) Important project/status/import mutations now write audit events server-side with actor data from the admin session and before/after where practical; duplicate client-side audit calls were removed. (4) Dashboard detail sheet status controls are admin-gated, toast only after server success, and invalidate project/list/dashboard caches. (5) `scripts/seed-admins.js` refuses default credentials when `NODE_ENV=production` and `ADMIN_USERS` is missing. (6) Excel export sanitizes strings beginning with formula-trigger characters. |
+| 5.1 | 2026-05-08 | System analyst (AI) + User | **Status workflow reliability + v5.1 admin/reference cleanup.** (1) Fixed status updates so UI success only appears after server confirmation; failed writes roll back local optimistic state. (2) `serverPatchProjectStatus` now validates allowed statuses, returns `{updated}`, and throws `Response` for invalid status or missing project. (3) Project detail status stepper is admin-only for writes, with public read-only messaging. (4) Project list now supports row-level status updates plus existing bulk updates, both invalidating projects/dashboard caches and logging best-effort audit events. (5) `/admin/users` is wired to `admin_users` list/create/delete with bcrypt hashing. (6) Added `scripts/seed-admins.js` and `npm run seed-admins`. (7) Project/equipment form dropdowns use DB-backed reference queries instead of static `mock-data.ts` arrays. (8) `/account/*` no longer imports Better Auth UI; it redirects to `/login`. (9) Added detailed status-management analysis section for future agents. |
 | 1.0 | 2026-04-20 | System analyst (AI) | Initial consolidated SRS + SDD based on original `webapp/` design target. |
 | 2.0 | 2026-04-21 | System analyst (AI) | Full rewrite to reflect actual codebase: TanStack Start + Vite 7 + React 19 + TailwindCSS 4 + mock-data frontend-only app. Corrected all outdated Express/SQLite/`webapp/` references. Updated file map, technology table, data types, routes, and implementation status. |
 | 3.0 | 2026-04-21 | System analyst (AI) | Backend integration: Neon PostgreSQL schema + seed data; Neon Auth (Better Auth); Neon Data API (PostgREST) wired via `src/lib/api.ts`; TanStack Query in all pages; route protection in `AppLayout`; `scripts/migrate.js` and `scripts/seed.js` added. Updated architecture diagram, FR table, tech stack, file map. |

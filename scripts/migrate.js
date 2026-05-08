@@ -67,6 +67,13 @@ CREATE TABLE IF NOT EXISTS equipment (
   budget_2570  NUMERIC NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS admin_users (
+  id            SERIAL PRIMARY KEY,
+  username      TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_projects_plan_id    ON projects(plan_id);
 CREATE INDEX IF NOT EXISTS idx_projects_department ON projects(department);
 CREATE INDEX IF NOT EXISTS idx_projects_status     ON projects(status);
@@ -89,6 +96,20 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='project_budgets' AND column_name='ordinance_amount') THEN
     ALTER TABLE project_budgets ADD COLUMN ordinance_amount NUMERIC DEFAULT 0;
   END IF;
+END $$;
+
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'projects_status_check'
+      AND conrelid = 'projects'::regclass
+  ) THEN
+    ALTER TABLE projects DROP CONSTRAINT projects_status_check;
+  END IF;
+  ALTER TABLE projects
+    ADD CONSTRAINT projects_status_check
+    CHECK (status IN ('not_set','planning','in_progress','completed','cancelled'));
 END $$;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
@@ -222,13 +243,17 @@ CREATE INDEX IF NOT EXISTS idx_projects_department_id ON projects(department_id)
 
 CREATE TABLE IF NOT EXISTS audit_events (
   id         SERIAL PRIMARY KEY,
-  action     TEXT NOT NULL CHECK (action IN ('create','update','delete','import','status_change')),
+  action     TEXT NOT NULL CHECK (action IN ('create','update','delete','import','status_change','login','logout','export')),
   entity     TEXT NOT NULL,
   entity_id  INTEGER,
   before     JSONB,
   after      JSONB,
   timestamp  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE audit_events DROP CONSTRAINT IF EXISTS audit_events_action_check;
+ALTER TABLE audit_events ADD CONSTRAINT audit_events_action_check
+  CHECK (action IN ('create','update','delete','import','status_change','login','logout','export'));
 
 CREATE INDEX IF NOT EXISTS idx_audit_events_entity ON audit_events(entity, entity_id);
 CREATE INDEX IF NOT EXISTS idx_audit_events_action ON audit_events(action);

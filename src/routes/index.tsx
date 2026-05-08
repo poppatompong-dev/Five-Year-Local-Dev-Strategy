@@ -10,8 +10,8 @@ import { AppLayout } from "@/components/AppLayout";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { formatBaht, STATUS_COLOR, YEARS, type Status } from "@/lib/mock-data";
-import { apiGetDashboard, apiGetProjects, apiGetProject, apiUpdateProject, apiPatchProjectStatus } from "@/lib/api";
-import { exportDashboardToExcel } from "@/lib/export";
+import { apiGetDashboard, apiGetProjects, apiGetProject, apiUpdateProject, apiPatchProjectStatus, apiLogAudit } from "@/lib/api";
+import { exportDashboardToExcel, exportOfficialDashboardPdf } from "@/lib/export";
 import type { ProjectRow, StrategyProgress, ProjectCreateInput } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -67,6 +67,7 @@ import {
   TrendingDown,
   AlertCircle,
   Download,
+  Printer,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -125,6 +126,7 @@ function useCountUp(target: number, duration = 900, enabled = true) {
 }
 
 function DashboardPage() {
+  const { isLoggedIn } = useAuth();
 
   // ── Filter state ──────────────────────────────────────────────────────────
   const [filterStatus, setFilterStatus] = useState<FilterStatus>(null);
@@ -401,6 +403,31 @@ function DashboardPage() {
                   className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur px-3 py-1.5 text-xs font-medium ring-1 ring-white/20 transition"
                 >
                   <Download className="size-3.5" /> ส่งออก
+                </button>
+                <button
+                  onClick={() => {
+                    if (!isLoggedIn) {
+                      toast.error("กรุณาเข้าสู่ระบบผู้ดูแลก่อนส่งออกรายงาน PDF");
+                      return;
+                    }
+                    if (data) {
+                      apiLogAudit({
+                        action: "export",
+                        entity: "official_report",
+                        after: {
+                          format: "pdf",
+                          template: "official-dashboard-summary",
+                          totalProjects: data.totalProjects,
+                          totalBudget: data.totalBudget,
+                        },
+                      }).catch(() => {});
+                      exportOfficialDashboardPdf(data);
+                      toast.success("เปิดเทมเพลตรายงาน PDF แล้ว");
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-gold text-gold-foreground hover:bg-gold/90 px-3 py-1.5 text-xs font-semibold ring-1 ring-white/20 transition"
+                >
+                  <Printer className="size-3.5" /> PDF ราชการ
                 </button>
                 <Link to="/projects" className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur px-3 py-1.5 text-xs font-medium ring-1 ring-white/20 transition">
                   ดูโครงการทั้งหมด <ArrowUpRight className="size-3.5" />
@@ -999,9 +1026,15 @@ function ProjectDetailSheet({ projectId, onClose }: { projectId: number | null; 
 
   const patchStatus = useMutation({
     mutationFn: (s: Status) => apiPatchProjectStatus(projectId!, s),
-    onSuccess: () => {
+    onSuccess: (_r, newStatus) => {
       qc.invalidateQueries({ queryKey: ["project", projectId] });
+      qc.invalidateQueries({ queryKey: ["projects"] });
       qc.invalidateQueries({ queryKey: ["projects-filtered"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      toast.success(`เปลี่ยนสถานะเป็น "${STATUS_LABEL[newStatus]}" แล้ว`);
+    },
+    onError: (err) => {
+      toast.error(`เปลี่ยนสถานะไม่สำเร็จ: ${err instanceof Error ? err.message : "กรุณาลองใหม่อีกครั้ง"}`);
     },
   });
 
@@ -1122,16 +1155,15 @@ function ProjectDetailSheet({ projectId, onClose }: { projectId: number | null; 
                 <div className="rounded-xl border border-border p-4">
                   <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">เปลี่ยนสถานะ</div>
                   <div className="flex flex-wrap gap-2">
-                    {(["planning", "in_progress", "completed", "cancelled"] as Status[]).map((s) => (
+                    {(["not_set", "planning", "in_progress", "completed", "cancelled"] as Status[]).map((s) => (
                       <button
                         key={s}
                         onClick={() => {
-                          patchStatus.mutate(s);
-                          toast.success(`เปลี่ยนสถานะเป็น "${STATUS_LABEL[s]}" แล้ว`, { icon: "✅" });
+                          if (isLoggedIn) patchStatus.mutate(s);
                         }}
-                        disabled={patchStatus.isPending || project.status === s}
+                        disabled={!isLoggedIn || patchStatus.isPending || project.status === s}
                         className={[
-                          "text-xs px-3 py-1.5 rounded-lg border font-medium transition-all",
+                          "text-xs px-3 py-1.5 rounded-lg border font-medium transition-all disabled:opacity-60",
                           project.status === s
                             ? "bg-primary text-primary-foreground border-primary"
                             : "bg-background hover:bg-muted border-border text-foreground/70",
@@ -1141,6 +1173,11 @@ function ProjectDetailSheet({ projectId, onClose }: { projectId: number | null; 
                       </button>
                     ))}
                   </div>
+                  {!isLoggedIn && (
+                    <div className="mt-3 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                      เข้าสู่ระบบผู้ดูแลเพื่อเปลี่ยนสถานะโครงการ
+                    </div>
+                  )}
                 </div>
               </>
             )}

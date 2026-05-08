@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { apiGetUsers, apiCreateUser, apiDeleteUser, type AuthUser } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import { Users, Plus, Trash2, Mail, ShieldCheck, ShieldOff, Eye, EyeOff, X } from "lucide-react";
 
 export const Route = createFileRoute("/admin/users")({
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/admin/users")({
 
 function UsersPage() {
   const qc = useQueryClient();
-  const currentUserId: string | undefined = undefined;
+  const { username } = useAuth();
 
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ["admin-users"],
@@ -91,7 +92,7 @@ function UsersPage() {
                           </div>
                           <div>
                             <div className="font-medium">{u.name || "—"}</div>
-                            {u.id === currentUserId && (
+                            {u.name === username && (
                               <span className="text-[10px] bg-gold/20 text-amber-700 px-1.5 py-0.5 rounded font-medium">
                                 คุณ
                               </span>
@@ -135,8 +136,8 @@ function UsersPage() {
                       <td className="px-5 py-4 text-right">
                         <button
                           onClick={() => setConfirmDelete(u)}
-                          disabled={u.id === currentUserId || deleteMutation.isPending}
-                          title={u.id === currentUserId ? "ไม่สามารถลบบัญชีตัวเองได้" : "ลบผู้ใช้"}
+                          disabled={u.name === username || deleteMutation.isPending}
+                          title={u.name === username ? "ไม่สามารถลบบัญชีตัวเองได้" : "ลบผู้ใช้"}
                           className="size-8 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition ml-auto"
                         >
                           <Trash2 className="size-4" />

@@ -12,6 +12,7 @@
     "format": "prettier --write .",
     "migrate": "node scripts/migrate.js",
     "seed": "node scripts/seed.js",
+    "seed-admins": "node --env-file=.env scripts/seed-admins.js",
     "add-users": "node scripts/add-users.js",
     "extract-textboxes": "node scripts/extract-textboxes.cjs",
     "seed-textboxes": "node scripts/seed-textboxes.js",

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -8,15 +9,18 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
-  strategies,
-  plans,
-  tactics,
-  DEPARTMENTS,
   YEARS,
   STATUS_LABEL,
   type Status,
 } from "@/lib/mock-data";
-import type { ProjectCreateInput, ProjectDetail } from "@/lib/api";
+import {
+  apiGetDepartments,
+  apiGetPlans,
+  apiGetStrategies,
+  apiGetTactics,
+  type ProjectCreateInput,
+  type ProjectDetail,
+} from "@/lib/api";
 import { Loader2 } from "lucide-react";
 
 interface ProjectFormDialogProps {
@@ -46,6 +50,27 @@ export function ProjectFormDialog({
   const [planId, setPlanId] = useState<number | "">("");
   const [status, setStatus] = useState<Status>("planning");
   const [budgets, setBudgets] = useState<Record<number, string>>({});
+
+  const { data: strategies = [] } = useQuery({
+    queryKey: ["strategies"],
+    queryFn: apiGetStrategies,
+    enabled: open,
+  });
+  const { data: tactics = [] } = useQuery({
+    queryKey: ["tactics"],
+    queryFn: apiGetTactics,
+    enabled: open,
+  });
+  const { data: plans = [] } = useQuery({
+    queryKey: ["plans"],
+    queryFn: apiGetPlans,
+    enabled: open,
+  });
+  const { data: departments = [] } = useQuery({
+    queryKey: ["departments"],
+    queryFn: apiGetDepartments,
+    enabled: open,
+  });
 
   useEffect(() => {
     if (open && initialData) {
@@ -158,7 +183,7 @@ export function ProjectFormDialog({
                 <option value="">— เลือกยุทธศาสตร์ —</option>
                 {strategies.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.id}. {s.short_name}
+                    {s.id}. {s.short_name ?? s.name}
                   </option>
                 ))}
               </select>
@@ -198,7 +223,7 @@ export function ProjectFormDialog({
                 className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2.5 text-sm ring-focus"
               >
                 <option value="">— เลือกหน่วยงาน —</option>
-                {DEPARTMENTS.map((d) => (
+                {departments.map((d) => (
                   <option key={d} value={d}>
                     {d}
                   </option>

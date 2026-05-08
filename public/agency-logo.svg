@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="ตราหน่วยงาน">
+  <defs>
+    <linearGradient id="seal" x1="24" x2="136" y1="18" y2="142" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0d7a5f"/>
+      <stop offset="1" stop-color="#064e3b"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="42" x2="118" y1="35" y2="125" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f3d985"/>
+      <stop offset="1" stop-color="#c9a84c"/>
+    </linearGradient>
+  </defs>
+  <circle cx="80" cy="80" r="74" fill="url(#seal)"/>
+  <circle cx="80" cy="80" r="64" fill="none" stroke="url(#gold)" stroke-width="6"/>
+  <circle cx="80" cy="80" r="48" fill="#f8f3df"/>
+  <path d="M80 34l8.5 21.5 23 1.7-17.8 14.7 5.4 22.4L80 82.2 60.9 94.3l5.4-22.4-17.8-14.7 23-1.7L80 34z" fill="url(#gold)"/>
+  <path d="M47 111h66v9H47zM57 96h46v10H57z" fill="#0d7a5f"/>
+  <text x="80" y="139" fill="#f8f3df" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" font-weight="700">NAKHON SAWAN</text>
+</svg>

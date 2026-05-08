@@ -7,6 +7,7 @@ import {
   serverGetEquipment, serverCreateEquipment, serverUpdateEquipment, serverDeleteEquipment,
   serverGetDashboard, serverGetDepartmentsList, serverCreateDepartment,
   serverLogAudit, serverGetAuditEvents,
+  serverGetUsers, serverCreateUser, serverDeleteUser,
 } from "./server-fns";
 
 // ---------------------------------------------------------------------------
@@ -103,7 +104,7 @@ export interface DBDepartment {
 
 export interface DBAuditEvent {
   id: number;
-  action: 'create' | 'update' | 'delete' | 'import' | 'status_change';
+  action: 'create' | 'update' | 'delete' | 'import' | 'status_change' | 'login' | 'logout' | 'export';
   entity: string;
   entity_id: number | null;
   before: any | null;
@@ -203,8 +204,8 @@ export async function apiGetProject(id: number): Promise<ProjectDetail | null> {
   return serverGetProject({ data: { id } });
 }
 
-export async function apiPatchProjectStatus(id: number, status: Status): Promise<void> {
-  await serverPatchProjectStatus({ data: { id, status } });
+export async function apiPatchProjectStatus(id: number, status: Status): Promise<{ updated: number }> {
+  return serverPatchProjectStatus({ data: { id, status } });
 }
 
 export async function apiBulkPatchProjectStatus(ids: number[], status: Status): Promise<{ updated: number }> {
@@ -358,20 +359,20 @@ export async function apiGetAuditEvents(params: {
 }
 
 // ---------------------------------------------------------------------------
-// User management stubs (disabled — auth removed)
+// User management
 // ---------------------------------------------------------------------------
 export async function apiGetUsers(): Promise<AuthUser[]> {
-  return [];
+  return serverGetUsers();
 }
 
-export async function apiCreateUser(_data: {
+export async function apiCreateUser(data: {
   name: string;
   email: string;
   password: string;
-}): Promise<void> {
-  throw new Error("Auth disabled");
+}): Promise<AuthUser> {
+  return serverCreateUser({ data: { username: data.email, password: data.password } });
 }
 
-export async function apiDeleteUser(_userId: string): Promise<void> {
-  throw new Error("Auth disabled");
+export async function apiDeleteUser(userId: string): Promise<void> {
+  await serverDeleteUser({ data: { id: userId } });
 }

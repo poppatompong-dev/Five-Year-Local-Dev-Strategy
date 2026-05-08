@@ -4,21 +4,28 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
-  strategies,
-  plans,
-  tactics,
-  DEPARTMENTS,
   YEARS,
   STATUS_LABEL,
   formatBaht,
   type Status,
 } from "@/lib/mock-data";
-import { apiGetProjects, apiCreateProject, apiDeleteProject, apiLogAudit, apiBulkPatchProjectStatus, type ProjectCreateInput } from "@/lib/api";
+import {
+  apiGetProjects,
+  apiCreateProject,
+  apiDeleteProject,
+  apiPatchProjectStatus,
+  apiBulkPatchProjectStatus,
+  apiGetStrategies,
+  apiGetTactics,
+  apiGetPlans,
+  apiGetDepartments,
+  type ProjectCreateInput,
+} from "@/lib/api";
 import { toast } from "sonner";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { exportProjectsToExcel } from "@/lib/export";
-import { Search, Filter, ChevronLeft, ChevronRight, X, ArrowUpDown, Plus, Trash2, Download, CheckSquare } from "lucide-react";
+import { Search, Filter, ChevronLeft, ChevronRight, X, ArrowUpDown, Plus, Trash2, Download, CheckSquare, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -52,26 +59,53 @@ function ProjectsPage() {
 
   const qc = useQueryClient();
 
+  const { data: strategies = [] } = useQuery({
+    queryKey: ["strategies"],
+    queryFn: apiGetStrategies,
+  });
+  const { data: tactics = [] } = useQuery({
+    queryKey: ["tactics"],
+    queryFn: apiGetTactics,
+  });
+  const { data: plans = [] } = useQuery({
+    queryKey: ["plans"],
+    queryFn: apiGetPlans,
+  });
+  const { data: departments = [] } = useQuery({
+    queryKey: ["departments"],
+    queryFn: apiGetDepartments,
+  });
+
   const bulkStatusMutation = useMutation({
     mutationFn: ({ ids, status }: { ids: number[]; status: Status }) => apiBulkPatchProjectStatus(ids, status),
-    onSuccess: (r, vars) => {
+    onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["projects"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       setSelectedIds(new Set());
       toast.success(`อัปเดตสถานะ ${r.updated} โครงการแล้ว`, { icon: "✅" });
-      apiLogAudit({ action: "status_change", entity: "project", after: { ids: vars.ids, status: vars.status } }).catch(() => {});
     },
     onError: (err) => toast.error(`อัปเดตไม่สำเร็จ: ${err.message}`),
   });
 
+  const rowStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: Status }) => apiPatchProjectStatus(id, status),
+    onSuccess: (_r, vars) => {
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      toast.success(`เปลี่ยนสถานะเป็น "${STATUS_LABEL[vars.status]}" แล้ว`);
+    },
+    onError: (err) => {
+      toast.error(`เปลี่ยนสถานะไม่สำเร็จ: ${err instanceof Error ? err.message : "กรุณาลองใหม่อีกครั้ง"}`);
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: (data: ProjectCreateInput) => apiCreateProject(data),
-    onSuccess: (_result, variables) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["projects"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       setCreateOpen(false);
       toast.success("เพิ่มโครงการสำเร็จ", { icon: "✅" });
-      apiLogAudit({ action: "create", entity: "project", after: variables }).catch(() => {});
     },
     onError: (err) => {
       toast.error(`เพิ่มโครงการไม่สำเร็จ: ${err.message}`);
@@ -80,12 +114,11 @@ function ProjectsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => apiDeleteProject(id),
-    onSuccess: (_r, id) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["projects"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       setDeleteId(null);
       toast.success("ลบโครงการแล้ว", { icon: "🗑️" });
-      apiLogAudit({ action: "delete", entity: "project", entity_id: id }).catch(() => {});
     },
     onError: (err) => {
       toast.error(`ลบโครงการไม่สำเร็จ: ${err.message}`);
@@ -193,7 +226,7 @@ function ProjectsPage() {
                 setPage(1);
               }}
               placeholder="ยุทธศาสตร์ทั้งหมด"
-              options={strategies.map((s) => ({ value: s.id, label: `${s.id}. ${s.short_name}` }))}
+              options={strategies.map((s) => ({ value: s.id, label: `${s.id}. ${s.short_name ?? s.name}` }))}
             />
             <Select
               value={planId}
@@ -211,7 +244,7 @@ function ProjectsPage() {
                 setPage(1);
               }}
               placeholder="หน่วยงาน"
-              options={DEPARTMENTS.map((d) => ({ value: d, label: d }))}
+              options={departments.map((d) => ({ value: d, label: d }))}
             />
             <Select
               value={status}
@@ -369,7 +402,32 @@ function ProjectsPage() {
                           {budget > 0 ? formatBaht(budget) : <span className="text-muted-foreground/60">—</span>}
                         </td>
                         <td className="px-5 py-4">
-                          <StatusBadge status={p.status} />
+                          {isLoggedIn ? (
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={p.status}
+                                disabled={rowStatusMutation.isPending}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                  const nextStatus = e.target.value as Status;
+                                  if (nextStatus !== p.status) {
+                                    rowStatusMutation.mutate({ id: p.id, status: nextStatus });
+                                  }
+                                }}
+                                className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs ring-focus min-w-[150px]"
+                                title="ปรับสถานะโครงการ"
+                              >
+                                {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
+                                  <option key={s} value={s}>
+                                    {STATUS_LABEL[s]}
+                                  </option>
+                                ))}
+                              </select>
+                              {rowStatusMutation.isPending && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
+                            </div>
+                          ) : (
+                            <StatusBadge status={p.status} />
+                          )}
                         </td>
                         <td className="px-3 py-4">
                           {isLoggedIn && (

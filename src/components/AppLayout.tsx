@@ -1,10 +1,11 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Wrench, Upload, Building2, Bell, Search, Users, History, LogIn, LogOut } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Wrench, Upload, Bell, Search, Users, History, LogIn, LogOut } from "lucide-react";
 import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+import { AgencyLogo } from "@/components/AgencyLogo";
 
 const PUBLIC_NAV = [
   { to: "/", label: "ภาพรวม", icon: LayoutDashboard },
@@ -38,9 +39,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
       <aside className="hidden lg:flex w-[280px] shrink-0 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border sticky top-0 h-screen">
         <div className="px-6 pt-7 pb-5 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
-            <div className="size-11 rounded-xl bg-gradient-to-br from-gold/25 to-gold/10 ring-1 ring-gold/40 flex items-center justify-center shadow-[0_2px_12px_-2px_oklch(0.74_0.12_88_/_0.4)]">
-              <Building2 className="size-5 text-gold" strokeWidth={1.5} />
-            </div>
+            <AgencyLogo />
             <div className="leading-tight">
               <div className="text-[15px] font-semibold tracking-tight">เทศบาลนคร</div>
               <div className="text-[15px] font-semibold tracking-tight text-gold">นครสวรรค์</div>
@@ -174,9 +173,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
         <header className="sticky top-0 z-20 glass border-b border-border/60">
           <div className="px-5 lg:px-8 h-14 flex items-center gap-4">
             <div className="lg:hidden flex items-center gap-2">
-              <div className="size-8 rounded-lg bg-emerald-gradient flex items-center justify-center shadow-soft">
-                <Building2 className="size-4 text-primary-foreground" strokeWidth={1.5} />
-              </div>
+              <AgencyLogo className="size-8" />
               <span className="font-semibold text-sm tracking-tight">เทศบาลนครนครสวรรค์</span>
             </div>
             <div className="flex-1 max-w-sm hidden md:flex">
@@ -211,7 +208,11 @@ export function AppLayout({ children }: { children?: ReactNode }) {
             <span className="size-1 rounded-full bg-success/60" />
             © 2568 เทศบาลนครนครสวรรค์ · ระบบบริหารแผนพัฒนาท้องถิ่น
           </div>
-          <div className="font-mono tracking-tight">v1.0.0</div>
+          <div className="text-right">
+            <span className="font-medium text-foreground/70">เครดิต: นักวิชาการคอมพิวเตอร์</span>
+            <span className="mx-1.5 text-muted-foreground/40">·</span>
+            <span>คิดเป็นระบบ เขียนเป็นจริง ขับเคลื่อนเมืองด้วยข้อมูล</span>
+          </div>
         </footer>
       </div>
     </div>

@@ -1,11 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useRef, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { apiBatchImportProjects, apiLogAudit, type ProjectCreateInput, type ImportResult } from "@/lib/api";
+import { apiBatchImportProjects, type ProjectCreateInput, type ImportResult } from "@/lib/api";
 import { YEARS } from "@/lib/mock-data";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, AlertTriangle, X, Loader2 } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, AlertTriangle, X, Loader2, Download, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
@@ -18,6 +19,9 @@ export const Route = createFileRoute("/import")({
   }),
   component: ImportPage,
 });
+
+const MAX_IMPORT_FILE_SIZE = 10 * 1024 * 1024;
+const TEMPLATE_FILENAME = "project-import-template-2566-2570.xlsx";
 
 interface ParsedRow {
   name: string;
@@ -37,25 +41,86 @@ function parseExcel(buffer: ArrayBuffer): { rows: ParsedRow[]; warnings: string[
 
   for (let i = 1; i < raw.length; i++) {
     const r = raw[i];
+    const hasAnyValue = r.some((cell) => String(cell ?? "").trim() !== "");
+    if (!hasAnyValue) continue;
+
     const name = String(r[0] ?? "").trim();
-    if (!name) { warnings.push(`แถว ${i + 1}: ข้ามเนื่องจากไม่มีชื่อโครงการ`); continue; }
+    if (!name) {
+      warnings.push(`แถว ${i + 1}: ข้ามเนื่องจากไม่มีชื่อโครงการ`);
+      continue;
+    }
 
     const department = String(r[1] ?? "").trim();
     const rawPlan = r[2];
-    const plan_id = rawPlan ? (isNaN(Number(rawPlan)) ? null : Number(rawPlan)) : null;
-    if (rawPlan && plan_id === null) warnings.push(`แถว ${i + 1}: รหัสแผนงาน "${rawPlan}" ไม่ถูกต้อง`);
+    const planText = String(rawPlan ?? "").trim();
+    const plan_id = planText ? (Number.isFinite(Number(planText)) ? Number(planText) : null) : null;
+    if (planText && plan_id === null) warnings.push(`แถว ${i + 1}: plan_id "${planText}" ต้องเป็นตัวเลข`);
 
     const budgets: Record<number, number> = {};
     YEARS.forEach((y, idx) => {
-      const val = Number(r[3 + idx] ?? 0);
-      if (!isNaN(val) && val > 0) budgets[y] = val;
-      if (val < 0) warnings.push(`แถว ${i + 1}: งบประมาณปี ${y} ติดลบ (${val})`);
+      const rawBudget = r[3 + idx];
+      const budgetText = String(rawBudget ?? "").trim();
+      if (!budgetText) return;
+
+      const val = Number(budgetText);
+      if (!Number.isFinite(val)) {
+        warnings.push(`แถว ${i + 1}: งบปี ${y} ต้องเป็นตัวเลข`);
+        return;
+      }
+      if (val < 0) {
+        warnings.push(`แถว ${i + 1}: งบปี ${y} ต้องไม่ติดลบ (${val})`);
+        return;
+      }
+      if (val > 0) budgets[y] = val;
     });
 
     rows.push({ name, department, plan_id, budgets });
   }
 
   return { rows, warnings, sheetName };
+}
+
+function downloadImportTemplate() {
+  const header = [
+    "ชื่อโครงการ",
+    "หน่วยงานรับผิดชอบ",
+    "plan_id",
+    ...YEARS.map((y) => `งบปี ${y}`),
+  ];
+  const exampleRow = [
+    "ตัวอย่างโครงการปรับปรุงทางเท้า",
+    "สำนักช่าง",
+    1,
+    250000,
+    0,
+    0,
+    0,
+    0,
+  ];
+
+  const templateSheet = XLSX.utils.aoa_to_sheet([header, exampleRow]);
+  templateSheet["!cols"] = [
+    { wch: 36 },
+    { wch: 24 },
+    { wch: 12 },
+    ...YEARS.map(() => ({ wch: 14 })),
+  ];
+
+  const instructionSheet = XLSX.utils.aoa_to_sheet([
+    ["คำแนะนำการนำเข้าข้อมูล"],
+    [],
+    ["1", "กรอกข้อมูลในชีต template โดยเริ่มตั้งแต่แถวที่ 2"],
+    ["2", "คอลัมน์ plan_id ต้องเป็นตัวเลข เช่น 1, 2, 3 หากไม่ทราบให้เว้นว่างได้"],
+    ["3", "งบประมาณต้องเป็นตัวเลข 0 หรือมากกว่า ห้ามใช้งบติดลบ"],
+    ["4", "แถวว่างจะถูกข้ามโดยอัตโนมัติ"],
+    ["5", "ระบบอ่านรูปแบบ Simple 8 columns เท่านั้น: ชื่อโครงการ, หน่วยงานรับผิดชอบ, plan_id และงบปี 2566-2570"],
+  ]);
+  instructionSheet["!cols"] = [{ wch: 8 }, { wch: 92 }];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, templateSheet, "template");
+  XLSX.utils.book_append_sheet(wb, instructionSheet, "instructions");
+  XLSX.writeFile(wb, TEMPLATE_FILENAME);
 }
 
 function ImportPage() {
@@ -66,16 +131,26 @@ function ImportPage() {
   const [result, setResult] = useState<ImportResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
+  const { isLoggedIn, isLoading } = useAuth();
 
   const handleFile = useCallback(async (f: File | null) => {
     if (!f) return;
+    setParsed(null);
+    setResult(null);
+
     if (!/\.(xlsx|xls)$/i.test(f.name)) {
+      setFile(null);
       setParseError("กรุณาเลือกไฟล์ .xlsx หรือ .xls เท่านั้น");
       return;
     }
+    if (f.size > MAX_IMPORT_FILE_SIZE) {
+      setFile(null);
+      setParseError("ไฟล์ต้องมีขนาดไม่เกิน 10 MB");
+      return;
+    }
+
     setFile(f);
     setParseError("");
-    setResult(null);
     try {
       const buffer = await f.arrayBuffer();
       const p = parseExcel(buffer);
@@ -98,11 +173,10 @@ function ImportPage() {
       qc.invalidateQueries({ queryKey: ["projects"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       if (r.errors.length === 0) {
-        toast.success(`นำเข้าสำเร็จ ${r.inserted} โครงการ`, { icon: "✅" });
+        toast.success(`นำเข้าสำเร็จ ${r.inserted} โครงการ`);
       } else {
         toast.warning(`นำเข้า ${r.inserted} โครงการ พบข้อผิดพลาด ${r.errors.length} รายการ`);
       }
-      apiLogAudit({ action: "import", entity: "project", after: { inserted: r.inserted, errors: r.errors.length } }).catch(() => {});
     },
     onError: (err) => {
       toast.error(`นำเข้าล้มเหลว: ${err.message}`);
@@ -110,7 +184,7 @@ function ImportPage() {
   });
 
   function startImport() {
-    if (!parsed) return;
+    if (!parsed || !isLoggedIn) return;
     const inputs: ProjectCreateInput[] = parsed.rows.map((r) => ({
       name: r.name,
       department: r.department || undefined,
@@ -131,21 +205,60 @@ function ImportPage() {
 
   const totalBudget = parsed?.rows.reduce((s, r) => s + Object.values(r.budgets).reduce((a, b) => a + b, 0), 0) ?? 0;
 
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="min-h-[50vh] flex items-center justify-center text-muted-foreground">
+          <Loader2 className="size-5 animate-spin mr-2" />
+          กำลังตรวจสอบสิทธิ์...
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <AppLayout>
+        <div className="max-w-2xl">
+          <div className="bg-card rounded-2xl border border-border p-8 shadow-soft">
+            <div className="size-12 rounded-xl bg-primary-soft text-primary flex items-center justify-center">
+              <LogIn className="size-6" />
+            </div>
+            <h1 className="text-2xl font-semibold tracking-tight mt-5">ต้องเข้าสู่ระบบผู้ดูแลก่อนนำเข้าข้อมูล</h1>
+            <p className="text-sm text-muted-foreground mt-2">
+              หน้า import เปิดให้ผู้ดูแลระบบเท่านั้น เพื่อป้องกันการอัปโหลดข้อมูลโดยไม่ได้รับอนุญาต
+            </p>
+            <Button asChild className="mt-5 gap-2">
+              <Link to="/login">
+                <LogIn className="size-4" />
+                เข้าสู่ระบบผู้ดูแล
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6 max-w-5xl">
-        <div>
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">การจัดการข้อมูล</div>
-          <h1 className="text-3xl font-semibold tracking-tight mt-1">นำเข้าข้อมูลจาก Excel</h1>
-          <p className="text-sm text-muted-foreground mt-1.5 max-w-2xl">
-            อัปโหลดไฟล์ Excel (.xlsx) เพื่อนำเข้าโครงการและงบประมาณรายปีเข้าสู่ระบบ
-            ระบบจะตรวจสอบโครงสร้างข้อมูลและรายงานผลการนำเข้า
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">การจัดการข้อมูล</div>
+            <h1 className="text-3xl font-semibold tracking-tight mt-1">นำเข้าข้อมูลจาก Excel</h1>
+            <p className="text-sm text-muted-foreground mt-1.5 max-w-2xl">
+              อัปโหลดไฟล์ Excel (.xlsx) เพื่อนำเข้าโครงการและงบประมาณรายปีเข้าระบบ ระบบจะตรวจโครงสร้างข้อมูลและรายงานผลก่อนบันทึก
+            </p>
+          </div>
+          <Button variant="outline" onClick={downloadImportTemplate} className="gap-2 shrink-0">
+            <Download className="size-4" />
+            ดาวน์โหลดเทมเพลต Excel
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-5">
-            {/* Drop zone */}
             <div
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
@@ -160,7 +273,7 @@ function ImportPage() {
               </div>
               <h3 className="mt-4 text-lg font-semibold">ลากและวางไฟล์ที่นี่</h3>
               <p className="text-sm text-muted-foreground mt-1">หรือคลิกเพื่อเลือกไฟล์จากเครื่องของคุณ</p>
-              <p className="text-xs text-muted-foreground mt-3">รองรับเฉพาะไฟล์ .xlsx ขนาดไม่เกิน 10 MB</p>
+              <p className="text-xs text-muted-foreground mt-3">รองรับเฉพาะไฟล์ .xlsx หรือ .xls ขนาดไม่เกิน 10 MB</p>
               <button
                 onClick={() => inputRef.current?.click()}
                 className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-5 py-2.5 text-sm font-medium hover:bg-primary/90 transition"
@@ -170,14 +283,12 @@ function ImportPage() {
               <input ref={inputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null)} />
             </div>
 
-            {/* Parse error */}
             {parseError && (
               <div className="rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive flex items-start gap-2">
                 <AlertCircle className="size-4 mt-0.5 shrink-0" /> {parseError}
               </div>
             )}
 
-            {/* File info + preview */}
             {file && parsed && (
               <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
                 <div className="p-5 flex items-center gap-4">
@@ -195,7 +306,6 @@ function ImportPage() {
                   </button>
                 </div>
 
-                {/* Preview table */}
                 <div className="overflow-x-auto border-t border-border max-h-[320px] overflow-y-auto">
                   <table className="w-full text-xs">
                     <thead className="sticky top-0 bg-muted/60 backdrop-blur">
@@ -212,10 +322,10 @@ function ImportPage() {
                         <tr key={i} className="border-t border-border/40 hover:bg-muted/30">
                           <td className="px-3 py-1.5 text-muted-foreground tabular">{i + 1}</td>
                           <td className="px-3 py-1.5 max-w-[240px] truncate">{r.name}</td>
-                          <td className="px-3 py-1.5 text-muted-foreground">{r.department || "—"}</td>
-                          <td className="px-3 py-1.5 tabular">{r.plan_id ?? "—"}</td>
+                          <td className="px-3 py-1.5 text-muted-foreground">{r.department || "-"}</td>
+                          <td className="px-3 py-1.5 tabular">{r.plan_id ?? "-"}</td>
                           {YEARS.map((y) => (
-                            <td key={y} className="px-3 py-1.5 text-right tabular">{r.budgets[y] ? r.budgets[y].toLocaleString("th-TH") : "—"}</td>
+                            <td key={y} className="px-3 py-1.5 text-right tabular">{r.budgets[y] ? r.budgets[y].toLocaleString("th-TH") : "-"}</td>
                           ))}
                         </tr>
                       ))}
@@ -228,7 +338,6 @@ function ImportPage() {
                   )}
                 </div>
 
-                {/* Warnings */}
                 {parsed.warnings.length > 0 && (
                   <div className="p-4 border-t border-border bg-amber-50/50 dark:bg-amber-950/20">
                     <div className="flex items-center gap-2 text-xs font-medium text-amber-700 dark:text-amber-400 mb-1.5">
@@ -240,21 +349,15 @@ function ImportPage() {
                   </div>
                 )}
 
-                {/* Action */}
                 {!result && (
                   <div className="p-5 border-t border-border">
-                    <Button
-                      onClick={startImport}
-                      disabled={importMutation.isPending}
-                      className="w-full gap-2"
-                    >
+                    <Button onClick={startImport} disabled={importMutation.isPending} className="w-full gap-2">
                       {importMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
                       {importMutation.isPending ? "กำลังนำเข้า..." : `นำเข้า ${parsed.rows.length} โครงการ`}
                     </Button>
                   </div>
                 )}
 
-                {/* Result */}
                 {result && (
                   <div className="p-5 border-t border-border space-y-3">
                     {result.inserted > 0 && (
@@ -315,10 +418,10 @@ function ImportPage() {
                 <AlertCircle className="size-4 text-gold-foreground" /> ข้อควรระวัง
               </h3>
               <ul className="mt-2 text-xs text-foreground/80 space-y-1.5 list-disc pl-5">
-                <li>ระบบจะข้ามแถวที่ไม่มีชื่อโครงการ</li>
-                <li>หากรหัสแผนงานไม่ถูกต้อง โครงการจะไม่ถูกผูกกับยุทธศาสตร์</li>
+                <li>ระบบจะข้ามแถวว่างและแถวที่ไม่มีชื่อโครงการ</li>
+                <li>plan_id ต้องเป็นตัวเลข หากไม่ถูกต้องโครงการจะไม่ถูกผูกกับแผนงาน</li>
+                <li>งบประมาณต้องเป็นตัวเลข 0 หรือมากกว่า</li>
                 <li>การนำเข้าจะเพิ่มข้อมูลใหม่ ไม่ได้แก้ไขข้อมูลเดิม</li>
-                <li>งบประมาณติดลบจะแสดงคำเตือน</li>
               </ul>
             </div>
           </aside>

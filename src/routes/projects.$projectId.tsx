@@ -9,7 +9,7 @@ import {
   STATUS_LABEL,
   type Status,
 } from "@/lib/mock-data";
-import { apiGetProject, apiPatchProjectStatus, apiUpdateProject, apiUpdateBudgets, apiDeleteProject, apiLogAudit, type ProjectCreateInput } from "@/lib/api";
+import { apiGetProject, apiPatchProjectStatus, apiUpdateProject, apiUpdateBudgets, apiDeleteProject, type ProjectCreateInput } from "@/lib/api";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -61,10 +61,12 @@ function StatusStepper({
   status,
   onStatusChange,
   isPending,
+  canEdit,
 }: {
   status: Status;
   onStatusChange: (s: Status) => void;
   isPending: boolean;
+  canEdit: boolean;
 }) {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const currentIdx = STEP_FLOW.indexOf(status);
@@ -150,7 +152,7 @@ function StatusStepper({
             <p className="flex-1 text-sm text-destructive font-medium">โครงการนี้ถูกยกเลิกแล้ว</p>
             <button
               onClick={() => setConfirmAction({ type: "reactivate" })}
-              disabled={isPending}
+              disabled={isPending || !canEdit}
               className="flex items-center gap-1.5 text-xs font-medium text-foreground/70 hover:text-foreground border border-border rounded-lg px-3 py-1.5 bg-background hover:bg-muted transition disabled:opacity-50"
             >
               <RotateCcw className="size-3.5" />
@@ -165,7 +167,7 @@ function StatusStepper({
               {currentIdx > 0 && (
                 <button
                   onClick={() => setConfirmAction({ type: "revert", to: STEP_FLOW[currentIdx - 1] })}
-                  disabled={isPending}
+                  disabled={isPending || !canEdit}
                   className="flex items-center gap-1.5 text-xs font-medium text-foreground/60 hover:text-foreground border border-border rounded-lg px-3 py-1.5 bg-background hover:bg-muted transition disabled:opacity-50"
                 >
                   <RotateCcw className="size-3.5" />
@@ -177,7 +179,7 @@ function StatusStepper({
               {currentIdx < STEP_FLOW.length - 1 && (
                 <button
                   onClick={() => setConfirmAction({ type: "cancel" })}
-                  disabled={isPending}
+                  disabled={isPending || !canEdit}
                   className="flex items-center gap-1.5 text-xs font-medium text-destructive hover:text-destructive border border-destructive/30 rounded-lg px-3 py-1.5 bg-background hover:bg-destructive/5 transition disabled:opacity-50"
                 >
                   <XCircle className="size-3.5" />
@@ -187,7 +189,7 @@ function StatusStepper({
               {currentIdx < STEP_FLOW.length - 1 ? (
                 <button
                   onClick={() => onStatusChange(STEP_FLOW[currentIdx + 1])}
-                  disabled={isPending}
+                  disabled={isPending || !canEdit}
                   className="flex items-center gap-1.5 text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-4 py-1.5 transition press-effect disabled:opacity-50"
                 >
                   {isPending ? (
@@ -218,6 +220,7 @@ function StatusStepper({
             <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirm}
+              disabled={!canEdit || isPending}
               className={cn(confirmMeta?.destructive && buttonVariants({ variant: "destructive" }))}
             >
               {confirmMeta?.action}
@@ -251,19 +254,25 @@ function ProjectDetailPage() {
     mutationFn: (s: Status) => apiPatchProjectStatus(id, s),
     onSuccess: (_r, newStatus) => {
       qc.invalidateQueries({ queryKey: ["project", id] });
-      apiLogAudit({ action: "status_change", entity: "project", entity_id: id, after: { status: newStatus } }).catch(() => {});
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      setLocalStatus(null);
+      toast.success(`เปลี่ยนสถานะเป็น "${STATUS_LABEL[newStatus]}" แล้ว`);
+    },
+    onError: (err) => {
+      setLocalStatus(null);
+      toast.error(`เปลี่ยนสถานะไม่สำเร็จ: ${err instanceof Error ? err.message : "กรุณาลองใหม่อีกครั้ง"}`);
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: (data: ProjectCreateInput) => apiUpdateProject(id, data),
-    onSuccess: (_r, variables) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["project", id] });
       qc.invalidateQueries({ queryKey: ["projects"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       setEditOpen(false);
       toast.success("บันทึกการเปลี่ยนแปลงแล้ว", { icon: "✅" });
-      apiLogAudit({ action: "update", entity: "project", entity_id: id, after: variables }).catch(() => {});
     },
     onError: (err) => {
       toast.error(`บันทึกไม่สำเร็จ: ${err.message}`);
@@ -276,7 +285,6 @@ function ProjectDetailPage() {
       qc.invalidateQueries({ queryKey: ["projects"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       toast.success("ลบโครงการแล้ว", { icon: "🗑️" });
-      apiLogAudit({ action: "delete", entity: "project", entity_id: id }).catch(() => {});
       navigate({ to: "/projects" });
     },
     onError: (err) => {
@@ -285,9 +293,9 @@ function ProjectDetailPage() {
   });
 
   function handleStatusChange(s: Status) {
+    if (!isLoggedIn || patchStatus.isPending || s === status) return;
     setLocalStatus(s);
     patchStatus.mutate(s);
-    toast.success(`เปลี่ยนสถานะเป็น "${STATUS_LABEL[s]}" แล้ว`, { icon: "✅" });
   }
 
   if (isLoading) {
@@ -405,7 +413,13 @@ function ProjectDetailPage() {
               status={status}
               onStatusChange={handleStatusChange}
               isPending={patchStatus.isPending}
+              canEdit={isLoggedIn}
             />
+            {!isLoggedIn && (
+              <div className="mt-4 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                เข้าสู่ระบบผู้ดูแลเพื่อปรับสถานะโครงการ
+              </div>
+            )}
           </div>
         </div>
 

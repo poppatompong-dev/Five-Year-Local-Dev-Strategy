@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -7,8 +8,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { DEPARTMENTS, YEARS } from "@/lib/mock-data";
-import type { EquipmentCreateInput, DBEquipment } from "@/lib/api";
+import { YEARS } from "@/lib/mock-data";
+import { apiGetDepartments, type EquipmentCreateInput, type DBEquipment } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 
 interface EquipmentFormDialogProps {
@@ -34,6 +35,12 @@ export function EquipmentFormDialog({
   const [target, setTarget] = useState("");
   const [department, setDepartment] = useState("");
   const [budgets, setBudgets] = useState<Record<number, string>>({});
+
+  const { data: departments = [] } = useQuery({
+    queryKey: ["departments"],
+    queryFn: apiGetDepartments,
+    enabled: open,
+  });
 
   useEffect(() => {
     if (open && initialData) {
@@ -155,7 +162,7 @@ export function EquipmentFormDialog({
                 className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2.5 text-sm ring-focus"
               >
                 <option value="">— เลือกหน่วยงาน —</option>
-                {DEPARTMENTS.map((d) => (
+                {departments.map((d) => (
                   <option key={d} value={d}>
                     {d}
                   </option>
