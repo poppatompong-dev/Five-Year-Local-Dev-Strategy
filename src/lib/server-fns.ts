@@ -15,6 +15,30 @@ const VALID_STATUSES: Status[] = ["not_set", "planning", "in_progress", "complet
 
 type AdminSession = Awaited<ReturnType<typeof requireAdmin>>;
 
+function getLinkedAnnotations(
+  row: { id: number },
+  byProject: Map<number, DBProjectAnnotation[]>,
+) {
+  const candidates = byProject.get(row.id) ?? [];
+  const seen = new Set<number>();
+  return candidates.filter((annotation) => {
+    if (seen.has(annotation.id)) return false;
+    seen.add(annotation.id);
+    return true;
+  });
+}
+
+function attachAnnotationSummary(row: any, annotations: DBProjectAnnotation[]): ProjectRow {
+  const types = Array.from(new Set(annotations.map((annotation) => annotation.annotation_type)));
+  return {
+    ...row,
+    total_budget: Number(row.total_budget),
+    annotation_count: annotations.length,
+    annotation_types: types,
+    annotation_preview: annotations[0]?.raw_text ?? null,
+  } as ProjectRow;
+}
+
 function actorFromSession(session: AdminSession) {
   return {
     userId: session.userId ?? null,
@@ -68,10 +92,23 @@ export const serverGetDepartments = createServerFn({ method: "GET" })
 // ---------------------------------------------------------------------------
 export const serverGetProjects = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: ProjectListParams }) => {
-    const { page = 1, limit = 12, search, status, strategy_id, plan_id, department, year } = data ?? {};
+    const {
+      page = 1,
+      limit = 12,
+      search,
+      annotation_search,
+      annotation_type,
+      has_annotations,
+      status,
+      strategy_id,
+      plan_id,
+      department,
+      year,
+    } = data ?? {};
     const offset = (page - 1) * limit;
+    const sql = getSql();
 
-    const allProjects = await getSql()`
+    const allProjects = await sql`
       SELECT
         p.*,
         pl.name AS plan_name,
@@ -87,11 +124,34 @@ export const serverGetProjects = createServerFn({ method: "POST" })
       LEFT JOIN strategies s ON t.strategy_id = s.id
       ORDER BY p.id
     `;
+    const allAnnotations = (await sql`
+      SELECT *
+      FROM project_annotations
+      ORDER BY source_sheet, source_row, id
+    `) as DBProjectAnnotation[];
+    const annotationsByProject = new Map<number, DBProjectAnnotation[]>();
+    allAnnotations.forEach((annotation) => {
+      if (annotation.project_id !== null) {
+        const list = annotationsByProject.get(annotation.project_id) ?? [];
+        list.push(annotation);
+        annotationsByProject.set(annotation.project_id, list);
+      }
+    });
 
     let filtered = allProjects as any[];
     if (search) {
       const s = search.toLowerCase();
-      filtered = filtered.filter((r) => r.name?.toLowerCase().includes(s));
+      filtered = filtered.filter((r) => {
+        const annotations = getLinkedAnnotations(r, annotationsByProject);
+        return (
+          r.name?.toLowerCase().includes(s) ||
+          r.objective?.toLowerCase().includes(s) ||
+          r.target?.toLowerCase().includes(s) ||
+          r.kpi?.toLowerCase().includes(s) ||
+          r.expected_result?.toLowerCase().includes(s) ||
+          annotations.some((annotation) => annotation.raw_text.toLowerCase().includes(s))
+        );
+      });
     }
     if (status) filtered = filtered.filter((r) => r.status === status);
     if (department) {
@@ -104,11 +164,30 @@ export const serverGetProjects = createServerFn({ method: "POST" })
       filtered = filtered.filter((r) => r.strategy_id === strategy_id);
     }
     if (year) filtered = filtered.filter((r) => Number(r.year_budget) > 0);
+    if (has_annotations) {
+      filtered = filtered.filter((r) => getLinkedAnnotations(r, annotationsByProject).length > 0);
+    }
+    if (annotation_type) {
+      filtered = filtered.filter((r) =>
+        getLinkedAnnotations(r, annotationsByProject)
+          .some((annotation) => annotation.annotation_type === annotation_type),
+      );
+    }
+    if (annotation_search) {
+      const s = annotation_search.toLowerCase();
+      filtered = filtered.filter((r) =>
+        getLinkedAnnotations(r, annotationsByProject)
+          .some((annotation) => annotation.raw_text.toLowerCase().includes(s)),
+      );
+    }
 
     const total = filtered.length;
     const paged = filtered.slice(offset, offset + limit);
     const result: ProjectListResult = {
-      data: paged.map((r: any) => ({ ...r, total_budget: Number(year ? r.year_budget : r.total_budget) })) as ProjectRow[],
+      data: paged.map((r: any) => attachAnnotationSummary(
+        { ...r, total_budget: Number(year ? r.year_budget : r.total_budget) },
+        getLinkedAnnotations(r, annotationsByProject),
+      )),
       total,
       page,
       limit,
@@ -122,7 +201,8 @@ export const serverGetProjects = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const serverGetProject = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { id: number } }) => {
-    const rows = await getSql()`
+    const sql = getSql();
+    const rows = await sql`
       SELECT p.*,
         row_to_json(pl.*) AS plan_data,
         row_to_json(t.*) AS tactic_data,
@@ -137,13 +217,19 @@ export const serverGetProject = createServerFn({ method: "POST" })
     if (!rows.length) return null;
     const r: any = rows[0];
 
-    const budgetRows = await getSql()`SELECT year, amount FROM project_budgets WHERE project_id = ${data.id}`;
+    const budgetRows = await sql`SELECT year, amount FROM project_budgets WHERE project_id = ${data.id}`;
     const budgets: Record<number, number> = {};
     let totalBudget = 0;
     budgetRows.forEach((b: any) => {
       budgets[b.year] = Number(b.amount);
       totalBudget += Number(b.amount);
     });
+    const annotations = (await sql`
+      SELECT *
+      FROM project_annotations
+      WHERE project_id = ${data.id}
+      ORDER BY source_row, id
+    `) as DBProjectAnnotation[];
 
     return {
       ...r,
@@ -152,6 +238,7 @@ export const serverGetProject = createServerFn({ method: "POST" })
       strategy: r.strategy_data ?? null,
       budgets,
       total_budget: totalBudget,
+      annotations,
     } as ProjectDetail;
   });
 
@@ -209,10 +296,10 @@ export const serverCreateProject = createServerFn({ method: "POST" })
     const sql = getSql();
     const { budgets, ...p } = data;
     const rows = await sql`
-      INSERT INTO projects (name, objective, target, kpi, expected_result, department, plan_id, status, source_sheet, amendment_version)
+      INSERT INTO projects (name, objective, target, kpi, expected_result, department, plan_id, status, source_sheet, source_row, amendment_version)
       VALUES (${p.name}, ${p.objective ?? null}, ${p.target ?? null}, ${p.kpi ?? null},
               ${p.expected_result ?? null}, ${p.department ?? null}, ${p.plan_id ?? null},
-              ${p.status || "planning"}, ${p.source_sheet ?? null}, ${p.amendment_version ?? null})
+              ${p.status || "planning"}, ${p.source_sheet ?? null}, ${p.source_row ?? null}, ${p.amendment_version ?? null})
       RETURNING *
     `;
     const created = rows[0] as DBProject;
@@ -334,10 +421,10 @@ export const serverBatchImportProjects = createServerFn({ method: "POST" })
         const { budgets, ...p } = data.rows[i];
         try {
           const created = await sql`
-            INSERT INTO projects (name, objective, target, kpi, expected_result, department, plan_id, status, source_sheet, amendment_version)
+            INSERT INTO projects (name, objective, target, kpi, expected_result, department, plan_id, status, source_sheet, source_row, amendment_version)
             VALUES (${p.name}, ${p.objective ?? null}, ${p.target ?? null}, ${p.kpi ?? null},
                     ${p.expected_result ?? null}, ${p.department ?? null}, ${p.plan_id ?? null},
-                    ${p.status || "planning"}, ${p.source_sheet ?? null}, ${p.amendment_version ?? null})
+                    ${p.status || "planning"}, ${p.source_sheet ?? null}, ${p.source_row ?? null}, ${p.amendment_version ?? null})
             RETURNING id
           `;
           const projId = (created[0] as any).id;
@@ -688,4 +775,142 @@ export const serverDeleteUser = createServerFn({ method: "POST" })
       before: beforeRows[0] ?? null,
       after: { deleted: true },
     });
+  });
+
+export const serverResetUserPassword = createServerFn({ method: "POST" })
+  .handler(async ({ data }: { data: { userId: number; newPassword: string } }) => {
+    const session = await requireAdmin();
+    if (!data.newPassword || data.newPassword.length < 4) {
+      throw new Response(JSON.stringify({ error: "PASSWORD_TOO_SHORT" }), { status: 400 });
+    }
+    const sql = getSql();
+    const passwordHash = await bcrypt.hash(data.newPassword, 10);
+    await sql`UPDATE admin_users SET password_hash = ${passwordHash} WHERE id = ${data.userId}`;
+    await insertAuditEvent(sql, session, {
+      action: "update",
+      entity: "admin_user",
+      entity_id: data.userId,
+      after: { password_reset: true },
+    });
+    return { ok: true };
+  });
+
+// ---------------------------------------------------------------------------
+// Hierarchy CRUD (Strategy / Tactic / Plan)
+// ---------------------------------------------------------------------------
+export const serverCreateStrategy = createServerFn({ method: "POST" })
+  .handler(async ({ data }: { data: { name: string; short_name: string; department: string } }) => {
+    const session = await requireAdmin();
+    const sql = getSql();
+    const rows = await sql`
+      INSERT INTO strategies (name, short_name, department)
+      VALUES (${data.name}, ${data.short_name}, ${data.department})
+      RETURNING *
+    `;
+    await insertAuditEvent(sql, session, { action: "create", entity: "strategy", entity_id: (rows[0] as any).id, after: rows[0] });
+    return rows[0] as DBStrategy;
+  });
+
+export const serverUpdateStrategy = createServerFn({ method: "POST" })
+  .handler(async ({ data }: { data: { id: number; name: string; short_name: string; department: string } }) => {
+    const session = await requireAdmin();
+    const sql = getSql();
+    const before = await sql`SELECT * FROM strategies WHERE id = ${data.id} LIMIT 1`;
+    const rows = await sql`
+      UPDATE strategies SET name = ${data.name}, short_name = ${data.short_name}, department = ${data.department}
+      WHERE id = ${data.id} RETURNING *
+    `;
+    await insertAuditEvent(sql, session, { action: "update", entity: "strategy", entity_id: data.id, before: before[0] ?? null, after: rows[0] });
+    return rows[0] as DBStrategy;
+  });
+
+export const serverDeleteStrategy = createServerFn({ method: "POST" })
+  .handler(async ({ data }: { data: { id: number } }) => {
+    const session = await requireAdmin();
+    const sql = getSql();
+    const childCount = await sql`SELECT COUNT(*)::int AS count FROM tactics WHERE strategy_id = ${data.id}`;
+    if (Number((childCount[0] as any).count) > 0) {
+      throw new Response(JSON.stringify({ error: "HAS_CHILDREN" }), { status: 409 });
+    }
+    const before = await sql`SELECT * FROM strategies WHERE id = ${data.id} LIMIT 1`;
+    await sql`DELETE FROM strategies WHERE id = ${data.id}`;
+    await insertAuditEvent(sql, session, { action: "delete", entity: "strategy", entity_id: data.id, before: before[0] ?? null, after: { deleted: true } });
+  });
+
+export const serverCreateTactic = createServerFn({ method: "POST" })
+  .handler(async ({ data }: { data: { code: string; name: string; strategy_id: number } }) => {
+    const session = await requireAdmin();
+    const sql = getSql();
+    const rows = await sql`
+      INSERT INTO tactics (code, name, strategy_id)
+      VALUES (${data.code}, ${data.name}, ${data.strategy_id})
+      RETURNING *
+    `;
+    await insertAuditEvent(sql, session, { action: "create", entity: "tactic", entity_id: (rows[0] as any).id, after: rows[0] });
+    return rows[0] as DBTactic;
+  });
+
+export const serverUpdateTactic = createServerFn({ method: "POST" })
+  .handler(async ({ data }: { data: { id: number; code: string; name: string; strategy_id: number } }) => {
+    const session = await requireAdmin();
+    const sql = getSql();
+    const before = await sql`SELECT * FROM tactics WHERE id = ${data.id} LIMIT 1`;
+    const rows = await sql`
+      UPDATE tactics SET code = ${data.code}, name = ${data.name}, strategy_id = ${data.strategy_id}
+      WHERE id = ${data.id} RETURNING *
+    `;
+    await insertAuditEvent(sql, session, { action: "update", entity: "tactic", entity_id: data.id, before: before[0] ?? null, after: rows[0] });
+    return rows[0] as DBTactic;
+  });
+
+export const serverDeleteTactic = createServerFn({ method: "POST" })
+  .handler(async ({ data }: { data: { id: number } }) => {
+    const session = await requireAdmin();
+    const sql = getSql();
+    const childCount = await sql`SELECT COUNT(*)::int AS count FROM plans WHERE tactic_id = ${data.id}`;
+    if (Number((childCount[0] as any).count) > 0) {
+      throw new Response(JSON.stringify({ error: "HAS_CHILDREN" }), { status: 409 });
+    }
+    const before = await sql`SELECT * FROM tactics WHERE id = ${data.id} LIMIT 1`;
+    await sql`DELETE FROM tactics WHERE id = ${data.id}`;
+    await insertAuditEvent(sql, session, { action: "delete", entity: "tactic", entity_id: data.id, before: before[0] ?? null, after: { deleted: true } });
+  });
+
+export const serverCreatePlan = createServerFn({ method: "POST" })
+  .handler(async ({ data }: { data: { name: string; tactic_id: number } }) => {
+    const session = await requireAdmin();
+    const sql = getSql();
+    const rows = await sql`
+      INSERT INTO plans (name, tactic_id)
+      VALUES (${data.name}, ${data.tactic_id})
+      RETURNING *
+    `;
+    await insertAuditEvent(sql, session, { action: "create", entity: "plan", entity_id: (rows[0] as any).id, after: rows[0] });
+    return rows[0] as DBPlan;
+  });
+
+export const serverUpdatePlan = createServerFn({ method: "POST" })
+  .handler(async ({ data }: { data: { id: number; name: string; tactic_id: number } }) => {
+    const session = await requireAdmin();
+    const sql = getSql();
+    const before = await sql`SELECT * FROM plans WHERE id = ${data.id} LIMIT 1`;
+    const rows = await sql`
+      UPDATE plans SET name = ${data.name}, tactic_id = ${data.tactic_id}
+      WHERE id = ${data.id} RETURNING *
+    `;
+    await insertAuditEvent(sql, session, { action: "update", entity: "plan", entity_id: data.id, before: before[0] ?? null, after: rows[0] });
+    return rows[0] as DBPlan;
+  });
+
+export const serverDeletePlan = createServerFn({ method: "POST" })
+  .handler(async ({ data }: { data: { id: number } }) => {
+    const session = await requireAdmin();
+    const sql = getSql();
+    const childCount = await sql`SELECT COUNT(*)::int AS count FROM projects WHERE plan_id = ${data.id}`;
+    if (Number((childCount[0] as any).count) > 0) {
+      throw new Response(JSON.stringify({ error: "HAS_CHILDREN" }), { status: 409 });
+    }
+    const before = await sql`SELECT * FROM plans WHERE id = ${data.id} LIMIT 1`;
+    await sql`DELETE FROM plans WHERE id = ${data.id}`;
+    await insertAuditEvent(sql, session, { action: "delete", entity: "plan", entity_id: data.id, before: before[0] ?? null, after: { deleted: true } });
   });

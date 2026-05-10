@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Wrench, Upload, Bell, Search, Users, History, LogIn, LogOut } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Wrench, Upload, Bell, Search, Users, History, LogIn, LogOut, GitBranch } from "lucide-react";
 import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -102,6 +102,21 @@ export function AppLayout({ children }: { children?: ReactNode }) {
                   </Link>
                 );
               })}
+              <Link
+                to="/admin/hierarchy"
+                className={[
+                  "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 relative overflow-hidden",
+                  location.pathname.startsWith("/admin/hierarchy")
+                    ? "bg-gradient-to-r from-gold to-gold/80 text-gold-foreground font-semibold shadow-[0_2px_16px_-2px_oklch(0.74_0.12_88_/_0.55)]"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground",
+                ].join(" ")}
+              >
+                {location.pathname.startsWith("/admin/hierarchy") && (
+                  <span className="absolute left-0 inset-y-2 w-0.5 rounded-full bg-white/40" />
+                )}
+                <GitBranch className="size-[17px] shrink-0" strokeWidth={location.pathname.startsWith("/admin/hierarchy") ? 2 : 1.75} />
+                <span>โครงสร้างแผน</span>
+              </Link>
               <Link
                 to="/admin/users"
                 className={[

@@ -2,9 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { apiGetUsers, apiCreateUser, apiDeleteUser, type AuthUser } from "@/lib/api";
+import { apiGetUsers, apiCreateUser, apiDeleteUser, apiResetUserPassword, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
-import { Users, Plus, Trash2, Mail, ShieldCheck, ShieldOff, Eye, EyeOff, X } from "lucide-react";
+import { toast } from "sonner";
+import { Users, Plus, Trash2, Mail, ShieldCheck, ShieldOff, Eye, EyeOff, X, KeyRound } from "lucide-react";
 
 export const Route = createFileRoute("/admin/users")({
   head: () => ({
@@ -29,6 +30,7 @@ function UsersPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<AuthUser | null>(null);
+  const [resetTarget, setResetTarget] = useState<AuthUser | null>(null);
 
   return (
     <AppLayout>
@@ -134,14 +136,23 @@ function UsersPage() {
                         })}
                       </td>
                       <td className="px-5 py-4 text-right">
-                        <button
-                          onClick={() => setConfirmDelete(u)}
-                          disabled={u.name === username || deleteMutation.isPending}
-                          title={u.name === username ? "ไม่สามารถลบบัญชีตัวเองได้" : "ลบผู้ใช้"}
-                          className="size-8 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition ml-auto"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setResetTarget(u)}
+                            title="รีเซ็ตรหัสผ่าน"
+                            className="size-8 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition"
+                          >
+                            <KeyRound className="size-4" />
+                          </button>
+                          <button
+                            onClick={() => setConfirmDelete(u)}
+                            disabled={u.name === username || deleteMutation.isPending}
+                            title={u.name === username ? "ไม่สามารถลบบัญชีตัวเองได้" : "ลบผู้ใช้"}
+                            className="size-8 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -174,6 +185,14 @@ function UsersPage() {
               onSuccess: () => setConfirmDelete(null),
             });
           }}
+        />
+      )}
+
+      {/* Reset Password Modal */}
+      {resetTarget && (
+        <ResetPasswordModal
+          user={resetTarget}
+          onClose={() => setResetTarget(null)}
         />
       )}
     </AppLayout>
@@ -366,6 +385,93 @@ function ConfirmDeleteModal({
             {isPending ? "กำลังลบ..." : "ลบบัญชี"}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ResetPasswordModal({ user, onClose }: { user: AuthUser; onClose: () => void }) {
+  const [newPassword, setNewPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [error, setError] = useState("");
+
+  const resetMutation = useMutation({
+    mutationFn: () => apiResetUserPassword(Number(user.id), newPassword),
+    onSuccess: () => {
+      toast.success(`รีเซ็ตรหัสผ่านของ ${user.name} สำเร็จ`);
+      onClose();
+    },
+    onError: (e: any) => setError(e?.message || "เกิดข้อผิดพลาด"),
+  });
+
+  function handleSubmit(ev: React.FormEvent) {
+    ev.preventDefault();
+    setError("");
+    if (newPassword.length < 4) {
+      setError("รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร");
+      return;
+    }
+    resetMutation.mutate();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+      <div className="w-full max-w-sm bg-card rounded-2xl border border-border shadow-xl p-6">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-lg font-semibold">รีเซ็ตรหัสผ่าน</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">{user.name}</p>
+          </div>
+          <button onClick={onClose} className="size-8 rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground">
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Field label="รหัสผ่านใหม่">
+            <div className="relative">
+              <input
+                required
+                type={showPw ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="อย่างน้อย 4 ตัวอักษร"
+                minLength={4}
+                autoFocus
+                className="input-base pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 size-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground"
+              >
+                {showPw ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+          </Field>
+
+          {error && (
+            <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{error}</p>
+          )}
+
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={resetMutation.isPending}
+              className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-medium hover:bg-muted transition"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              disabled={resetMutation.isPending || newPassword.length < 4}
+              className="flex-1 rounded-xl bg-primary text-primary-foreground px-4 py-2.5 text-sm font-medium hover:bg-primary/90 transition disabled:opacity-60"
+            >
+              {resetMutation.isPending ? "กำลังบันทึก..." : "บันทึกรหัสผ่าน"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

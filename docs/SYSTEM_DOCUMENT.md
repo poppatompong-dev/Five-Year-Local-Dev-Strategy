@@ -2,9 +2,9 @@
 
 > **Document Type:** Combined Software Requirements Specification (SRS) + System Design Document (SDD)
 > **Target Audience:** AI development agents analyzing, maintaining, and extending this codebase
-> **Version:** 5.3
-> **Date:** 2026-05-08
-> **Repository Root:** `C:\Users\PC\Documents\Projects\Five-Year Local Development Strategy`
+> **Version:** 5.5
+> **Date:** 2026-05-10
+> **Repository Root:** `C:\Users\Patompong.l\Documents\Web Applications\Five-Year-Local-Dev-Strategy`
 > **Production URL:** `https://five-year-local-dev-strategy.vercel.app`
 > **Repository:** `https://github.com/poppatompong-dev/Five-Year-Local-Dev-Strategy`
 
@@ -91,8 +91,8 @@ There is no Neon Auth / Better Auth dependency anymore. Auth is custom session-c
 | ID | Requirement | Status |
 |---|---|---|
 | FR-01 | System SHALL display an overview dashboard showing total projects, total budget, budget-by-year, budget-by-strategy, status breakdown, strategy progress, radar chart, top 10 departments, and a sortable project table. | ✅ Implemented |
-| FR-02 | System SHALL list all projects with pagination (default 12/page) and filters for search text, strategy, plan, department, status, and year. | ✅ Implemented |
-| FR-03 | System SHALL show a single-project detail view including hierarchy path, objective, target, KPI, expected result, department, and per-year budget. | ✅ Implemented |
+| FR-02 | System SHALL list all projects with pagination (default 12/page) and filters for search text, strategy, plan, department, status, year, and Excel text box annotations. | ✅ Implemented |
+| FR-03 | System SHALL show a single-project detail view including hierarchy path, objective, target, KPI, expected result, department, per-year budget, and Excel text box annotations. | ✅ Implemented |
 | FR-04 | System SHALL allow changing a project's status to one of: `not_set`, `planning`, `in_progress`, `completed`, `cancelled`. | ✅ Implemented — admin-only, persisted via `serverPatchProjectStatus` |
 | FR-04b | System SHALL allow admins to bulk-update status for multiple selected projects at once. | ✅ Implemented — `serverBulkPatchProjectStatus` + checkbox toolbar on `/projects` |
 | FR-05 | System SHALL list equipment items with pagination and search. | ✅ Implemented — live from Neon DB |
@@ -109,6 +109,7 @@ There is no Neon Auth / Better Auth dependency anymore. Auth is custom session-c
 | FR-16 | System SHALL provide an admin user management page. | ✅ Implemented against `admin_users` for list/create/delete. Password reset and granular roles remain future work. |
 | FR-17 | Public visitors SHALL NOT see admin-only menu items (Import, Users, Audit) or CRUD buttons (Add/Edit/Delete). | ✅ Implemented — `useAuth()` gates visibility throughout `AppLayout` and route components |
 | FR-18 | Database credentials SHALL NEVER be present in client-side JavaScript bundles. | ✅ Implemented — all SQL runs in `createServerFn` handlers; `DATABASE_URL` (no `VITE_` prefix) is server-only |
+| FR-19 | System SHALL preserve and display row-anchored Excel drawing/text box notes used by officers for amendments, changes, budget sources, and related context. | ✅ Implemented — `project_annotations` are linked by `project_id` and surfaced in project list/detail |
 
 ### 3.3 Non-Functional Requirements
 
@@ -116,7 +117,7 @@ There is no Neon Auth / Better Auth dependency anymore. Auth is custom session-c
 |---|---|---|
 | NFR-01 | Usability | UI SHALL use Thai labels for all user-facing text. Non-technical officers are the primary users. |
 | NFR-02 | Usability | Dashboards SHALL be readable at 1366×768 and above. |
-| NFR-03 | Performance | Dashboard rendering SHALL be perceptible as instant for the current mock-data scale (248 projects). |
+| NFR-03 | Performance | Dashboard rendering SHALL be perceptible as instant for the current official-data scale (548 projects). |
 | NFR-04 | Portability | The system SHALL run on a single machine with Node.js ≥18 installed; no external service required. |
 | NFR-09 | UX | UI SHALL include micro-animations, tooltips, hover cards, and toast notifications to communicate state changes clearly to non-technical users. |
 | NFR-10 | UX | Interactive charts SHALL filter the project table immediately on click, with visible active state and a dismissible filter chip. |
@@ -260,8 +261,27 @@ interface Project {
   plan_id: number;
   status: Status;
   source_sheet: string;          // e.g. "ผ.02/1"
+  source_row: number | null;      // original Excel row for traceability
   budgets: Record<number, number>; // year → amount in Baht
   total_budget: number;
+  annotations: ProjectAnnotation[];
+}
+
+interface ProjectAnnotation {
+  id: number;
+  project_id: number | null;
+  source_sheet: string;
+  source_row: number;
+  annotation_type:
+    | "amendment" | "change" | "addition" | "transfer" | "merge"
+    | "duplicate" | "budget_source" | "status_note" | "form_index" | "cover_metadata";
+  raw_text: string;
+  amendment_type: string | null;
+  amendment_number: number | null;
+  amendment_year: number | null;
+  target_plan: string | null;
+  target_ref: string | null;
+  funding_source: string | null;
 }
 ```
 
@@ -548,6 +568,8 @@ The import page (`/import`) provides:
 - Browser-side Simple 8-column parser with preview table, warnings, and import result.
 - Persistence through `serverBatchImportProjects`, which is also protected by `requireAdmin()`.
 - Server-side audit event for each import attempt that inserts rows or produces errors.
+- Official multi-sheet staging can be loaded by CLI with `npm run load-official-projects`. This reads the locally generated, gitignored `scripts/staging-projects.json`, recreates the strategy/tactic/plan/project hierarchy, stores `source_sheet` + `source_row`, inserts budgets with ordinance amounts, and links row-anchored Excel text boxes to `project_annotations.project_id` using deterministic project-row ownership. Exact project-row matches win first; text boxes on continuation rows attach to the owning project block until the next project row.
+- Annotation integrity can be verified by CLI with `npm run verify-annotation-links`. The verifier compares every text box from `scripts/textbox-data.json` against live `project_annotations`, fails on count mismatches, fails if any project-detail-sheet text box has no owning project, and fails if one annotation is linked to more than one project.
 
 ### 8.2 Target (Hierarchy-Aware) Flow
 
@@ -556,7 +578,7 @@ A robust importer should:
 1. Parse the workbook and detect sheet roles by name pattern (`ผ.02/*`, `ผ.03`, summary).
 2. Build an in-memory hierarchy: `strategy → tactic → plan`.
 3. **Upsert** strategies/tactics/plans by code/name.
-4. Insert projects referencing resolved `plan_id`. Record `source_sheet` for traceability.
+4. Insert projects referencing resolved `plan_id`. Record `source_sheet` and `source_row` for traceability.
 5. Insert per-year budgets only for years with a positive amount.
 6. Wrap the whole import in a transaction; roll back on failure.
 7. Return `{ strategies, tactics, plans, projects, budgets, warnings }`.
@@ -572,8 +594,8 @@ A robust importer should:
 - ✅ **No client-exposed credentials** — `DATABASE_URL` and `SESSION_PASSWORD` are server-only. All SQL runs inside `createServerFn` handlers; the Neon serverless driver is never bundled into client JS. Verified by grep over `dist/client/`.
 - ✅ **`requireAdmin()` middleware** — every mutation server function calls it first; returns Response 401 (not Error) so Seroval serializes the response correctly.
 - ✅ **Vercel deployment** — `api/server.js` wraps the TanStack Start H3 bundle; `vercel.json` rewrites all paths through it. Production at `https://five-year-local-dev-strategy.vercel.app`.
-- ✅ **Neon PostgreSQL** — full schema seeded with 248 projects, 869 budget rows, 64 equipment items + new `admin_users` table.
-- ✅ **`not_set` status** added; all 248 imported projects reset to `not_set` (since the source Excel had no status column). DB CHECK constraint updated.
+- ✅ **Neon PostgreSQL** — full schema loaded with 548 official workbook projects, 1,281 budget rows, 230 Excel text box rows, 117/117 project-detail-sheet text boxes linked to the correct project, 61 non-project-sheet text boxes preserved unlinked, 52 metadata text boxes preserved, 64 equipment items + `admin_users` table.
+- ✅ **`not_set` status** added; official workbook projects default to `not_set` (since the source Excel had no status column). DB CHECK constraint updated.
 - ✅ **Bulk status update** — `/projects` page has a checkbox column (admin only) and a bulk toolbar that calls `serverBulkPatchProjectStatus` (`WHERE id = ANY($1::int[])`).
 - ✅ **TanStack Query** — all pages use `useQuery` / `useMutation` against the `apiXxx` wrappers.
 - ✅ **Per-project status mutation** wired on detail page.
@@ -595,8 +617,11 @@ A robust importer should:
 - ✅ **Micro-animations** — `animate-fade-up` + stagger delays on card sections; `hover-lift` on stat cards; `press-effect` on strategy row buttons.
 - ✅ **`TooltipProvider` + `Toaster`** mounted globally in `AppLayout`.
 - ✅ **QuickMenu** per project row — view/edit links + copy link/copy data with toast feedback.
-- ✅ Project list with server-side filters + pagination (12/page) via PostgREST.
-- ✅ Project detail with hierarchy path + budget bar chart (live data).
+- ✅ Strategy / Tactic / Plan management UI (`/admin/hierarchy`) for admin CRUD with child-record delete guards.
+- ✅ Password reset in `/admin/users`; granular roles remain future work.
+- ✅ Project list with server-side filters + pagination (12/page) via TanStack Start server functions.
+- ✅ Project list can filter by text box annotation content/type and shows annotation previews in rows.
+- ✅ Project detail with hierarchy path + budget bar chart + linked Excel text box annotations (live data).
 - ✅ Equipment list with pagination + search (live data).
 - ✅ Import page UI (file picker, drag-and-drop, Simple 8-column parser, 10 MB client-side size guard, preview, import result).
 - ✅ Thai locale number formatting (`formatBaht`).
@@ -607,9 +632,7 @@ A robust importer should:
 
 ### 9.2 What is Missing
 
-- ❌ Strategy / Tactic / Plan management UI (CLI only).
 - ❌ Official multi-sheet workbook upload in the UI. `/import` currently supports the Simple 8-column template; `scripts/import-projects.cjs` remains the working CLI importer for richer legacy workbooks.
-- ❌ Password reset / role management in `/admin/users` (list/create/delete exists).
 - ❌ Account routes (`/account/*`) are leftover from the Better Auth era and no longer functional. Remove or rewrite.
 - ❌ Granular admin roles (currently every admin has full power).
 - ❌ Unit / integration tests.
@@ -661,7 +684,8 @@ C:\Users\PC\Documents\Projects\Five-Year Local Development Strategy\
 │   ├── migrate.js                   # DDL migration
 │   ├── seed.js                      # Seed reference data
 │   ├── add-users.js                 # Legacy Neon Auth seed (kept for reference)
-│   ├── import-projects.cjs          # Excel → DB import pipeline
+│   ├── import-projects.cjs          # Excel → staging JSON import pipeline
+│   ├── load-official-projects.js    # Staging JSON → official DB tables + linked annotations
 │   ├── extract-textboxes.cjs        # Excel text box extraction
 │   ├── seed-textboxes.js            # Annotations + sheet metadata seed
 │   ├── forensic-extract.cjs         # Workbook forensic analysis
@@ -714,13 +738,14 @@ After changing env vars, manually **Redeploy** the latest deployment — env var
 
 ```bash
 npm run migrate                 # CREATE TABLE IF NOT EXISTS — idempotent
-npm run seed                    # Reference data + 248 projects
-npm run import-projects         # Full Excel pipeline (project source workbook)
+npm run seed                    # Mock/reference data + 248 projects
+npm run import-projects         # Full Excel pipeline (project source workbook → staging JSON)
+npm run load-official-projects  # Staging JSON → official DB tables + linked text boxes
 ```
 
 Admin user seeding is handled by `npm run seed-admins`, which runs `scripts/seed-admins.js` with `.env` loaded. In non-production local development, missing `ADMIN_USERS` still seeds the legacy convenience users `pop` / `pop` and `pok` / `pok`. In `NODE_ENV=production`, missing `ADMIN_USERS` fails immediately before database connection or dependency loading, so default admin credentials cannot be seeded by accident. To seed custom admins, set `ADMIN_USERS` as comma-separated `username:password` pairs before running the script.
 
-All scripts use `@neondatabase/serverless` with `process.env.DATABASE_URL`. The connection string is never bundled into client code.
+Runtime server functions use `@neondatabase/serverless`; migration/import maintenance scripts may use `pg` with `process.env.DATABASE_URL`. The connection string is never bundled into client code.
 
 ---
 
@@ -998,6 +1023,7 @@ Important limitation: request IP address and user-agent are not captured yet bec
 
 | Version | Date | Author | Change |
 |---|---|---|---|
+| 5.5 | 2026-05-10 | System analyst (AI) + User | **Official workbook data + text box annotation release.** (1) Loaded the production Neon database from the official multi-sheet staging output: 548 projects, 1,281 budget rows, 33 plans, 15 tactics, 6 strategies. (2) Added `scripts/load-official-projects.js` and `npm run load-official-projects` to recreate the official hierarchy and link row-anchored Excel text boxes into `project_annotations.project_id` by deterministic project-row ownership. (3) Added `npm run verify-annotation-links`; latest verification passed with 230 total text boxes, 117/117 project-detail-sheet text boxes linked, 0 project-sheet unmatched text boxes, 0 duplicate linked groups, and 0 DB/source mismatches. (4) Project list search now includes project detail fields and annotation text; filters were added for "has text box", annotation type, and annotation text. (5) Project rows, dashboard detail sheet, project modal sheet, and full project detail page now show annotation previews/full annotation cards. (6) `apiGetProjects` / `serverGetProjects` and `apiGetProject` / `serverGetProject` now return annotation summaries/details only from explicit `project_id` links, preventing source-row fallback from attaching unreviewed notes to the wrong project. (7) `npm run build` passes for Vercel deployment readiness. |
 | 5.3 | 2026-05-08 | System analyst (AI) + User | **Official reporting + branding + detailed logs.** (1) Added agency logo rendering via `AgencyLogo`, with `/agency-logo.png` first and checked-in `/agency-logo.svg` fallback. (2) Added official A4 print-to-PDF report template for dashboard summaries, with government-style header, KPI/table sections, signature lines, and footer credit. (3) Added dashboard PDF export button and `export` audit event. (4) Expanded audit action set to `login`, `logout`, and `export`; login/logout events are now written without storing passwords. (5) Expanded server-side audit coverage to equipment CRUD, department create, admin user create/delete, and richer `system` metadata. (6) Footer now credits `นักวิชาการคอมพิวเตอร์` with the slogan `คิดเป็นระบบ เขียนเป็นจริง ขับเคลื่อนเมืองด้วยข้อมูล`. |
 | 5.2 | 2026-05-08 | System analyst (AI) + User | **Import template + security hardening.** (1) `/import` now provides a downloadable Simple 8-column Excel template with `template` and `instructions` sheets. (2) `/import` is admin-gated in UI, enforces 10 MB file size before parse, validates required project name / numeric `plan_id` / non-negative numeric budgets, and still persists through `serverBatchImportProjects`. (3) Important project/status/import mutations now write audit events server-side with actor data from the admin session and before/after where practical; duplicate client-side audit calls were removed. (4) Dashboard detail sheet status controls are admin-gated, toast only after server success, and invalidate project/list/dashboard caches. (5) `scripts/seed-admins.js` refuses default credentials when `NODE_ENV=production` and `ADMIN_USERS` is missing. (6) Excel export sanitizes strings beginning with formula-trigger characters. |
 | 5.1 | 2026-05-08 | System analyst (AI) + User | **Status workflow reliability + v5.1 admin/reference cleanup.** (1) Fixed status updates so UI success only appears after server confirmation; failed writes roll back local optimistic state. (2) `serverPatchProjectStatus` now validates allowed statuses, returns `{updated}`, and throws `Response` for invalid status or missing project. (3) Project detail status stepper is admin-only for writes, with public read-only messaging. (4) Project list now supports row-level status updates plus existing bulk updates, both invalidating projects/dashboard caches and logging best-effort audit events. (5) `/admin/users` is wired to `admin_users` list/create/delete with bcrypt hashing. (6) Added `scripts/seed-admins.js` and `npm run seed-admins`. (7) Project/equipment form dropdowns use DB-backed reference queries instead of static `mock-data.ts` arrays. (8) `/account/*` no longer imports Better Auth UI; it redirects to `/login`. (9) Added detailed status-management analysis section for future agents. |

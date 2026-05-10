@@ -5,14 +5,14 @@ import React from "react";
 import { toast } from "sonner";
 import { Tooltip as TipRoot, TooltipContent as TipContent, TooltipTrigger as TipTrigger } from "@/components/ui/tooltip";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AppLayout } from "@/components/AppLayout";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { formatBaht, STATUS_COLOR, YEARS, type Status } from "@/lib/mock-data";
-import { apiGetDashboard, apiGetProjects, apiGetProject, apiUpdateProject, apiPatchProjectStatus, apiLogAudit } from "@/lib/api";
+import { ANNOTATION_TYPE_LABEL, apiGetDashboard, apiGetProjects, apiGetProject, apiUpdateProject, apiPatchProjectStatus, apiLogAudit } from "@/lib/api";
 import { exportDashboardToExcel, exportOfficialDashboardPdf } from "@/lib/export";
-import type { ProjectRow, StrategyProgress, ProjectCreateInput } from "@/lib/api";
+import type { ProjectRow, StrategyProgress, ProjectCreateInput, ProjectDetail } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import {
   ResponsiveContainer,
@@ -68,6 +68,8 @@ import {
   AlertCircle,
   Download,
   Printer,
+  CircleDashed,
+  MessageSquareText,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -221,11 +223,13 @@ function DashboardPage() {
   const _totalCompleted = data?.byStatus.find(s => s.status === "completed")?.count ?? 0;
   const _totalPlanning  = data?.byStatus.find(s => s.status === "planning")?.count ?? 0;
   const _totalCancelled = data?.byStatus.find(s => s.status === "cancelled")?.count ?? 0;
+  const _totalNotSet    = data?.byStatus.find(s => s.status === "not_set")?.count ?? 0;
   const countProjects  = useCountUp(_totalProjects,  900, !!data);
   const countActive    = useCountUp(_totalActive,    750, !!data);
   const countCompleted = useCountUp(_totalCompleted, 800, !!data);
   const countPlanning  = useCountUp(_totalPlanning,  700, !!data);
   const countCancelled = useCountUp(_totalCancelled, 650, !!data);
+  const countNotSet    = useCountUp(_totalNotSet,    600, !!data);
 
   // Sorted memos (use empty arrays when data not yet loaded)
   const stratSorted = useMemo(() => {
@@ -438,12 +442,13 @@ function DashboardPage() {
         </section>
 
         {/* ── Status KPI strip — clickable filter ───────────────────── */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <section className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           {([
-            { status: "in_progress" as Status, label: "ดำเนินการอยู่",  count: countActive,    pct: activePct,    icon: <PlayCircle className="size-5" />,   colorClass: "text-warning",     barClass: "bg-warning",     bgClass: "bg-warning/10",     tooltip: "โครงการที่อยู่ระหว่างดำเนินการ · คลิกเพื่อกรอง" },
-            { status: "completed"   as Status, label: "เสร็จสิ้นแล้ว", count: countCompleted, pct: completedPct, icon: <CheckCircle2 className="size-5" />, colorClass: "text-success",     barClass: "bg-success",     bgClass: "bg-success/10",     tooltip: "โครงการที่ดำเนินการเสร็จสมบูรณ์แล้ว · คลิกเพื่อกรอง" },
-            { status: "planning"    as Status, label: "วางแผน",         count: countPlanning,  pct: data.totalProjects > 0 ? Math.round((totalPlanning / data.totalProjects) * 100) : 0,  icon: <Clock className="size-5" />,     colorClass: "text-info",        barClass: "bg-info",        bgClass: "bg-info/10",        tooltip: "โครงการที่อยู่ในขั้นตอนวางแผน · คลิกเพื่อกรอง" },
-            { status: "cancelled"   as Status, label: "ยกเลิก",         count: countCancelled, pct: data.totalProjects > 0 ? Math.round((totalCancelled / data.totalProjects) * 100) : 0, icon: <XCircle className="size-5" />,   colorClass: "text-destructive", barClass: "bg-destructive", bgClass: "bg-destructive/10", tooltip: "โครงการที่ถูกยกเลิก · คลิกเพื่อกรอง" },
+            { status: "in_progress" as Status, label: "ดำเนินการอยู่",  count: countActive,    pct: activePct,    icon: <PlayCircle className="size-5" />,     colorClass: "text-warning",            barClass: "bg-warning",            bgClass: "bg-warning/10",            tooltip: "โครงการที่อยู่ระหว่างดำเนินการ · คลิกเพื่อกรอง" },
+            { status: "completed"   as Status, label: "เสร็จสิ้นแล้ว", count: countCompleted, pct: completedPct, icon: <CheckCircle2 className="size-5" />,   colorClass: "text-success",            barClass: "bg-success",            bgClass: "bg-success/10",            tooltip: "โครงการที่ดำเนินการเสร็จสมบูรณ์แล้ว · คลิกเพื่อกรอง" },
+            { status: "planning"    as Status, label: "วางแผน",         count: countPlanning,  pct: data.totalProjects > 0 ? Math.round((_totalPlanning / data.totalProjects) * 100) : 0,  icon: <Clock className="size-5" />,       colorClass: "text-info",               barClass: "bg-info",               bgClass: "bg-info/10",               tooltip: "โครงการที่อยู่ในขั้นตอนวางแผน · คลิกเพื่อกรอง" },
+            { status: "cancelled"   as Status, label: "ยกเลิก",         count: countCancelled, pct: data.totalProjects > 0 ? Math.round((_totalCancelled / data.totalProjects) * 100) : 0, icon: <XCircle className="size-5" />,     colorClass: "text-destructive",        barClass: "bg-destructive",        bgClass: "bg-destructive/10",        tooltip: "โครงการที่ถูกยกเลิก · คลิกเพื่อกรอง" },
+            { status: "not_set"     as Status, label: "ยังไม่กำหนด",   count: countNotSet,    pct: data.totalProjects > 0 ? Math.round((_totalNotSet / data.totalProjects) * 100) : 0,    icon: <CircleDashed className="size-5" />, colorClass: "text-muted-foreground",   barClass: "bg-muted-foreground/50", bgClass: "bg-muted/50",              tooltip: "โครงการที่ยังไม่ได้กำหนดสถานะ · คลิกเพื่อกรอง" },
           ] as const).map(({ status, tooltip, ...props }, i) => (
             <TipRoot key={status}>
               <TipTrigger asChild>
@@ -862,6 +867,12 @@ function DashboardPage() {
                         <span className="font-medium line-clamp-2 group-hover:text-primary transition-colors">
                           {p.name}
                         </span>
+                        {p.annotation_count > 0 && (
+                          <span className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700 ring-1 ring-amber-200">
+                            <MessageSquareText className="size-3 shrink-0" />
+                            <span className="truncate">{p.annotation_preview}</span>
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-3 hidden md:table-cell text-muted-foreground text-xs max-w-[140px] truncate">{p.department ?? "—"}</td>
                       <td className="px-3 py-3 hidden lg:table-cell text-xs text-muted-foreground max-w-[160px] truncate" title={p.strategy_name ?? undefined}>{p.strategy_name ?? "—"}</td>
@@ -1051,6 +1062,9 @@ function ProjectDetailSheet({ projectId, onClose }: { projectId: number | null; 
               <SheetTitle className="text-base font-semibold pr-6 leading-snug">
                 {isLoading ? "กำลังโหลด..." : (project?.name ?? "รายละเอียดโครงการ")}
               </SheetTitle>
+              <SheetDescription className="sr-only">
+                แสดงรายละเอียดโครงการ สถานะ งบประมาณ แผนงาน และปุ่มดำเนินการสำหรับผู้ดูแลระบบ
+              </SheetDescription>
             </SheetHeader>
           </div>
 
@@ -1099,6 +1113,8 @@ function ProjectDetailSheet({ projectId, onClose }: { projectId: number | null; 
                     )}
                   </div>
                 )}
+
+                <ProjectAnnotationsPanel annotations={project.annotations} />
 
                 {/* Meta info */}
                 <div className="grid grid-cols-2 gap-3">
@@ -1223,6 +1239,41 @@ function ProjectDetailSheet({ projectId, onClose }: { projectId: number | null; 
 }
 
 // ─── Quick action dropdown menu ───────────────────────────────────────────────
+function ProjectAnnotationsPanel({ annotations }: { annotations: ProjectDetail["annotations"] }) {
+  if (!annotations?.length) return null;
+
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-amber-900 dark:text-amber-200">
+          <MessageSquareText className="size-4" />
+          กล่องข้อความจากไฟล์ต้นทาง
+        </div>
+        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+          {annotations.length.toLocaleString("th-TH")} รายการ
+        </span>
+      </div>
+      <div className="space-y-2.5">
+        {annotations.map((annotation) => (
+          <div key={annotation.id} className="rounded-lg border border-amber-200/70 bg-background/80 px-3 py-2.5">
+            <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                {ANNOTATION_TYPE_LABEL[annotation.annotation_type] ?? annotation.annotation_type}
+              </span>
+              {annotation.source_row && (
+                <span className="text-[11px] text-muted-foreground">
+                  {annotation.source_sheet} แถว {annotation.source_row}
+                </span>
+              )}
+            </div>
+            <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/85">{annotation.raw_text}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function QuickMenu({ projectId, projectName }: { projectId: number; projectName: string }) {
   const { isLoggedIn } = useAuth();
   const [open, setOpen] = useState(false);

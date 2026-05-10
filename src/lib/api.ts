@@ -7,7 +7,10 @@ import {
   serverGetEquipment, serverCreateEquipment, serverUpdateEquipment, serverDeleteEquipment,
   serverGetDashboard, serverGetDepartmentsList, serverCreateDepartment,
   serverLogAudit, serverGetAuditEvents,
-  serverGetUsers, serverCreateUser, serverDeleteUser,
+  serverGetUsers, serverCreateUser, serverDeleteUser, serverResetUserPassword,
+  serverCreateStrategy, serverUpdateStrategy, serverDeleteStrategy,
+  serverCreateTactic, serverUpdateTactic, serverDeleteTactic,
+  serverCreatePlan, serverUpdatePlan, serverDeletePlan,
 } from "./server-fns";
 
 // ---------------------------------------------------------------------------
@@ -77,6 +80,19 @@ export interface DBProjectAnnotation {
   funding_source: string | null;
   created_at: string;
 }
+
+export const ANNOTATION_TYPE_LABEL: Record<AnnotationType, string> = {
+  amendment: "แก้ไข",
+  change: "เปลี่ยนแปลง",
+  addition: "เพิ่มเติม",
+  transfer: "โอน/ย้าย",
+  merge: "รวมรายการ",
+  duplicate: "รายการซ้ำ",
+  budget_source: "แหล่งงบประมาณ",
+  status_note: "หมายเหตุสถานะ",
+  form_index: "เลขแบบ",
+  cover_metadata: "ข้อมูลหน้าปก",
+};
 
 export interface DBSheetMetadata {
   id: number;
@@ -162,6 +178,9 @@ export async function apiGetDepartments(): Promise<string[]> {
 // ---------------------------------------------------------------------------
 export interface ProjectListParams {
   search?: string;
+  annotation_search?: string;
+  annotation_type?: AnnotationType;
+  has_annotations?: boolean;
   strategy_id?: number;
   plan_id?: number;
   department?: string;
@@ -178,6 +197,9 @@ export interface ProjectRow extends DBProject {
   strategy_id: number | null;
   strategy_name: string | null;
   total_budget: number;
+  annotation_count: number;
+  annotation_types: AnnotationType[];
+  annotation_preview: string | null;
 }
 
 export interface ProjectListResult {
@@ -198,6 +220,7 @@ export interface ProjectDetail extends DBProject {
   strategy: DBStrategy | null;
   budgets: Record<number, number>;
   total_budget: number;
+  annotations: DBProjectAnnotation[];
 }
 
 export async function apiGetProject(id: number): Promise<ProjectDetail | null> {
@@ -222,6 +245,7 @@ export interface ProjectCreateInput {
   plan_id?: number | null;
   status?: Status;
   source_sheet?: string;
+  source_row?: number | null;
   amendment_version?: string;
   budgets?: Record<number, number>;
 }
@@ -375,4 +399,47 @@ export async function apiCreateUser(data: {
 
 export async function apiDeleteUser(userId: string): Promise<void> {
   await serverDeleteUser({ data: { id: userId } });
+}
+
+export async function apiResetUserPassword(userId: number, newPassword: string): Promise<{ ok: true }> {
+  return serverResetUserPassword({ data: { userId, newPassword } });
+}
+
+// ---------------------------------------------------------------------------
+// Hierarchy CRUD
+// ---------------------------------------------------------------------------
+export async function apiCreateStrategy(data: { name: string; short_name: string; department: string }): Promise<DBStrategy> {
+  return serverCreateStrategy({ data });
+}
+
+export async function apiUpdateStrategy(data: { id: number; name: string; short_name: string; department: string }): Promise<DBStrategy> {
+  return serverUpdateStrategy({ data });
+}
+
+export async function apiDeleteStrategy(id: number): Promise<void> {
+  await serverDeleteStrategy({ data: { id } });
+}
+
+export async function apiCreateTactic(data: { code: string; name: string; strategy_id: number }): Promise<DBTactic> {
+  return serverCreateTactic({ data });
+}
+
+export async function apiUpdateTactic(data: { id: number; code: string; name: string; strategy_id: number }): Promise<DBTactic> {
+  return serverUpdateTactic({ data });
+}
+
+export async function apiDeleteTactic(id: number): Promise<void> {
+  await serverDeleteTactic({ data: { id } });
+}
+
+export async function apiCreatePlan(data: { name: string; tactic_id: number }): Promise<DBPlan> {
+  return serverCreatePlan({ data });
+}
+
+export async function apiUpdatePlan(data: { id: number; name: string; tactic_id: number }): Promise<DBPlan> {
+  return serverUpdatePlan({ data });
+}
+
+export async function apiDeletePlan(id: number): Promise<void> {
+  await serverDeletePlan({ data: { id } });
 }

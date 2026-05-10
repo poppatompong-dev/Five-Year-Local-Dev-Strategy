@@ -16,6 +16,7 @@ import { Route as EquipmentRouteImport } from './routes/equipment'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminHierarchyRouteImport } from './routes/admin.hierarchy'
 import { Route as AdminAuditRouteImport } from './routes/admin.audit'
 import { Route as AccountPathnameRouteImport } from './routes/account.$pathname'
 
@@ -54,6 +55,11 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/admin/users',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminHierarchyRoute = AdminHierarchyRouteImport.update({
+  id: '/admin/hierarchy',
+  path: '/admin/hierarchy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminAuditRoute = AdminAuditRouteImport.update({
   id: '/admin/audit',
   path: '/admin/audit',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/projects': typeof ProjectsRouteWithChildren
   '/account/$pathname': typeof AccountPathnameRoute
   '/admin/audit': typeof AdminAuditRoute
+  '/admin/hierarchy': typeof AdminHierarchyRoute
   '/admin/users': typeof AdminUsersRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
 }
@@ -84,6 +91,7 @@ export interface FileRoutesByTo {
   '/projects': typeof ProjectsRouteWithChildren
   '/account/$pathname': typeof AccountPathnameRoute
   '/admin/audit': typeof AdminAuditRoute
+  '/admin/hierarchy': typeof AdminHierarchyRoute
   '/admin/users': typeof AdminUsersRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
 }
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   '/projects': typeof ProjectsRouteWithChildren
   '/account/$pathname': typeof AccountPathnameRoute
   '/admin/audit': typeof AdminAuditRoute
+  '/admin/hierarchy': typeof AdminHierarchyRoute
   '/admin/users': typeof AdminUsersRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
 }
@@ -109,6 +118,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/account/$pathname'
     | '/admin/audit'
+    | '/admin/hierarchy'
     | '/admin/users'
     | '/projects/$projectId'
   fileRoutesByTo: FileRoutesByTo
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/account/$pathname'
     | '/admin/audit'
+    | '/admin/hierarchy'
     | '/admin/users'
     | '/projects/$projectId'
   id:
@@ -131,6 +142,7 @@ export interface FileRouteTypes {
     | '/projects'
     | '/account/$pathname'
     | '/admin/audit'
+    | '/admin/hierarchy'
     | '/admin/users'
     | '/projects/$projectId'
   fileRoutesById: FileRoutesById
@@ -143,6 +155,7 @@ export interface RootRouteChildren {
   ProjectsRoute: typeof ProjectsRouteWithChildren
   AccountPathnameRoute: typeof AccountPathnameRoute
   AdminAuditRoute: typeof AdminAuditRoute
+  AdminHierarchyRoute: typeof AdminHierarchyRoute
   AdminUsersRoute: typeof AdminUsersRoute
 }
 
@@ -197,6 +210,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/hierarchy': {
+      id: '/admin/hierarchy'
+      path: '/admin/hierarchy'
+      fullPath: '/admin/hierarchy'
+      preLoaderRoute: typeof AdminHierarchyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/audit': {
       id: '/admin/audit'
       path: '/admin/audit'
@@ -234,6 +254,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectsRoute: ProjectsRouteWithChildren,
   AccountPathnameRoute: AccountPathnameRoute,
   AdminAuditRoute: AdminAuditRoute,
+  AdminHierarchyRoute: AdminHierarchyRoute,
   AdminUsersRoute: AdminUsersRoute,
 }
 export const routeTree = rootRouteImport

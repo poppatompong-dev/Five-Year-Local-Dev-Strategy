@@ -11,7 +11,9 @@ import {
 } from "@/lib/mock-data";
 import {
   apiGetProjects,
+  apiGetProject,
   apiCreateProject,
+  apiUpdateProject,
   apiDeleteProject,
   apiPatchProjectStatus,
   apiBulkPatchProjectStatus,
@@ -19,15 +21,19 @@ import {
   apiGetTactics,
   apiGetPlans,
   apiGetDepartments,
+  ANNOTATION_TYPE_LABEL,
   type ProjectCreateInput,
+  type ProjectDetail,
+  type AnnotationType,
 } from "@/lib/api";
 import { toast } from "sonner";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { exportProjectsToExcel } from "@/lib/export";
-import { Search, Filter, ChevronLeft, ChevronRight, X, ArrowUpDown, Plus, Trash2, Download, CheckSquare, Loader2 } from "lucide-react";
+import { Search, Filter, ChevronLeft, ChevronRight, X, ArrowUpDown, Plus, Trash2, Download, CheckSquare, Loader2, ExternalLink, Pencil, MessageSquareText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 export const Route = createFileRoute("/projects")({
   head: () => ({
@@ -45,6 +51,9 @@ function ProjectsPage() {
   const { isLoggedIn } = useAuth();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [annotationSearch, setAnnotationSearch] = useState("");
+  const [debouncedAnnotationSearch, setDebouncedAnnotationSearch] = useState("");
+  const [annotationType, setAnnotationType] = useState<AnnotationType | "all" | "">("");
   const [strategyId, setStrategyId] = useState<number | "">("");
   const [planId, setPlanId] = useState<number | "">("");
   const [department, setDepartment] = useState("");
@@ -56,6 +65,7 @@ function ProjectsPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleteName, setDeleteName] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [detailProjectId, setDetailProjectId] = useState<number | null>(null);
 
   const qc = useQueryClient();
 
@@ -130,10 +140,13 @@ function ProjectsPage() {
     : plans;
 
   const { data: result, isLoading } = useQuery({
-    queryKey: ["projects", { debouncedSearch, strategyId, planId, department, status, year, page }],
+    queryKey: ["projects", { debouncedSearch, debouncedAnnotationSearch, annotationType, strategyId, planId, department, status, year, page }],
     queryFn: () =>
       apiGetProjects({
         search: debouncedSearch || undefined,
+        annotation_search: debouncedAnnotationSearch || undefined,
+        annotation_type: annotationType && annotationType !== "all" ? annotationType : undefined,
+        has_annotations: annotationType === "all" || !!debouncedAnnotationSearch || undefined,
         strategy_id: strategyId || undefined,
         plan_id: planId || undefined,
         department: department || undefined,
@@ -150,7 +163,7 @@ function ProjectsPage() {
   const totalFiltered = result?.total ?? 0;
   const totalBudget = pageItems.reduce((s, p) => s + p.total_budget, 0);
 
-  const hasFilters = strategyId || planId || department || status || year || search;
+  const hasFilters = strategyId || planId || department || status || year || search || annotationSearch || annotationType;
 
   function handleSearchChange(val: string) {
     setSearch(val);
@@ -159,9 +172,19 @@ function ProjectsPage() {
     (handleSearchChange as any)._t = setTimeout(() => setDebouncedSearch(val), 400);
   }
 
+  function handleAnnotationSearchChange(val: string) {
+    setAnnotationSearch(val);
+    setPage(1);
+    clearTimeout((handleAnnotationSearchChange as any)._t);
+    (handleAnnotationSearchChange as any)._t = setTimeout(() => setDebouncedAnnotationSearch(val), 400);
+  }
+
   function clearFilters() {
     setSearch("");
     setDebouncedSearch("");
+    setAnnotationSearch("");
+    setDebouncedAnnotationSearch("");
+    setAnnotationType("");
     setStrategyId("");
     setPlanId("");
     setDepartment("");
@@ -218,6 +241,30 @@ function ProjectsPage() {
                 className="w-full bg-muted/50 border border-border rounded-lg pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground ring-focus"
               />
             </div>
+            <div className="relative flex-1 min-w-[220px]">
+              <MessageSquareText className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <input
+                value={annotationSearch}
+                onChange={(e) => handleAnnotationSearchChange(e.target.value)}
+                placeholder="ค้นหาในกล่องข้อความ/หมายเหตุจากไฟล์ต้นทาง..."
+                className="w-full bg-muted/50 border border-border rounded-lg pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground ring-focus"
+              />
+            </div>
+            <Select
+              value={annotationType}
+              onChange={(v) => {
+                setAnnotationType(v as AnnotationType | "all" | "");
+                setPage(1);
+              }}
+              placeholder="Text box"
+              options={[
+                { value: "all" as const, label: "มี Text box" },
+                ...(Object.entries(ANNOTATION_TYPE_LABEL).map(([value, label]) => ({
+                  value: value as AnnotationType,
+                  label,
+                }))),
+              ]}
+            />
             <Select
               value={strategyId}
               onChange={(v) => {
@@ -355,7 +402,11 @@ function ProjectsPage() {
                   pageItems.map((p) => {
                     const budget = p.total_budget;
                     return (
-                      <tr key={p.id} className="border-b border-border/50 hover:bg-muted/40 transition group">
+                      <tr
+                        key={p.id}
+                        className="border-b border-border/50 hover:bg-muted/40 transition group cursor-pointer"
+                        onClick={() => setDetailProjectId(p.id)}
+                      >
                         {isLoggedIn && (
                           <td className="px-3 py-4">
                             <input
@@ -373,19 +424,30 @@ function ProjectsPage() {
                           </td>
                         )}
                         <td className="px-5 py-4 max-w-[420px]">
-                          <Link
-                            to="/projects/$projectId"
-                            params={{ projectId: String(p.id) }}
-                            className="font-medium line-clamp-2 group-hover:text-primary transition"
+                          <button
+                            type="button"
+                            className="font-medium line-clamp-2 text-left group-hover:text-primary transition"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDetailProjectId(p.id);
+                            }}
                           >
                             {p.name}
-                          </Link>
+                          </button>
                           {p.tactic_code && (
                             <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5">
                               <span className="inline-flex items-center justify-center size-4 rounded bg-primary-soft text-primary text-[10px] font-semibold">
                                 {p.tactic_code}
                               </span>
                               <span className="truncate">{p.plan_name}</span>
+                            </div>
+                          )}
+                          {p.annotation_count > 0 && (
+                            <div className="mt-2 flex items-start gap-1.5 text-xs text-amber-700">
+                              <MessageSquareText className="mt-0.5 size-3.5 shrink-0" />
+                              <span className="line-clamp-1">
+                                {p.annotation_count} text box · {p.annotation_preview}
+                              </span>
                             </div>
                           )}
                         </td>
@@ -515,8 +577,242 @@ function ProjectsPage() {
           description={`คุณต้องการลบโครงการ "${deleteName}" หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
           isDeleting={deleteMutation.isPending}
         />
+
+        <ProjectReadSheet
+          projectId={detailProjectId}
+          onClose={() => setDetailProjectId(null)}
+        />
       </div>
     </AppLayout>
+  );
+}
+
+function ProjectReadSheet({ projectId, onClose }: { projectId: number | null; onClose: () => void }) {
+  const { isLoggedIn } = useAuth();
+  const qc = useQueryClient();
+  const [editOpen, setEditOpen] = useState(false);
+
+  const { data: project, isLoading } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: () => apiGetProject(projectId!),
+    enabled: projectId !== null,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: ProjectCreateInput) => apiUpdateProject(projectId!, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["project", projectId] });
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      setEditOpen(false);
+      toast.success("บันทึกข้อมูลโครงการแล้ว");
+    },
+    onError: (err) => toast.error(`บันทึกไม่สำเร็จ: ${err.message}`),
+  });
+
+  return (
+    <>
+      <Sheet open={projectId !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+        <SheetContent side="right" className="w-full sm:max-w-xl p-0 flex flex-col">
+          <div className="shrink-0 bg-background/95 backdrop-blur border-b border-border px-6 py-4">
+            <SheetHeader>
+              <SheetTitle className="text-base font-semibold pr-6 leading-snug">
+                {isLoading ? "กำลังโหลดรายละเอียด..." : (project?.name ?? "รายละเอียดโครงการ")}
+              </SheetTitle>
+              <SheetDescription className="sr-only">
+                แสดงรายละเอียดโครงการ แผนงาน หน่วยงาน สถานะ งบประมาณ และข้อมูลประกอบอื่น ๆ
+              </SheetDescription>
+            </SheetHeader>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            {isLoading && (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="size-7 animate-spin text-primary" />
+              </div>
+            )}
+
+            {!isLoading && !project && (
+              <div className="rounded-xl border border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
+                ไม่พบข้อมูลโครงการนี้
+              </div>
+            )}
+
+            {project && <ProjectReadContent project={project} />}
+          </div>
+
+          {project && (
+            <div className="shrink-0 bg-background/95 backdrop-blur border-t border-border px-6 py-4 flex flex-wrap items-center gap-3">
+              {isLoggedIn && (
+                <Button onClick={() => setEditOpen(true)} className="flex-1 gap-2">
+                  <Pencil className="size-4" />
+                  แก้ไขโครงการ
+                </Button>
+              )}
+              <Button variant="outline" asChild className="flex-1 gap-2">
+                <Link to="/projects/$projectId" params={{ projectId: String(project.id) }}>
+                  <ExternalLink className="size-4" />
+                  ดูเต็มหน้า
+                </Link>
+              </Button>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {project && (
+        <ProjectFormDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          onSubmit={async (data) => { await updateMutation.mutateAsync(data); }}
+          initialData={project}
+          isSubmitting={updateMutation.isPending}
+        />
+      )}
+    </>
+  );
+}
+
+function ProjectReadContent({ project }: { project: ProjectDetail }) {
+  const budgetMax = Math.max(...YEARS.map((year) => project.budgets[year] || 0), 1);
+
+  const detailBlocks = [
+    { label: "วัตถุประสงค์", value: project.objective },
+    { label: "เป้าหมาย", value: project.target },
+    { label: "ตัวชี้วัด (KPI)", value: project.kpi },
+    { label: "ผลที่คาดว่าจะได้รับ", value: project.expected_result },
+  ].filter((item) => item.value);
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-2xl bg-emerald-gradient p-5 text-primary-foreground">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-xs text-primary-foreground/70 mb-1">สถานะปัจจุบัน</div>
+            <StatusBadge status={project.status} />
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-primary-foreground/70">งบประมาณรวม</div>
+            <div className="text-2xl font-bold tabular mt-0.5">
+              {formatBaht(project.total_budget, { compact: true })}
+            </div>
+            <div className="text-[11px] text-primary-foreground/60">บาท</div>
+          </div>
+        </div>
+      </div>
+
+      {(project.strategy || project.tactic || project.plan) && (
+        <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">ลำดับแผน</div>
+          <div className="text-sm leading-relaxed">
+            {project.strategy && <span className="font-medium">{project.strategy.name}</span>}
+            {project.tactic && <span className="text-muted-foreground"> › {project.tactic.code}: {project.tactic.name}</span>}
+            {project.plan && <span className="text-muted-foreground"> › {project.plan.name}</span>}
+          </div>
+        </div>
+      )}
+
+      <ProjectAnnotationsSection annotations={project.annotations} />
+
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { label: "หน่วยงาน", value: project.department },
+          { label: "แหล่งข้อมูล", value: project.source_sheet },
+          { label: "รหัสโครงการ", value: `#${project.id}` },
+          {
+            label: "วันที่เพิ่ม",
+            value: new Date(project.created_at).toLocaleDateString("th-TH", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            }),
+          },
+        ].map(({ label, value }) => (
+          <div key={label} className="rounded-xl bg-muted/50 px-3 py-2.5">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{label}</div>
+            <div className="text-sm font-medium truncate">{value ?? "—"}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-xl border border-border p-4">
+        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">งบประมาณรายปี</div>
+        <div className="space-y-2.5">
+          {YEARS.map((year) => {
+            const amount = project.budgets[year] || 0;
+            const pct = (amount / budgetMax) * 100;
+            return (
+              <div key={year}>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-muted-foreground">ปี {year}</span>
+                  <span className="font-medium tabular">
+                    {amount > 0 ? `${formatBaht(amount)} บาท` : "—"}
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full rounded-full bg-emerald-gradient transition-all" style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {detailBlocks.length > 0 ? (
+        detailBlocks.map(({ label, value }) => (
+          <div key={label} className="rounded-xl border border-border p-4">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{label}</div>
+            <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/85">{value}</p>
+          </div>
+        ))
+      ) : (
+        <div className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+          ยังไม่มีรายละเอียดวัตถุประสงค์ เป้าหมาย หรือตัวชี้วัดสำหรับโครงการนี้
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProjectAnnotationsSection({ annotations }: { annotations: ProjectDetail["annotations"] }) {
+  if (!annotations?.length) return null;
+
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-amber-900 dark:text-amber-200">
+          <MessageSquareText className="size-4" />
+          กล่องข้อความจากไฟล์ต้นทาง
+        </div>
+        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
+          {annotations.length.toLocaleString("th-TH")} รายการ
+        </span>
+      </div>
+      <div className="space-y-2.5">
+        {annotations.map((annotation) => (
+          <div key={annotation.id} className="rounded-lg border border-amber-200/70 bg-background/80 px-3 py-2.5">
+            <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                {ANNOTATION_TYPE_LABEL[annotation.annotation_type] ?? annotation.annotation_type}
+              </span>
+              {annotation.source_row && (
+                <span className="text-[11px] text-muted-foreground">
+                  {annotation.source_sheet} แถว {annotation.source_row}
+                </span>
+              )}
+            </div>
+            <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/85">{annotation.raw_text}</p>
+            {(annotation.target_plan || annotation.target_ref || annotation.funding_source) && (
+              <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
+                {annotation.target_plan && <span>แผนปลายทาง: {annotation.target_plan}</span>}
+                {annotation.target_ref && <span>อ้างอิง: {annotation.target_ref}</span>}
+                {annotation.funding_source && <span>แหล่งงบ: {annotation.funding_source}</span>}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

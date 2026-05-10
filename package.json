@@ -13,6 +13,8 @@
     "migrate": "node scripts/migrate.js",
     "seed": "node scripts/seed.js",
     "seed-admins": "node --env-file=.env scripts/seed-admins.js",
+    "load-official-projects": "node --env-file=.env scripts/load-official-projects.js",
+    "verify-annotation-links": "node --env-file=.env scripts/verify-annotation-links.js",
     "add-users": "node scripts/add-users.js",
     "extract-textboxes": "node scripts/extract-textboxes.cjs",
     "seed-textboxes": "node scripts/seed-textboxes.js",

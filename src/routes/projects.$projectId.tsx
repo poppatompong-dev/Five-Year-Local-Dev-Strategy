@@ -9,12 +9,12 @@ import {
   STATUS_LABEL,
   type Status,
 } from "@/lib/mock-data";
-import { apiGetProject, apiPatchProjectStatus, apiUpdateProject, apiUpdateBudgets, apiDeleteProject, type ProjectCreateInput } from "@/lib/api";
+import { ANNOTATION_TYPE_LABEL, apiGetProject, apiPatchProjectStatus, apiUpdateProject, apiUpdateBudgets, apiDeleteProject, type ProjectCreateInput, type ProjectDetail } from "@/lib/api";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ChevronLeft, ChevronRight, FileText, Target, Award, TrendingUp, Building2, Calendar, Pencil, Trash2, CheckCircle2, XCircle, ArrowRight, RotateCcw, Save, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Target, Award, TrendingUp, Building2, Calendar, Pencil, Trash2, CheckCircle2, XCircle, ArrowRight, RotateCcw, Save, X, MessageSquareText } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -426,6 +426,8 @@ function ProjectDetailPage() {
         {/* Content grid */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
           <div className="xl:col-span-2 space-y-5">
+            <ProjectAnnotationsPanel annotations={project.annotations} />
+
             <DetailCard icon={<FileText className="size-4" />} title="วัตถุประสงค์ของโครงการ">
               <p>{project.objective}</p>
             </DetailCard>
@@ -536,6 +538,53 @@ function ProjectDetailPage() {
         />
       </div>
     </AppLayout>
+  );
+}
+
+function ProjectAnnotationsPanel({ annotations }: { annotations: ProjectDetail["annotations"] }) {
+  if (!annotations?.length) return null;
+
+  return (
+    <div className="bg-card rounded-2xl border border-amber-200 p-5 lg:p-6 shadow-soft dark:border-amber-900/50">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="size-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+            <MessageSquareText className="size-4" />
+          </span>
+          <div>
+            <h3 className="text-base font-semibold tracking-tight">กล่องข้อความจากไฟล์ต้นทาง</h3>
+            <p className="text-xs text-muted-foreground">หมายเหตุที่เจ้าหน้าที่แปะไว้บนแถวโครงการใน Excel</p>
+          </div>
+        </div>
+        <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
+          {annotations.length.toLocaleString("th-TH")} รายการ
+        </span>
+      </div>
+      <div className="space-y-3">
+        {annotations.map((annotation) => (
+          <div key={annotation.id} className="rounded-xl border border-border bg-muted/20 px-4 py-3">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                {ANNOTATION_TYPE_LABEL[annotation.annotation_type] ?? annotation.annotation_type}
+              </span>
+              {annotation.source_row && (
+                <span className="text-[11px] text-muted-foreground">
+                  {annotation.source_sheet} แถว {annotation.source_row}
+                </span>
+              )}
+            </div>
+            <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/85">{annotation.raw_text}</p>
+            {(annotation.target_plan || annotation.target_ref || annotation.funding_source) && (
+              <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                {annotation.target_plan && <span>แผนปลายทาง: {annotation.target_plan}</span>}
+                {annotation.target_ref && <span>อ้างอิง: {annotation.target_ref}</span>}
+                {annotation.funding_source && <span>แหล่งงบ: {annotation.funding_source}</span>}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

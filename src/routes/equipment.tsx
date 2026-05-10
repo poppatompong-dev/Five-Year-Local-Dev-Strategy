@@ -9,6 +9,7 @@ import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Search, ChevronLeft, ChevronRight, Wrench, Package, Plus, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 export const Route = createFileRoute("/equipment")({
   head: () => ({
@@ -32,6 +33,7 @@ function EquipmentPage() {
   const [editItem, setEditItem] = useState<DBEquipment | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleteName, setDeleteName] = useState("");
+  const [detailItem, setDetailItem] = useState<DBEquipment | null>(null);
 
   const qc = useQueryClient();
 
@@ -152,9 +154,22 @@ function EquipmentPage() {
                   const budgets = [Number(e.budget_2566), Number(e.budget_2567), Number(e.budget_2568), Number(e.budget_2569), Number(e.budget_2570)];
                   const total = budgets.reduce((a, b) => a + b, 0);
                   return (
-                    <tr key={e.id} className="border-b border-border/50 hover:bg-muted/40 transition group">
+                    <tr
+                      key={e.id}
+                      className="border-b border-border/50 hover:bg-muted/40 transition group cursor-pointer"
+                      onClick={() => setDetailItem(e)}
+                    >
                       <td className="px-5 py-4 max-w-[300px]">
-                        <div className="font-medium">{e.item_type}</div>
+                        <button
+                          type="button"
+                          className="font-medium text-left hover:text-primary transition"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setDetailItem(e);
+                          }}
+                        >
+                          {e.item_type}
+                        </button>
                         <div className="mt-1 flex items-center gap-1.5 text-xs">
                           <span className="rounded bg-primary-soft text-primary px-2 py-0.5">{e.category}</span>
                           <span className="text-muted-foreground truncate">{e.target}</span>
@@ -177,14 +192,18 @@ function EquipmentPage() {
                         {isLoggedIn && (
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
                             <button
-                              onClick={() => setEditItem(e)}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setEditItem(e);
+                              }}
                               className="size-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition"
                               title="แก้ไข"
                             >
                               <Pencil className="size-3.5" />
                             </button>
                             <button
-                              onClick={() => {
+                              onClick={(event) => {
+                                event.stopPropagation();
                                 setDeleteId(e.id);
                                 setDeleteName(e.item_type || "");
                               }}
@@ -257,8 +276,128 @@ function EquipmentPage() {
           description={`คุณต้องการลบ "${deleteName}" หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`}
           isDeleting={deleteMutation.isPending}
         />
+
+        <EquipmentReadSheet
+          item={detailItem}
+          onClose={() => setDetailItem(null)}
+          onEdit={(item) => setEditItem(item)}
+        />
       </div>
     </AppLayout>
+  );
+}
+
+function EquipmentReadSheet({
+  item,
+  onClose,
+  onEdit,
+}: {
+  item: DBEquipment | null;
+  onClose: () => void;
+  onEdit: (item: DBEquipment) => void;
+}) {
+  const { isLoggedIn } = useAuth();
+
+  return (
+    <Sheet open={item !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <SheetContent side="right" className="w-full sm:max-w-xl p-0 flex flex-col">
+        <div className="shrink-0 bg-background/95 backdrop-blur border-b border-border px-6 py-4">
+          <SheetHeader>
+            <SheetTitle className="text-base font-semibold pr-6 leading-snug">
+              {item?.item_type ?? "รายละเอียดครุภัณฑ์"}
+            </SheetTitle>
+            <SheetDescription className="sr-only">
+              แสดงรายละเอียดครุภัณฑ์ หมวด แผนงาน หน่วยงาน เป้าหมาย และงบประมาณรายปี
+            </SheetDescription>
+          </SheetHeader>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {item && <EquipmentReadContent item={item} />}
+        </div>
+
+        {item && isLoggedIn && (
+          <div className="shrink-0 bg-background/95 backdrop-blur border-t border-border px-6 py-4">
+            <Button onClick={() => onEdit(item)} className="w-full gap-2">
+              <Pencil className="size-4" />
+              แก้ไขครุภัณฑ์
+            </Button>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function EquipmentReadContent({ item }: { item: DBEquipment }) {
+  const budgetRows = YEARS.map((year) => {
+    const key = `budget_${year}` as keyof DBEquipment;
+    return { year, amount: Number(item[key] || 0) };
+  });
+  const total = budgetRows.reduce((sum, row) => sum + row.amount, 0);
+  const max = Math.max(...budgetRows.map((row) => row.amount), 1);
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-2xl bg-emerald-gradient p-5 text-primary-foreground">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-xs text-primary-foreground/70 mb-1">หมวดครุภัณฑ์</div>
+            <div className="text-lg font-semibold leading-snug">{item.category || "ไม่ระบุหมวด"}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-primary-foreground/70">งบประมาณรวม</div>
+            <div className="text-2xl font-bold tabular mt-0.5">
+              {formatBaht(total, { compact: true })}
+            </div>
+            <div className="text-[11px] text-primary-foreground/60">บาท</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { label: "แผนงาน", value: item.plan_name },
+          { label: "หน่วยงาน", value: item.department },
+          { label: "รหัสรายการ", value: `#${item.id}` },
+          { label: "เป้าหมาย", value: item.target },
+        ].map(({ label, value }) => (
+          <div key={label} className="rounded-xl bg-muted/50 px-3 py-2.5">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{label}</div>
+            <div className="text-sm font-medium break-words">{value || "—"}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-xl border border-border p-4">
+        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">งบประมาณรายปี</div>
+        <div className="space-y-2.5">
+          {budgetRows.map(({ year, amount }) => {
+            const pct = (amount / max) * 100;
+            return (
+              <div key={year}>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-muted-foreground">ปี {year}</span>
+                  <span className="font-medium tabular">
+                    {amount > 0 ? `${formatBaht(amount)} บาท` : "—"}
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full rounded-full bg-emerald-gradient transition-all" style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border p-4">
+        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">รายละเอียดรายการ</div>
+        <p className="text-sm leading-relaxed text-foreground/85">
+          {item.item_type || "ยังไม่มีรายละเอียดชื่อครุภัณฑ์"}
+        </p>
+      </div>
+    </div>
   );
 }
 

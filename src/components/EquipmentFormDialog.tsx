@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -91,11 +92,14 @@ export function EquipmentFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEdit ? "แก้ไขครุภัณฑ์" : "เพิ่มครุภัณฑ์ใหม่"}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            กรอกข้อมูลครุภัณฑ์ แผนงาน หน่วยงาน เป้าหมาย และงบประมาณรายปี
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
