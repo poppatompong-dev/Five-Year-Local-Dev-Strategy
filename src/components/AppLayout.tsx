@@ -1,16 +1,19 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Wrench, Upload, Bell, Search, Users, History, LogIn, LogOut, GitBranch } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Wrench, Upload, Bell, Search, Users, History, LogIn, LogOut, GitBranch, Info, BookOpen } from "lucide-react";
 import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { AgencyLogo } from "@/components/AgencyLogo";
+import { getActivePlanFiscalYear } from "@/lib/fiscal-year";
 
 const PUBLIC_NAV = [
   { to: "/", label: "ภาพรวม", icon: LayoutDashboard },
   { to: "/projects", label: "โครงการ", icon: FolderKanban },
   { to: "/equipment", label: "ครุภัณฑ์", icon: Wrench },
+  { to: "/about", label: "เกี่ยวกับระบบ", icon: Info },
+  { to: "/manual", label: "คู่มือ", icon: BookOpen },
 ] as const;
 
 const ADMIN_NAV = [
@@ -21,6 +24,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { isLoggedIn, username, logout } = useAuth();
+  const activeFiscalYear = getActivePlanFiscalYear();
 
   const handleLogout = async () => {
     try {
@@ -196,19 +200,24 @@ export function AppLayout({ children }: { children?: ReactNode }) {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" strokeWidth={1.75} />
                 <input
                   type="search"
+                  aria-label="ค้นหาโครงการ แผนงาน หรือหน่วยงาน"
                   placeholder="ค้นหาโครงการ แผนงาน หน่วยงาน..."
                   className="w-full bg-muted/50 border border-border/70 rounded-xl pl-9 pr-4 py-2 text-sm placeholder:text-muted-foreground/60 ring-focus hover:border-border transition-colors"
                 />
               </div>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <button className="size-9 rounded-xl hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-all relative">
+              <button
+                type="button"
+                aria-label="การแจ้งเตือน"
+                className="size-9 rounded-xl hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-all relative"
+              >
                 <Bell className="size-[17px]" strokeWidth={1.75} />
-                <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-gold ring-2 ring-background animate-pulse" />
+                <span aria-hidden="true" className="absolute top-1.5 right-1.5 size-2 rounded-full bg-gold ring-2 ring-background animate-pulse" />
               </button>
               <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-success/10 text-success border border-success/20 text-xs font-medium">
                 <span className="size-1.5 rounded-full bg-success animate-pulse" />
-                ปีงบประมาณ 2568
+                ปีงบประมาณ {activeFiscalYear}
               </div>
             </div>
           </div>
@@ -221,7 +230,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
         <footer className="px-5 lg:px-8 py-4 border-t border-border/60 text-[11px] text-muted-foreground/60 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <span className="size-1 rounded-full bg-success/60" />
-            © 2568 เทศบาลนครนครสวรรค์ · ระบบบริหารแผนพัฒนาท้องถิ่น
+            © 2026 เทศบาลนครนครสวรรค์ · ระบบบริหารแผนพัฒนาท้องถิ่น
           </div>
           <div className="text-right">
             <span className="font-medium text-foreground/70">เครดิต: นักวิชาการคอมพิวเตอร์</span>

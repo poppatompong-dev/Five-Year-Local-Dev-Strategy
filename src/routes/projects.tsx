@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
+import { PublicDataNotice } from "@/components/PublicDataNotice";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   YEARS,
@@ -29,7 +30,6 @@ import {
 import { toast } from "sonner";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { exportProjectsToExcel } from "@/lib/export";
 import { Search, Filter, ChevronLeft, ChevronRight, X, ArrowUpDown, Plus, Trash2, Download, CheckSquare, Loader2, ExternalLink, Pencil, MessageSquareText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -46,6 +46,21 @@ export const Route = createFileRoute("/projects")({
 });
 
 const PAGE_SIZE = 12;
+
+function getProjectRowTone(status: Status) {
+  switch (status) {
+    case "completed":
+      return "border-l-success bg-success/5 hover:bg-success/10";
+    case "in_progress":
+      return "border-l-warning bg-warning/5 hover:bg-warning/10";
+    case "planning":
+      return "border-l-info bg-info/5 hover:bg-info/10";
+    case "cancelled":
+      return "border-l-destructive bg-destructive/5 hover:bg-destructive/10";
+    default:
+      return "border-l-muted-foreground/40 bg-muted/20 hover:bg-muted/40";
+  }
+}
 
 function ProjectsPage() {
   const { isLoggedIn } = useAuth();
@@ -210,14 +225,16 @@ function ProjectsPage() {
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              onClick={() => {
+              onClick={async () => {
                 if (pageItems.length > 0) {
+                  const { exportProjectsToExcel } = await import("@/lib/export");
                   exportProjectsToExcel(pageItems, `projects-${new Date().toISOString().slice(0, 10)}.xlsx`);
                   toast.success("ส่งออกไฟล์ Excel แล้ว", { icon: "📄" });
                 }
               }}
               disabled={pageItems.length === 0}
               className="gap-1.5"
+              aria-label="ส่งออกโครงการในหน้านี้เป็นไฟล์ Excel"
             >
               <Download className="size-4" /> ส่งออก
             </Button>
@@ -229,12 +246,16 @@ function ProjectsPage() {
           </div>
         </div>
 
+        <PublicDataNotice compact />
+
         {/* Filters */}
         <div className="bg-card rounded-2xl border border-border p-4 lg:p-5 shadow-soft">
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[220px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               <input
+                id="project-search"
+                aria-label="ค้นหาโครงการ"
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="ค้นหาชื่อโครงการ หน่วยงาน วัตถุประสงค์..."
@@ -244,6 +265,8 @@ function ProjectsPage() {
             <div className="relative flex-1 min-w-[220px]">
               <MessageSquareText className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               <input
+                id="project-annotation-search"
+                aria-label="ค้นหาในกล่องข้อความและหมายเหตุ"
                 value={annotationSearch}
                 onChange={(e) => handleAnnotationSearchChange(e.target.value)}
                 placeholder="ค้นหาในกล่องข้อความ/หมายเหตุจากไฟล์ต้นทาง..."
@@ -314,6 +337,7 @@ function ProjectsPage() {
             {hasFilters && (
               <button
                 onClick={clearFilters}
+                aria-label="ล้างตัวกรองทั้งหมด"
                 className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg hover:bg-muted transition"
               >
                 <X className="size-3.5" /> ล้างตัวกรอง
@@ -332,6 +356,7 @@ function ProjectsPage() {
             <div className="flex items-center gap-2 ml-auto">
               <span className="text-xs text-muted-foreground">ปรับสถานะเป็น:</span>
               <select
+                aria-label="ปรับสถานะโครงการที่เลือก"
                 onChange={(e) => {
                   const v = e.target.value as Status;
                   if (v) {
@@ -359,14 +384,15 @@ function ProjectsPage() {
 
         {/* Project list */}
         <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="max-h-[72vh] overflow-auto">
+            <table className="w-full min-w-[980px] border-separate border-spacing-0 text-sm">
               <thead>
-                <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground bg-muted/30 border-b border-border">
+                <tr className="sticky top-0 z-10 border-b border-border bg-muted/95 text-left text-xs uppercase tracking-wider text-muted-foreground backdrop-blur">
                   {isLoggedIn && (
                     <th className="px-3 py-3.5 w-10">
                       <input
                         type="checkbox"
+                        aria-label="เลือกโครงการทั้งหมดในหน้านี้"
                         className="size-4 cursor-pointer"
                         checked={pageItems.length > 0 && pageItems.every((p) => selectedIds.has(p.id))}
                         onChange={(e) => {
@@ -399,18 +425,23 @@ function ProjectsPage() {
                     </td>
                   </tr>
                 ) : (
-                  pageItems.map((p) => {
+                  pageItems.map((p, index) => {
                     const budget = p.total_budget;
                     return (
                       <tr
                         key={p.id}
-                        className="border-b border-border/50 hover:bg-muted/40 transition group cursor-pointer"
+                        className={[
+                          "group cursor-pointer border-b border-l-4 border-border/50 transition-colors",
+                          index % 2 === 0 ? "bg-card" : "bg-muted/10",
+                          getProjectRowTone(p.status),
+                        ].join(" ")}
                         onClick={() => setDetailProjectId(p.id)}
                       >
                         {isLoggedIn && (
                           <td className="px-3 py-4">
                             <input
                               type="checkbox"
+                              aria-label={`เลือกโครงการ ${p.name}`}
                               className="size-4 cursor-pointer"
                               checked={selectedIds.has(p.id)}
                               onClick={(e) => e.stopPropagation()}
@@ -423,10 +454,17 @@ function ProjectsPage() {
                             />
                           </td>
                         )}
-                        <td className="px-5 py-4 max-w-[420px]">
+                        <td className="px-5 py-4 max-w-[440px]">
+                          <div className="mb-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+                            <span className="inline-flex h-5 min-w-8 items-center justify-center rounded-full bg-background px-2 font-semibold tabular shadow-sm ring-1 ring-border">
+                              #{(safePage - 1) * PAGE_SIZE + index + 1}
+                            </span>
+                            <span className="truncate md:hidden">{p.department || "ไม่ระบุหน่วยงาน"}</span>
+                          </div>
                           <button
                             type="button"
-                            className="font-medium line-clamp-2 text-left group-hover:text-primary transition"
+                            className="line-clamp-2 text-left font-semibold leading-relaxed transition group-hover:text-primary"
+                            aria-label={`ดูรายละเอียดโครงการ ${p.name}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               setDetailProjectId(p.id);
@@ -435,7 +473,7 @@ function ProjectsPage() {
                             {p.name}
                           </button>
                           {p.tactic_code && (
-                            <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5">
+                            <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                               <span className="inline-flex items-center justify-center size-4 rounded bg-primary-soft text-primary text-[10px] font-semibold">
                                 {p.tactic_code}
                               </span>
@@ -451,12 +489,14 @@ function ProjectsPage() {
                             </div>
                           )}
                         </td>
-                        <td className="px-5 py-4 text-foreground/80">{p.department}</td>
+                        <td className="max-w-[220px] px-5 py-4 text-foreground/80">
+                          <span className="line-clamp-2" title={p.department ?? undefined}>{p.department}</span>
+                        </td>
                         <td className="px-5 py-4">
                           {p.strategy_name && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs">
+                            <span className="inline-flex max-w-[240px] items-center gap-1.5 rounded-full bg-background px-2.5 py-1 text-xs shadow-sm ring-1 ring-border">
                               <span className="size-1.5 rounded-full bg-primary" />
-                              {p.strategy_name}
+                              <span className="truncate">{p.strategy_name}</span>
                             </span>
                           )}
                         </td>
@@ -476,7 +516,8 @@ function ProjectsPage() {
                                     rowStatusMutation.mutate({ id: p.id, status: nextStatus });
                                   }
                                 }}
-                                className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs ring-focus min-w-[150px]"
+                              className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs ring-focus min-w-[150px]"
+                                aria-label={`ปรับสถานะโครงการ ${p.name}`}
                                 title="ปรับสถานะโครงการ"
                               >
                                 {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
@@ -500,6 +541,7 @@ function ProjectsPage() {
                                 setDeleteName(p.name);
                               }}
                               className="size-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition opacity-0 group-hover:opacity-100"
+                              aria-label={`ลบโครงการ ${p.name}`}
                               title="ลบโครงการ"
                             >
                               <Trash2 className="size-4" />
@@ -524,6 +566,7 @@ function ProjectsPage() {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={safePage === 1}
+                  aria-label="ไปหน้าก่อนหน้า"
                   className="size-8 rounded-md border border-border bg-background hover:bg-muted disabled:opacity-40 disabled:hover:bg-background flex items-center justify-center transition"
                 >
                   <ChevronLeft className="size-4" />
@@ -538,6 +581,8 @@ function ProjectsPage() {
                     <button
                       key={n}
                       onClick={() => setPage(n)}
+                      aria-label={`ไปหน้าที่ ${n}`}
+                      aria-current={n === safePage ? "page" : undefined}
                       className={[
                         "size-8 rounded-md text-sm font-medium transition tabular",
                         n === safePage
@@ -552,6 +597,7 @@ function ProjectsPage() {
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={safePage === totalPages}
+                  aria-label="ไปหน้าถัดไป"
                   className="size-8 rounded-md border border-border bg-background hover:bg-muted disabled:opacity-40 disabled:hover:bg-background flex items-center justify-center transition"
                 >
                   <ChevronRight className="size-4" />
@@ -830,6 +876,7 @@ function Select<T extends string | number>({
   return (
     <select
       value={value}
+      aria-label={placeholder}
       onChange={(e) => {
         const v = e.target.value;
         if (v === "") onChange("");

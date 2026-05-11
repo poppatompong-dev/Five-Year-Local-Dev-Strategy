@@ -33,9 +33,14 @@ function LoginPage() {
       toast.success("เข้าสู่ระบบสำเร็จ");
       window.location.href = "/";
     } catch (err: any) {
-      const msg = err?.message === "TOO_MANY_ATTEMPTS"
-        ? "พยายามเข้าสู่ระบบผิดหลายครั้งเกินไป กรุณารอ 1 นาทีแล้วลองใหม่"
-        : err?.message || "เข้าสู่ระบบไม่สำเร็จ";
+      const msg =
+        err?.message === "TOO_MANY_ATTEMPTS"
+          ? "พยายามเข้าสู่ระบบผิดหลายครั้งเกินไป กรุณารอ 1 นาทีแล้วลองใหม่"
+          : err?.message === "ADMIN_LOGIN_DISABLED"
+            ? "ระบบปิดการเข้าสู่ระบบผู้ดูแลชั่วคราว กรุณาติดต่อผู้ดูแลระบบ"
+            : err?.message === "ADMIN_LOGIN_NOT_ALLOWED"
+              ? "เครือข่ายนี้ไม่ได้รับอนุญาตให้เข้าสู่ระบบผู้ดูแล"
+              : err?.message || "เข้าสู่ระบบไม่สำเร็จ";
       toast.error(msg);
       setSubmitting(false);
     }

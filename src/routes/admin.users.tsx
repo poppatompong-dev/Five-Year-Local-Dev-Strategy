@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
+import { AdminOnly } from "@/components/AdminOnly";
 import { apiGetUsers, apiCreateUser, apiDeleteUser, apiResetUserPassword, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -16,11 +17,12 @@ export const Route = createFileRoute("/admin/users")({
 
 function UsersPage() {
   const qc = useQueryClient();
-  const { username } = useAuth();
+  const { username, isLoggedIn } = useAuth();
 
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ["admin-users"],
     queryFn: apiGetUsers,
+    enabled: isLoggedIn,
   });
 
   const deleteMutation = useMutation({
@@ -31,6 +33,17 @@ function UsersPage() {
   const [showForm, setShowForm] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<AuthUser | null>(null);
   const [resetTarget, setResetTarget] = useState<AuthUser | null>(null);
+
+  if (!isLoggedIn) {
+    return (
+      <AdminOnly
+        title="จัดการผู้ใช้สำหรับผู้ดูแลระบบ"
+        description="หน้านี้มีข้อมูลบัญชีเจ้าหน้าที่ จึงต้องเข้าสู่ระบบก่อนเข้าถึง"
+      >
+        <></>
+      </AdminOnly>
+    );
+  }
 
   return (
     <AppLayout>

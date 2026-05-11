@@ -29,6 +29,7 @@ function formatReportBaht(value: number) {
 }
 
 export function exportProjectsToExcel(projects: ProjectRow[], filename = "projects.xlsx") {
+  const generatedAt = new Date();
   const header = [
     "ID",
     "ชื่อโครงการ",
@@ -62,6 +63,17 @@ export function exportProjectsToExcel(projects: ProjectRow[], filename = "projec
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "โครงการ");
+  const meta = [
+    ["ชื่อชุดข้อมูล", "รายการโครงการแผนพัฒนาท้องถิ่น 5 ปี"],
+    ["หน่วยงาน", "เทศบาลนครนครสวรรค์"],
+    ["วันที่ส่งออก", generatedAt.toLocaleString("th-TH")],
+    ["สถานะข้อมูล", "ข้อมูลเผยแพร่สำหรับประชาชนแบบอ่านอย่างเดียว"],
+    ["แหล่งข้อมูล", "แผนพัฒนาท้องถิ่น พ.ศ. 2566-2570 และข้อมูลที่เจ้าหน้าที่เผยแพร่ในระบบ"],
+    ["หมายเหตุ", "ไฟล์นี้ไม่รวมข้อมูลผู้ดูแลระบบ audit log internal note หรือข้อมูลที่ยังไม่เผยแพร่เมื่อเปิดใช้ publish_status"],
+  ];
+  const wsMeta = XLSX.utils.aoa_to_sheet(meta.map(sanitizeExcelRow));
+  wsMeta["!cols"] = [{ wch: 24 }, { wch: 90 }];
+  XLSX.utils.book_append_sheet(wb, wsMeta, "ข้อมูลกำกับ");
   XLSX.writeFile(wb, filename);
 }
 
@@ -317,6 +329,7 @@ export function exportOfficialDashboardPdf(data: DashboardData) {
 
 export function exportDashboardToExcel(data: DashboardData, filename = "dashboard.xlsx") {
   const wb = XLSX.utils.book_new();
+  const generatedAt = new Date();
 
   // Sheet 1: Summary
   const summaryData = [
@@ -364,6 +377,18 @@ export function exportDashboardToExcel(data: DashboardData, filename = "dashboar
   const wsDept = XLSX.utils.aoa_to_sheet([sanitizeExcelRow(deptHeader), ...deptRows]);
   wsDept["!cols"] = [{ wch: 30 }, { wch: 15 }, { wch: 20 }];
   XLSX.utils.book_append_sheet(wb, wsDept, "หน่วยงาน");
+
+  const meta = [
+    ["ชื่อชุดข้อมูล", "สรุปภาพรวมแผนพัฒนาท้องถิ่น 5 ปี"],
+    ["หน่วยงาน", "เทศบาลนครนครสวรรค์"],
+    ["วันที่ส่งออก", generatedAt.toLocaleString("th-TH")],
+    ["สถานะข้อมูล", "ข้อมูลเผยแพร่สำหรับประชาชนแบบอ่านอย่างเดียว"],
+    ["แหล่งข้อมูล", "แผนพัฒนาท้องถิ่น พ.ศ. 2566-2570 และข้อมูลที่เจ้าหน้าที่เผยแพร่ในระบบ"],
+    ["ขอบเขต", "รวมเฉพาะข้อมูลสรุป public dashboard ไม่รวมข้อมูลผู้ดูแลระบบหรือ audit log"],
+  ];
+  const wsMeta = XLSX.utils.aoa_to_sheet(meta.map(sanitizeExcelRow));
+  wsMeta["!cols"] = [{ wch: 24 }, { wch: 90 }];
+  XLSX.utils.book_append_sheet(wb, wsMeta, "ข้อมูลกำกับ");
 
   XLSX.writeFile(wb, filename);
 }

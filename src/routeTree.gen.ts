@@ -10,9 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProjectsRouteImport } from './routes/projects'
+import { Route as ManualRouteImport } from './routes/manual'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ImportRouteImport } from './routes/import'
 import { Route as EquipmentRouteImport } from './routes/equipment'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
@@ -23,6 +25,11 @@ import { Route as AccountPathnameRouteImport } from './routes/account.$pathname'
 const ProjectsRoute = ProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManualRoute = ManualRouteImport.update({
+  id: '/manual',
+  path: '/manual',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -38,6 +45,11 @@ const ImportRoute = ImportRouteImport.update({
 const EquipmentRoute = EquipmentRouteImport.update({
   id: '/equipment',
   path: '/equipment',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -73,9 +85,11 @@ const AccountPathnameRoute = AccountPathnameRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/equipment': typeof EquipmentRoute
   '/import': typeof ImportRoute
   '/login': typeof LoginRoute
+  '/manual': typeof ManualRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/account/$pathname': typeof AccountPathnameRoute
   '/admin/audit': typeof AdminAuditRoute
@@ -85,9 +99,11 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/equipment': typeof EquipmentRoute
   '/import': typeof ImportRoute
   '/login': typeof LoginRoute
+  '/manual': typeof ManualRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/account/$pathname': typeof AccountPathnameRoute
   '/admin/audit': typeof AdminAuditRoute
@@ -98,9 +114,11 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/equipment': typeof EquipmentRoute
   '/import': typeof ImportRoute
   '/login': typeof LoginRoute
+  '/manual': typeof ManualRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/account/$pathname': typeof AccountPathnameRoute
   '/admin/audit': typeof AdminAuditRoute
@@ -112,9 +130,11 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
     | '/equipment'
     | '/import'
     | '/login'
+    | '/manual'
     | '/projects'
     | '/account/$pathname'
     | '/admin/audit'
@@ -124,9 +144,11 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/equipment'
     | '/import'
     | '/login'
+    | '/manual'
     | '/projects'
     | '/account/$pathname'
     | '/admin/audit'
@@ -136,9 +158,11 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/about'
     | '/equipment'
     | '/import'
     | '/login'
+    | '/manual'
     | '/projects'
     | '/account/$pathname'
     | '/admin/audit'
@@ -149,9 +173,11 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
   EquipmentRoute: typeof EquipmentRoute
   ImportRoute: typeof ImportRoute
   LoginRoute: typeof LoginRoute
+  ManualRoute: typeof ManualRoute
   ProjectsRoute: typeof ProjectsRouteWithChildren
   AccountPathnameRoute: typeof AccountPathnameRoute
   AdminAuditRoute: typeof AdminAuditRoute
@@ -166,6 +192,13 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof ProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manual': {
+      id: '/manual'
+      path: '/manual'
+      fullPath: '/manual'
+      preLoaderRoute: typeof ManualRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -187,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/equipment'
       fullPath: '/equipment'
       preLoaderRoute: typeof EquipmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -248,9 +288,11 @@ const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
   EquipmentRoute: EquipmentRoute,
   ImportRoute: ImportRoute,
   LoginRoute: LoginRoute,
+  ManualRoute: ManualRoute,
   ProjectsRoute: ProjectsRouteWithChildren,
   AccountPathnameRoute: AccountPathnameRoute,
   AdminAuditRoute: AdminAuditRoute,

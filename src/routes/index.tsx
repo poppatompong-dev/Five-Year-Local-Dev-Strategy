@@ -7,9 +7,12 @@ import { Tooltip as TipRoot, TooltipContent as TipContent, TooltipTrigger as Tip
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AppLayout } from "@/components/AppLayout";
+import { AgencyLogo } from "@/components/AgencyLogo";
+import { PublicDataNotice } from "@/components/PublicDataNotice";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { formatBaht, STATUS_COLOR, YEARS, type Status } from "@/lib/mock-data";
+import { getActivePlanFiscalYear, getFiscalQuarter } from "@/lib/fiscal-year";
 import { ANNOTATION_TYPE_LABEL, apiGetDashboard, apiGetProjects, apiGetProject, apiUpdateProject, apiPatchProjectStatus, apiLogAudit } from "@/lib/api";
 import { exportDashboardToExcel, exportOfficialDashboardPdf } from "@/lib/export";
 import type { ProjectRow, StrategyProgress, ProjectCreateInput, ProjectDetail } from "@/lib/api";
@@ -70,6 +73,9 @@ import {
   Printer,
   CircleDashed,
   MessageSquareText,
+  ClipboardCheck,
+  AlertTriangle,
+  Gauge,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -108,6 +114,21 @@ type TableSort  = "default" | "name_asc" | "budget_desc" | "budget_asc" | "statu
 type ProgressSort = "completion_desc" | "completion_asc" | "count_desc" | "budget_desc" | "id_asc";
 type YearSort   = "year_asc" | "year_desc" | "budget_desc" | "count_desc";
 
+function getProjectRowTone(status: Status) {
+  switch (status) {
+    case "completed":
+      return "border-l-success bg-success/5 hover:bg-success/10";
+    case "in_progress":
+      return "border-l-warning bg-warning/5 hover:bg-warning/10";
+    case "planning":
+      return "border-l-info bg-info/5 hover:bg-info/10";
+    case "cancelled":
+      return "border-l-destructive bg-destructive/5 hover:bg-destructive/10";
+    default:
+      return "border-l-muted-foreground/40 bg-muted/20 hover:bg-muted/40";
+  }
+}
+
 // ── Count-up animation hook ───────────────────────────────────────────────────
 function useCountUp(target: number, duration = 900, enabled = true) {
   const [count, setCount] = useState(0);
@@ -129,6 +150,8 @@ function useCountUp(target: number, duration = 900, enabled = true) {
 
 function DashboardPage() {
   const { isLoggedIn } = useAuth();
+  const activeFiscalYear = getActivePlanFiscalYear();
+  const fiscalQuarter = getFiscalQuarter();
 
   // ── Filter state ──────────────────────────────────────────────────────────
   const [filterStatus, setFilterStatus] = useState<FilterStatus>(null);
@@ -210,6 +233,11 @@ function DashboardPage() {
     queryKey: ["projects", "recent"],
     queryFn: () => apiGetProjects({ page: 1, limit: 6 }),
     enabled: !hasFilter,
+  });
+
+  const { data: followUpResult } = useQuery({
+    queryKey: ["projects", "follow-up", activeFiscalYear],
+    queryFn: () => apiGetProjects({ page: 1, limit: 200, year: activeFiscalYear }),
   });
 
   const tableRows: ProjectRow[] = hasFilter
@@ -303,6 +331,8 @@ function DashboardPage() {
     }
   }, [tableRows, tableSort]);
 
+  const followUpRows = useMemo(() => followUpResult?.data ?? [], [followUpResult?.data]);
+
   // ── Loading skeleton ───────────────────────────────────────────────────────
   if (isLoading) {
     return (
@@ -379,7 +409,12 @@ function DashboardPage() {
           <div aria-hidden className="absolute -top-8  -right-8  size-40 rounded-full border border-white/8" />
           <div aria-hidden className="absolute -bottom-20 -left-10 size-72 rounded-full border border-white/6" />
           <div className="relative flex flex-wrap items-center justify-between gap-6">
-            <div>
+            <div className="flex min-w-0 flex-1 flex-col gap-5 md:flex-row md:items-center">
+              <AgencyLogo
+                className="size-24 shrink-0 rounded-full bg-white p-2 ring-2 ring-white/60 shadow-[0_16px_36px_-16px_oklch(0_0_0_/_0.55)] md:size-28"
+                imgClassName="size-full"
+              />
+              <div className="min-w-0">
               <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur px-3 py-1 text-xs font-medium ring-1 ring-white/20">
                 <Calendar className="size-3.5" />ปีงบประมาณ 2566 – 2570
               </div>
@@ -391,8 +426,9 @@ function DashboardPage() {
                 <MousePointerClick className="size-3" />
                 คลิกที่กราฟใดก็ได้เพื่อกรองตารางโครงการด้านล่างทันที
               </div>
+              </div>
             </div>
-            <div className="flex flex-col items-end gap-1 text-right">
+            <div className="flex flex-col items-start gap-1 text-left sm:items-end sm:text-right">
               <div className="text-primary-foreground/70 text-xs">งบประมาณรวม 5 ปี</div>
               <div className="text-3xl font-bold tabular tracking-tight">{formatBaht(data.totalBudget, { compact: true })}</div>
               <div className="text-primary-foreground/70 text-xs">บาท · {data.totalProjects.toLocaleString("th-TH")} โครงการ</div>
@@ -408,31 +444,29 @@ function DashboardPage() {
                 >
                   <Download className="size-3.5" /> ส่งออก
                 </button>
-                <button
-                  onClick={() => {
-                    if (!isLoggedIn) {
-                      toast.error("กรุณาเข้าสู่ระบบผู้ดูแลก่อนส่งออกรายงาน PDF");
-                      return;
-                    }
-                    if (data) {
-                      apiLogAudit({
-                        action: "export",
-                        entity: "official_report",
-                        after: {
-                          format: "pdf",
-                          template: "official-dashboard-summary",
-                          totalProjects: data.totalProjects,
-                          totalBudget: data.totalBudget,
-                        },
-                      }).catch(() => {});
-                      exportOfficialDashboardPdf(data);
-                      toast.success("เปิดเทมเพลตรายงาน PDF แล้ว");
-                    }
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-gold text-gold-foreground hover:bg-gold/90 px-3 py-1.5 text-xs font-semibold ring-1 ring-white/20 transition"
-                >
-                  <Printer className="size-3.5" /> PDF ราชการ
-                </button>
+                {isLoggedIn && (
+                  <button
+                    onClick={() => {
+                      if (data) {
+                        apiLogAudit({
+                          action: "export",
+                          entity: "official_report",
+                          after: {
+                            format: "pdf",
+                            template: "official-dashboard-summary",
+                            totalProjects: data.totalProjects,
+                            totalBudget: data.totalBudget,
+                          },
+                        }).catch(() => {});
+                        exportOfficialDashboardPdf(data);
+                        toast.success("เปิดเทมเพลตรายงาน PDF แล้ว");
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-gold text-gold-foreground hover:bg-gold/90 px-3 py-1.5 text-xs font-semibold ring-1 ring-white/20 transition"
+                  >
+                    <Printer className="size-3.5" /> PDF ราชการ
+                  </button>
+                )}
                 <Link to="/projects" className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur px-3 py-1.5 text-xs font-medium ring-1 ring-white/20 transition">
                   ดูโครงการทั้งหมด <ArrowUpRight className="size-3.5" />
                 </Link>
@@ -440,6 +474,17 @@ function DashboardPage() {
             </div>
           </div>
         </section>
+
+        <PublicDataNotice />
+
+        <ProjectFollowUpPanel
+          fiscalYear={activeFiscalYear}
+          fiscalQuarter={fiscalQuarter}
+          projects={followUpRows}
+          onYearClick={() => setYearFilter(activeFiscalYear)}
+          onPlanningClick={() => setStatusFilter("planning")}
+          onProgressClick={() => setStatusFilter("in_progress")}
+        />
 
         {/* ── Status KPI strip — clickable filter ───────────────────── */}
         <section className="grid grid-cols-2 lg:grid-cols-5 gap-3">
@@ -826,10 +871,10 @@ function DashboardPage() {
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto -mx-2">
-              <table className="w-full text-sm">
+            <div className="-mx-2 max-h-[70vh] overflow-auto">
+              <table className="w-full min-w-[860px] border-separate border-spacing-0 text-sm">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
+                  <tr className="sticky top-0 z-10 border-b border-border bg-card/95 text-left text-xs uppercase tracking-wider text-muted-foreground backdrop-blur">
                     <th className="px-3 py-2.5 font-medium">#</th>
                     <th className="px-3 py-2.5 font-medium">ชื่อโครงการ</th>
                     <th className="px-3 py-2.5 font-medium hidden md:table-cell">หน่วยงาน</th>
@@ -851,10 +896,13 @@ function DashboardPage() {
                     <tr
                       key={p.id}
                       className={[
-                        "border-b border-border/50 transition-colors group cursor-pointer",
+                        "group cursor-pointer border-b border-l-4 border-border/50 transition-colors",
                         selectedProjectId === p.id
                           ? "bg-primary/8 ring-1 ring-inset ring-primary/20"
-                          : "hover:bg-muted/40",
+                          : i % 2 === 0
+                            ? "bg-card"
+                            : "bg-muted/10",
+                        getProjectRowTone(p.status),
                       ].join(" ")}
                       onClick={(e) => {
                         // Don't open sheet when clicking the quick-menu
@@ -862,11 +910,20 @@ function DashboardPage() {
                         setSelectedProjectId(p.id);
                       }}
                     >
-                      <td className="px-3 py-3 text-muted-foreground tabular text-xs">{i + 1}</td>
-                      <td className="px-3 py-3 max-w-[220px]">
-                        <span className="font-medium line-clamp-2 group-hover:text-primary transition-colors">
+                      <td className="px-3 py-3 text-muted-foreground tabular text-xs">
+                        <span className="inline-flex h-6 min-w-7 items-center justify-center rounded-full bg-background px-2 font-semibold shadow-sm ring-1 ring-border">
+                          {i + 1}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 max-w-[260px]">
+                        <span className="line-clamp-2 font-semibold leading-relaxed transition-colors group-hover:text-primary">
                           {p.name}
                         </span>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground md:hidden">
+                          <span className="max-w-[180px] truncate">{p.department ?? "ไม่ระบุหน่วยงาน"}</span>
+                          <span>·</span>
+                          <span>{formatBaht(p.total_budget, { compact: true })} บาท</span>
+                        </div>
                         {p.annotation_count > 0 && (
                           <span className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700 ring-1 ring-amber-200">
                             <MessageSquareText className="size-3 shrink-0" />
@@ -1586,6 +1643,230 @@ function StatCard({
         <div className="text-2xl font-semibold tracking-tight tabular">{value}</div>
         <div className="text-xs text-muted-foreground">{sub}</div>
       </div>
+    </div>
+  );
+}
+
+function ProjectFollowUpPanel({
+  fiscalYear,
+  fiscalQuarter,
+  projects,
+  onYearClick,
+  onPlanningClick,
+  onProgressClick,
+}: {
+  fiscalYear: number;
+  fiscalQuarter: number;
+  projects: ProjectRow[];
+  onYearClick: () => void;
+  onPlanningClick: () => void;
+  onProgressClick: () => void;
+}) {
+  const urgent = projects.filter((p) => p.status === "not_set" || p.status === "planning");
+  const monitoring = projects.filter((p) => p.status === "in_progress");
+  const completed = projects.filter((p) => p.status === "completed");
+  const totalBudget = projects.reduce((sum, p) => sum + Number(p.total_budget || 0), 0);
+  const completionRate = projects.length > 0 ? Math.round((completed.length / projects.length) * 100) : 0;
+  const activeWorkTotal = Math.max(1, urgent.length + monitoring.length);
+
+  const deptFocus = [
+    ...projects
+      .reduce((map, p) => {
+        const key = p.department || "ไม่ระบุหน่วยงาน";
+        const current = map.get(key) ?? { department: key, count: 0, budget: 0 };
+
+        if (p.status === "not_set" || p.status === "planning" || p.status === "in_progress") {
+          current.count += 1;
+          current.budget += Number(p.total_budget || 0);
+        }
+
+        map.set(key, current);
+        return map;
+      }, new Map<string, { department: string; count: number; budget: number }>())
+      .values(),
+  ]
+    .filter((item) => item.count > 0)
+    .sort((a, b) => b.count - a.count || b.budget - a.budget)
+    .slice(0, 3);
+
+  const priority = [...urgent, ...monitoring]
+    .sort((a, b) => {
+      const score = (status: Status) => {
+        if (status === "not_set") return 0;
+        if (status === "planning") return 1;
+        if (status === "in_progress") return 2;
+        return 3;
+      };
+      return score(a.status) - score(b.status) || Number(b.total_budget || 0) - Number(a.total_budget || 0);
+    })
+    .slice(0, 5);
+
+  const quarterHint =
+    fiscalQuarter >= 3
+      ? "ช่วงครึ่งหลังของปีงบประมาณ ควรเน้นงานที่ยังไม่เริ่มและงานที่ต้องเร่งปิดผล"
+      : "ช่วงต้นปีงบประมาณ ควรเน้นยืนยันแผน เริ่มกระบวนการ และจัดลำดับงานสำคัญ";
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5 shadow-soft lg:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <ClipboardCheck className="size-4 text-primary" />
+            เร่งรัดและติดตามโครงการ
+          </div>
+          <h2 className="mt-1 text-xl font-semibold tracking-tight">
+            ปีงบประมาณ {fiscalYear} · ไตรมาส {fiscalQuarter}
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            {quarterHint} โดยระบบคำนวณจากสถานะและงบประมาณรายปีที่มีอยู่ ไม่เพิ่มภาระกรอกข้อมูลให้เจ้าหน้าที่
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onYearClick}
+            className="rounded-lg border border-border px-3 py-2 text-xs font-medium transition-colors hover:bg-muted"
+          >
+            ดูโครงการปีนี้
+          </button>
+          <button
+            type="button"
+            onClick={onPlanningClick}
+            className="rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-xs font-medium text-info transition-colors hover:bg-info/15"
+          >
+            งานวางแผน
+          </button>
+          <button
+            type="button"
+            onClick={onProgressClick}
+            className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-medium text-warning transition-colors hover:bg-warning/15"
+          >
+            งานดำเนินการ
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <FollowUpMetric
+          icon={<AlertTriangle className="size-4" />}
+          label="ควรเร่งรัด"
+          value={urgent.length.toLocaleString("th-TH")}
+          sub="ยังไม่เริ่ม/ยังวางแผน"
+          tone="warning"
+        />
+        <FollowUpMetric
+          icon={<Gauge className="size-4" />}
+          label="กำลังติดตาม"
+          value={monitoring.length.toLocaleString("th-TH")}
+          sub="อยู่ระหว่างดำเนินการ"
+          tone="info"
+        />
+        <FollowUpMetric
+          icon={<CheckCircle2 className="size-4" />}
+          label="ปิดงานแล้ว"
+          value={`${completionRate}%`}
+          sub={`${completed.length.toLocaleString("th-TH")} โครงการ`}
+          tone="success"
+        />
+        <FollowUpMetric
+          icon={<Wallet className="size-4" />}
+          label="งบประมาณปีนี้"
+          value={formatBaht(totalBudget, { compact: true })}
+          sub="บาท"
+          tone="gold"
+        />
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="rounded-xl border border-border bg-muted/20 p-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">รายการที่ควรหยิบมาติดตามก่อน</h3>
+            <span className="text-xs text-muted-foreground">{priority.length.toLocaleString("th-TH")} รายการ</span>
+          </div>
+          {priority.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+              ยังไม่มีรายการเร่งรัดในปีงบประมาณนี้
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {priority.map((project) => (
+                <Link
+                  key={project.id}
+                  to="/projects/$projectId"
+                  params={{ projectId: String(project.id) }}
+                  className="flex items-start justify-between gap-3 rounded-lg bg-background px-3 py-2.5 text-sm transition-colors hover:bg-muted/70"
+                >
+                  <div className="min-w-0">
+                    <div className="line-clamp-1 font-medium">{project.name}</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span>{project.department || "ไม่ระบุหน่วยงาน"}</span>
+                      <span>·</span>
+                      <span>{formatBaht(project.total_budget)} บาท</span>
+                    </div>
+                  </div>
+                  <StatusBadge status={project.status} />
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-border bg-muted/20 p-4">
+          <h3 className="mb-3 text-sm font-semibold">หน่วยงานที่ควรติดตามใกล้ชิด</h3>
+          {deptFocus.length === 0 ? (
+            <p className="text-sm text-muted-foreground">ยังไม่มีหน่วยงานที่ต้องเร่งรัดเป็นพิเศษ</p>
+          ) : (
+            <div className="space-y-3">
+              {deptFocus.map((dept) => (
+                <div key={dept.department}>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="line-clamp-1 font-medium">{dept.department}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{dept.count} งาน</span>
+                  </div>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-background">
+                    <div
+                      className="h-full rounded-full bg-warning"
+                      style={{ width: `${Math.min(100, (dept.count / activeWorkTotal) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FollowUpMetric({
+  icon,
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub: string;
+  tone: "warning" | "info" | "success" | "gold";
+}) {
+  const tones: Record<"warning" | "info" | "success" | "gold", string> = {
+    warning: "bg-warning/10 text-warning",
+    info: "bg-info/10 text-info",
+    success: "bg-success/10 text-success",
+    gold: "bg-gold/15 text-gold-foreground",
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-background px-4 py-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-muted-foreground">{label}</span>
+        <span className={`flex size-8 items-center justify-center rounded-lg ${tones[tone]}`}>{icon}</span>
+      </div>
+      <div className="mt-1.5 text-2xl font-semibold tabular">{value}</div>
+      <div className="text-xs text-muted-foreground">{sub}</div>
     </div>
   );
 }

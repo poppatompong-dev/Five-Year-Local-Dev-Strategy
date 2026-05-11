@@ -1,13 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import bcrypt from "bcryptjs";
 import { getSql } from "./db";
-import { requireAdmin } from "./session.server";
+import { getServerSession, requireAdmin } from "./session.server";
 import type {
   DBStrategy, DBTactic, DBPlan, DBProject, DBProjectBudget,
   DBProjectAnnotation, DBDepartment, DBAuditEvent, DBEquipment,
   AuthUser, ProjectCreateInput, EquipmentCreateInput,
   ProjectListParams, ProjectListResult, ProjectRow, ProjectDetail,
   EquipmentListResult, DashboardData, ImportResult, StrategyProgress,
+  PublicDataSummary,
 } from "./api";
 import type { Status } from "./mock-data";
 
@@ -44,6 +45,47 @@ function actorFromSession(session: AdminSession) {
     userId: session.userId ?? null,
     username: session.username ?? null,
   };
+}
+
+const columnCache = new Map<string, boolean>();
+
+async function hasColumn(sql: any, tableName: string, columnName: string) {
+  const key = `${tableName}.${columnName}`;
+  if (columnCache.has(key)) return columnCache.get(key)!;
+  const rows = await sql`
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = ${tableName}
+      AND column_name = ${columnName}
+    LIMIT 1
+  `;
+  const exists = rows.length > 0;
+  columnCache.set(key, exists);
+  return exists;
+}
+
+async function isAdminViewer() {
+  try {
+    const session = await getServerSession();
+    return !!session.data?.userId;
+  } catch {
+    return false;
+  }
+}
+
+async function applyPublishedFilter(sql: any, rows: any[], tableName: "projects" | "equipment") {
+  if (await isAdminViewer()) return rows;
+  if (!(await hasColumn(sql, tableName, "publish_status"))) return rows;
+  return rows.filter((row) => row.publish_status === "published");
+}
+
+function maxIsoDate(values: Array<string | null | undefined>) {
+  const times = values
+    .map((value) => (value ? new Date(value).getTime() : Number.NaN))
+    .filter((value) => Number.isFinite(value));
+  if (!times.length) return null;
+  return new Date(Math.max(...times)).toISOString();
 }
 
 function auditSystemMeta(entity: string, action: DBAuditEvent["action"]) {
@@ -83,8 +125,10 @@ export const serverGetPlans = createServerFn({ method: "GET" })
 
 export const serverGetDepartments = createServerFn({ method: "GET" })
   .handler(async () => {
-    const rows = await getSql()`SELECT DISTINCT department FROM projects WHERE department IS NOT NULL ORDER BY department`;
-    return rows.map((r: any) => r.department as string);
+    const sql = getSql();
+    const rows = await sql`SELECT * FROM projects WHERE department IS NOT NULL ORDER BY department`;
+    const filtered = await applyPublishedFilter(sql, rows as any[], "projects");
+    return Array.from(new Set(filtered.map((r: any) => r.department as string).filter(Boolean))).sort();
   });
 
 // ---------------------------------------------------------------------------
@@ -108,7 +152,7 @@ export const serverGetProjects = createServerFn({ method: "POST" })
     const offset = (page - 1) * limit;
     const sql = getSql();
 
-    const allProjects = await sql`
+    const allProjectRows = await sql`
       SELECT
         p.*,
         pl.name AS plan_name,
@@ -124,6 +168,7 @@ export const serverGetProjects = createServerFn({ method: "POST" })
       LEFT JOIN strategies s ON t.strategy_id = s.id
       ORDER BY p.id
     `;
+    const allProjects = await applyPublishedFilter(sql, allProjectRows as any[], "projects");
     const allAnnotations = (await sql`
       SELECT *
       FROM project_annotations
@@ -216,6 +261,8 @@ export const serverGetProject = createServerFn({ method: "POST" })
     `;
     if (!rows.length) return null;
     const r: any = rows[0];
+    const visibleRows = await applyPublishedFilter(sql, [r], "projects");
+    if (!visibleRows.length) return null;
 
     const budgetRows = await sql`SELECT year, amount FROM project_budgets WHERE project_id = ${data.id}`;
     const budgets: Record<number, number> = {};
@@ -474,8 +521,9 @@ export const serverGetEquipment = createServerFn({ method: "POST" })
   .handler(async ({ data }: { data: { search?: string; page?: number; limit?: number } }) => {
     const { page = 1, limit = 10, search } = data ?? {};
     const offset = (page - 1) * limit;
-    const allRows = await getSql()`SELECT * FROM equipment ORDER BY id`;
-    let filtered = allRows as any[];
+    const sql = getSql();
+    const allRows = await sql`SELECT * FROM equipment ORDER BY id`;
+    let filtered = await applyPublishedFilter(sql, allRows as any[], "equipment");
     if (search) {
       const s = search.toLowerCase();
       filtered = filtered.filter((r: any) => r.item_type?.toLowerCase().includes(s));
@@ -560,17 +608,20 @@ export const serverDeleteEquipment = createServerFn({ method: "POST" })
 export const serverGetDashboard = createServerFn({ method: "GET" })
   .handler(async () => {
     const sql = getSql();
-    const [projects, strategies, plans, budgets, tactics] = await Promise.all([
-      sql`SELECT id, status, department, plan_id FROM projects`,
+    const [projectRows, strategies, plans, budgets, tactics] = await Promise.all([
+      sql`SELECT * FROM projects`,
       sql`SELECT * FROM strategies ORDER BY id`,
       sql`SELECT id, tactic_id FROM plans`,
       sql`SELECT project_id, year, amount FROM project_budgets`,
       sql`SELECT id, strategy_id FROM tactics`,
     ]);
+    const projects = await applyPublishedFilter(sql, projectRows as any[], "projects");
+    const visibleProjectIds = new Set(projects.map((p: any) => p.id));
 
     const budgetByProject = new Map<number, number>();
     const budgetByYear = new Map<number, { total: number; count: Set<number> }>();
     budgets.forEach((b: any) => {
+      if (!visibleProjectIds.has(b.project_id)) return;
       budgetByProject.set(b.project_id, (budgetByProject.get(b.project_id) ?? 0) + Number(b.amount));
       const yb = budgetByYear.get(b.year) ?? { total: 0, count: new Set<number>() };
       yb.total += Number(b.amount);
@@ -648,6 +699,46 @@ export const serverGetDashboard = createServerFn({ method: "GET" })
       byYear,
       topDepts,
     } as DashboardData;
+  });
+
+export const serverGetPublicDataSummary = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const sql = getSql();
+    const [projectMeta, equipmentMeta, auditMetaRows, batchRows, documentRows] = await Promise.all([
+      sql`SELECT COUNT(*)::int AS count, MAX(created_at) AS last_updated FROM projects`.catch(() => []),
+      sql`SELECT COUNT(*)::int AS count FROM equipment`.catch(() => []),
+      sql`SELECT MAX(timestamp) AS last_updated FROM audit_events WHERE action IN ('import','update','status_change')`.catch(() => []),
+      sql`SELECT source_file, imported_at, status FROM import_batches ORDER BY imported_at DESC LIMIT 1`.catch(() => []),
+      sql`SELECT key, value FROM document_metadata WHERE key IN ('source_file','workbook_name','document_title','last_imported_at')`.catch(() => []),
+    ]);
+
+    const documentMeta = new Map((documentRows as any[]).map((row) => [String(row.key), String(row.value)]));
+    const latestBatch = (batchRows as any[])[0] as any | undefined;
+    const sourceName =
+      documentMeta.get("document_title") ??
+      "แผนพัฒนาท้องถิ่น พ.ศ. 2566-2570 เทศบาลนครนครสวรรค์";
+    const sourceFileName =
+      latestBatch?.source_file ??
+      documentMeta.get("source_file") ??
+      documentMeta.get("workbook_name") ??
+      "เอกสารแผนพัฒนาท้องถิ่นฉบับทางราชการ";
+
+    return {
+      sourceName,
+      sourceFileName,
+      dataStatus: "เผยแพร่แบบอ่านอย่างเดียว",
+      validationStatus: latestBatch?.status ?? "validated",
+      reconciliationStatus: "อยู่ระหว่างตรวจทานเทียบเอกสารต้นทาง",
+      lastUpdated: maxIsoDate([
+        (projectMeta as any[])[0]?.last_updated,
+        (auditMetaRows as any[])[0]?.last_updated,
+        latestBatch?.imported_at,
+        documentMeta.get("last_imported_at"),
+      ]),
+      verificationNote: "ข้อมูลเผยแพร่สำหรับประชาชนเป็นข้อมูลอ่านอย่างเดียว และจะปรับปรุงเมื่อเจ้าหน้าที่ตรวจทานหรือเผยแพร่ข้อมูลชุดใหม่",
+      projectCount: Number((projectMeta as any[])[0]?.count ?? 0),
+      equipmentCount: Number((equipmentMeta as any[])[0]?.count ?? 0),
+    } as PublicDataSummary;
   });
 
 // ---------------------------------------------------------------------------

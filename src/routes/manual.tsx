@@ -1,0 +1,133 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { AppLayout } from "@/components/AppLayout";
+import { Button } from "@/components/ui/button";
+import { BookOpen, ClipboardCheck, Download, FolderKanban, Gauge, Lock, Printer, Search, Wrench } from "lucide-react";
+import type { ReactNode } from "react";
+
+export const Route = createFileRoute("/manual")({
+  head: () => ({
+    meta: [
+      { title: "คู่มือการใช้งาน · ระบบบริหารแผนพัฒนาท้องถิ่น" },
+      { name: "description", content: "คู่มือการใช้งานระบบบริหารแผนพัฒนาท้องถิ่น 5 ปี เทศบาลนครนครสวรรค์" },
+    ],
+  }),
+  component: ManualPage,
+});
+
+function ManualPage() {
+  return (
+    <AppLayout>
+      <style>{`
+        @media print {
+          body { background: white !important; }
+          aside, header, footer, .manual-print-hidden { display: none !important; }
+          main { padding: 0 !important; }
+          .manual-page {
+            box-shadow: none !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            max-width: none !important;
+            color: #111827 !important;
+          }
+          .manual-section { break-inside: avoid; page-break-inside: avoid; }
+          a { color: inherit; text-decoration: none; }
+        }
+      `}</style>
+
+      <article className="manual-page mx-auto max-w-5xl rounded-2xl border border-border bg-card p-6 shadow-soft lg:p-8">
+        <div className="manual-print-hidden mb-6 flex flex-wrap items-center justify-between gap-3">
+          <Button variant="outline" asChild>
+            <Link to="/">กลับหน้าภาพรวม</Link>
+          </Button>
+          <Button onClick={() => window.print()} className="gap-2">
+            <Printer className="size-4" />
+            พิมพ์ / บันทึกเป็น PDF
+          </Button>
+        </div>
+
+        <header className="mb-8 border-b border-border pb-6">
+          <div className="flex items-center gap-3 text-primary">
+            <BookOpen className="size-7" />
+            <div className="text-sm font-medium uppercase tracking-wider">คู่มือภาษาไทย</div>
+          </div>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight">คู่มือการใช้งานระบบบริหารแผนพัฒนาท้องถิ่น 5 ปี</h1>
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+            สำหรับเจ้าหน้าที่และผู้ใช้ทั่วไปของเทศบาลนครนครสวรรค์ คู่มือนี้เน้นขั้นตอนใช้งานจริง อ่านเร็ว และพิมพ์เป็น PDF ได้จากปุ่มด้านบน
+          </p>
+        </header>
+
+        <section className="manual-section mb-7 grid gap-3 md:grid-cols-3">
+          <QuickCard icon={<Gauge className="size-4" />} title="ภาพรวม" text="ดูจำนวนโครงการ งบประมาณ สถานะ และงานที่ควรติดตามตามปีงบประมาณ" />
+          <QuickCard icon={<FolderKanban className="size-4" />} title="โครงการ" text="ค้นหา กรอง ดูรายละเอียด และปรับสถานะเมื่อเข้าสู่ระบบผู้ดูแล" />
+          <QuickCard icon={<Wrench className="size-4" />} title="ครุภัณฑ์" text="ดูรายการครุภัณฑ์ งบประมาณรายปี และรายละเอียดรายการ" />
+        </section>
+
+        <ManualSection title="1. สำหรับประชาชนทั่วไป" icon={<Search className="size-5" />}>
+          <Step text="เปิดหน้าภาพรวมเพื่อดูจำนวนโครงการ งบประมาณรวม และสถานะการดำเนินงาน" />
+          <Step text="ใช้เมนูโครงการเพื่อค้นหาตามชื่อ หน่วยงาน ยุทธศาสตร์ แผนงาน สถานะ และปีงบประมาณ" />
+          <Step text="กดชื่อโครงการเพื่ออ่านรายละเอียด งบประมาณรายปี แหล่งข้อมูล และหมายเหตุจากไฟล์ต้นทาง" />
+          <Step text="ใช้ปุ่มส่งออกเฉพาะข้อมูล public เพื่อดาวน์โหลดข้อมูลที่เผยแพร่แล้ว" />
+        </ManualSection>
+
+        <ManualSection title="2. สำหรับเจ้าหน้าที่ผู้ดูแล" icon={<Lock className="size-5" />}>
+          <Step text="กดเข้าสู่ระบบผู้ดูแลจากแถบซ้าย แล้วเข้าสู่ระบบด้วยบัญชีภายในที่ได้รับมอบหมาย" />
+          <Step text="หลังเข้าสู่ระบบ จะเห็นเมนูนำเข้าข้อมูล โครงสร้างแผน จัดการผู้ใช้ และประวัติการใช้งาน" />
+          <Step text="การเพิ่ม แก้ไข ลบ และ import จะถูกบันทึกใน audit log โดยอัตโนมัติ" />
+          <Step text="หากเข้าสู่ระบบผิดหลายครั้ง ระบบจะล็อกชั่วคราวประมาณ 1 นาทีเพื่อป้องกัน brute force" />
+        </ManualSection>
+
+        <ManualSection title="3. การเร่งรัดและติดตามโครงการ" icon={<ClipboardCheck className="size-5" />}>
+          <Step text="ดูแผงเร่งรัดและติดตามในหน้าภาพรวม ระบบจะเลือกปีงบประมาณปัจจุบันให้เอง" />
+          <Step text="โครงการที่มีงบปีปัจจุบันแต่ยังเป็น “ยังไม่กำหนด” หรือ “วางแผน” จะถูกจัดเป็นงานควรเร่งรัด" />
+          <Step text="โครงการ “ดำเนินการ” คือกลุ่มที่ควรติดตามความคืบหน้าเป็นระยะ โดยไม่ต้องกรอกข้อมูลเพิ่ม" />
+          <Step text="ใช้ปุ่มลัดในแผงติดตามเพื่อกรองรายการปีนี้ งานวางแผน หรืองานดำเนินการ แล้วเปิดรายละเอียดเพื่อปรับสถานะ" />
+        </ManualSection>
+
+        <ManualSection title="4. การส่งออกและการพิมพ์" icon={<Download className="size-5" />}>
+          <Step text="ปุ่มส่งออกบนหน้าภาพรวมและหน้าโครงการจะสร้างไฟล์ Excel พร้อมแผ่นข้อมูลกำกับ เช่น วันที่ส่งออกและแหล่งข้อมูล" />
+          <Step text="รายงาน PDF ราชการจะแสดงเฉพาะเมื่อเข้าสู่ระบบผู้ดูแล" />
+          <Step text="หน้าคู่มือนี้สามารถกด “พิมพ์ / บันทึกเป็น PDF” แล้วเลือก Save as PDF ใน browser ได้" />
+        </ManualSection>
+
+        <ManualSection title="5. ข้อควรระวัง" icon={<ClipboardCheck className="size-5" />}>
+          <Step text="อย่านำ DATABASE_URL, SESSION_PASSWORD หรือไฟล์ .env ไปใส่ในเอกสารสาธารณะหรือ repository public" />
+          <Step text="ก่อน import ข้อมูลชุดใหญ่ ควรสำรองฐานข้อมูลหรือใช้ Neon branch สำหรับ staging" />
+          <Step text="หากพบข้อมูลผิด ให้ตรวจแหล่งข้อมูลและ audit log ก่อนแก้ไขหรือ rollback" />
+        </ManualSection>
+      </article>
+    </AppLayout>
+  );
+}
+
+function QuickCard({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-muted/25 p-4">
+      <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+        <span className="flex size-8 items-center justify-center rounded-lg bg-primary-soft text-primary">{icon}</span>
+        {title}
+      </div>
+      <p className="text-sm leading-relaxed text-muted-foreground">{text}</p>
+    </div>
+  );
+}
+
+function ManualSection({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
+  return (
+    <section className="manual-section mb-7 rounded-xl border border-border p-5">
+      <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold">
+        <span className="text-primary">{icon}</span>
+        {title}
+      </h2>
+      <ol className="space-y-2">{children}</ol>
+    </section>
+  );
+}
+
+function Step({ text }: { text: string }) {
+  return (
+    <li className="flex gap-3 text-sm leading-relaxed text-foreground/85">
+      <span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary" />
+      <span>{text}</span>
+    </li>
+  );
+}

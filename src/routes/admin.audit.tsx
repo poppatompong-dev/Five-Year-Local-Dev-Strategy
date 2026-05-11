@@ -2,7 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
+import { AdminOnly } from "@/components/AdminOnly";
 import { apiGetAuditEvents, type DBAuditEvent } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import { ChevronLeft, ChevronRight, History, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -22,6 +24,9 @@ const ACTION_LABEL: Record<string, string> = {
   delete: "ลบ",
   import: "นำเข้า",
   status_change: "เปลี่ยนสถานะ",
+  login: "เข้าสู่ระบบ",
+  logout: "ออกจากระบบ",
+  export: "ส่งออก",
 };
 
 const ACTION_COLOR: Record<string, string> = {
@@ -30,9 +35,13 @@ const ACTION_COLOR: Record<string, string> = {
   delete: "bg-destructive/15 text-destructive border-destructive/30",
   import: "bg-primary/15 text-primary border-primary/30",
   status_change: "bg-warning/15 text-warning border-warning/30",
+  login: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30",
+  logout: "bg-slate-500/15 text-slate-700 border-slate-500/30",
+  export: "bg-cyan-500/15 text-cyan-700 border-cyan-500/30",
 };
 
 function AuditPage() {
+  const { isLoggedIn } = useAuth();
   const [filterAction, setFilterAction] = useState("");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 30;
@@ -41,9 +50,9 @@ function AuditPage() {
     queryKey: ["audit-events", filterAction, page],
     queryFn: () =>
       apiGetAuditEvents({
-        ...(filterAction ? { entity: "project" } : {}),
         limit: PAGE_SIZE * page,
       }),
+    enabled: isLoggedIn,
   });
 
   const filtered = filterAction
@@ -64,6 +73,17 @@ function AuditPage() {
     });
   }
 
+  if (!isLoggedIn) {
+    return (
+      <AdminOnly
+        title="ประวัติการใช้งานสำหรับผู้ดูแลระบบ"
+        description="Audit log เป็นข้อมูลภายใน จึงต้องเข้าสู่ระบบก่อนเข้าถึง"
+      >
+        <></>
+      </AdminOnly>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6 max-w-5xl">
@@ -78,7 +98,7 @@ function AuditPage() {
         {/* Filters */}
         <div className="flex items-center gap-2 flex-wrap">
           <Filter className="size-4 text-muted-foreground" />
-          {["", "create", "update", "delete", "import", "status_change"].map((action) => (
+          {["", "create", "update", "delete", "import", "status_change", "login", "logout", "export"].map((action) => (
             <button
               key={action}
               onClick={() => { setFilterAction(action); setPage(1); }}

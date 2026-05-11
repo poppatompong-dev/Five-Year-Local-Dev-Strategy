@@ -1,7 +1,7 @@
 import { Building2 } from "lucide-react";
 import { useState } from "react";
 
-const LOGO_CANDIDATES = ["/agency-logo.svg", "/agency-logo.png"];
+const LOGO_CANDIDATES = ["/agency-logo.png", "/agency-logo.svg"];
 
 export function AgencyLogo({ className = "size-11", imgClassName = "size-full" }: { className?: string; imgClassName?: string }) {
   const [logoIndex, setLogoIndex] = useState(0);
@@ -13,6 +13,11 @@ export function AgencyLogo({ className = "size-11", imgClassName = "size-full" }
         <img
           src={LOGO_CANDIDATES[logoIndex]}
           alt="ตราหน่วยงานเทศบาลนครนครสวรรค์"
+          width={128}
+          height={128}
+          decoding="async"
+          fetchPriority="high"
+          loading="eager"
           className={`${imgClassName} object-contain`}
           onError={() => {
             if (logoIndex < LOGO_CANDIDATES.length - 1) setLogoIndex((i) => i + 1);
@@ -20,7 +25,7 @@ export function AgencyLogo({ className = "size-11", imgClassName = "size-full" }
           }}
         />
       ) : (
-        <Building2 className="size-5 text-gold" strokeWidth={1.5} />
+        <Building2 aria-label="ตราหน่วยงานเทศบาลนครนครสวรรค์" role="img" className="size-5 text-gold" strokeWidth={1.5} />
       )}
     </div>
   );

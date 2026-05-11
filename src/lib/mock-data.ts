@@ -266,7 +266,6 @@ export function formatBaht(n: number | string, options: { compact?: boolean } = 
   if (options.compact) {
     if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toLocaleString("th-TH", { maximumFractionDigits: 2 })} พันล้าน`;
     if (num >= 1_000_000) return `${(num / 1_000_000).toLocaleString("th-TH", { maximumFractionDigits: 2 })} ล้าน`;
-    if (num >= 1_000) return `${(num / 1_000).toLocaleString("th-TH", { maximumFractionDigits: 1 })} พัน`;
   }
   return num.toLocaleString("th-TH");
 }

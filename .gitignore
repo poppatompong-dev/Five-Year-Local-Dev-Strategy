@@ -8,6 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+node_modules.broken-*/
 dist
 dist-ssr
 .output
@@ -35,6 +36,10 @@ scripts/forensic-*.txt
 scripts/staging-*.json
 scripts/textbox-*.json
 scripts/textbox-*.txt
+scripts/raw-import-*
+scripts/import-output-*
+src/*.xlsx
+src/*.xls
 
 # Editor directories and files
 .vscode/*

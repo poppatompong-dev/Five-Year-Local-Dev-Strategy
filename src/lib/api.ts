@@ -5,7 +5,7 @@ import {
   serverCreateProject, serverUpdateProject, serverUpdateBudgets, serverDeleteProject,
   serverBatchImportProjects,
   serverGetEquipment, serverCreateEquipment, serverUpdateEquipment, serverDeleteEquipment,
-  serverGetDashboard, serverGetDepartmentsList, serverCreateDepartment,
+  serverGetDashboard, serverGetPublicDataSummary, serverGetDepartmentsList, serverCreateDepartment,
   serverLogAudit, serverGetAuditEvents,
   serverGetUsers, serverCreateUser, serverDeleteUser, serverResetUserPassword,
   serverCreateStrategy, serverUpdateStrategy, serverDeleteStrategy,
@@ -50,6 +50,16 @@ export interface DBProject {
   amendment_version: string | null;
   source_row: number | null;
   import_batch_id: string | null;
+  imported_at?: string | null;
+  imported_by?: string | null;
+  validation_status?: string | null;
+  reconciliation_status?: string | null;
+  publish_status?: "draft" | "reviewed" | "published" | null;
+  published_at?: string | null;
+  published_by?: string | null;
+  data_version?: string | null;
+  plan_revision?: string | null;
+  source_file_name?: string | null;
   created_at: string;
 }
 
@@ -140,6 +150,11 @@ export interface DBEquipment {
   budget_2568: number;
   budget_2569: number;
   budget_2570: number;
+  publish_status?: "draft" | "reviewed" | "published" | null;
+  published_at?: string | null;
+  published_by?: string | null;
+  source_file_name?: string | null;
+  data_version?: string | null;
 }
 
 export interface AuthUser {
@@ -348,6 +363,22 @@ export interface DashboardData {
 
 export async function apiGetDashboard(): Promise<DashboardData> {
   return serverGetDashboard();
+}
+
+export interface PublicDataSummary {
+  sourceName: string;
+  sourceFileName: string;
+  dataStatus: string;
+  validationStatus: string;
+  reconciliationStatus: string;
+  lastUpdated: string | null;
+  verificationNote: string;
+  projectCount: number;
+  equipmentCount: number;
+}
+
+export async function apiGetPublicDataSummary(): Promise<PublicDataSummary> {
+  return serverGetPublicDataSummary();
 }
 
 // ---------------------------------------------------------------------------

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
+import { PublicDataNotice } from "@/components/PublicDataNotice";
 import { formatBaht, YEARS } from "@/lib/mock-data";
 import { apiGetEquipment, apiCreateEquipment, apiUpdateEquipment, apiDeleteEquipment, type EquipmentCreateInput, type DBEquipment } from "@/lib/api";
 import { EquipmentFormDialog } from "@/components/EquipmentFormDialog";
@@ -100,6 +101,8 @@ function EquipmentPage() {
             </Button>
           )}
         </div>
+
+        <PublicDataNotice compact />
 
         {/* Stat row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

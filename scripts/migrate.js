@@ -93,10 +93,74 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='projects' AND column_name='import_batch_id') THEN
     ALTER TABLE projects ADD COLUMN import_batch_id UUID;
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='projects' AND column_name='source_file_name') THEN
+    ALTER TABLE projects ADD COLUMN source_file_name TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='projects' AND column_name='imported_at') THEN
+    ALTER TABLE projects ADD COLUMN imported_at TIMESTAMPTZ;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='projects' AND column_name='imported_by') THEN
+    ALTER TABLE projects ADD COLUMN imported_by TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='projects' AND column_name='validation_status') THEN
+    ALTER TABLE projects ADD COLUMN validation_status TEXT NOT NULL DEFAULT 'valid';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='projects' AND column_name='reconciliation_status') THEN
+    ALTER TABLE projects ADD COLUMN reconciliation_status TEXT NOT NULL DEFAULT 'not_checked';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='projects' AND column_name='publish_status') THEN
+    ALTER TABLE projects ADD COLUMN publish_status TEXT NOT NULL DEFAULT 'published';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='projects' AND column_name='published_at') THEN
+    ALTER TABLE projects ADD COLUMN published_at TIMESTAMPTZ DEFAULT NOW();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='projects' AND column_name='published_by') THEN
+    ALTER TABLE projects ADD COLUMN published_by TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='projects' AND column_name='data_version') THEN
+    ALTER TABLE projects ADD COLUMN data_version TEXT NOT NULL DEFAULT 'official-2566-2570-v1';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='projects' AND column_name='plan_revision') THEN
+    ALTER TABLE projects ADD COLUMN plan_revision TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='equipment' AND column_name='source_file_name') THEN
+    ALTER TABLE equipment ADD COLUMN source_file_name TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='equipment' AND column_name='publish_status') THEN
+    ALTER TABLE equipment ADD COLUMN publish_status TEXT NOT NULL DEFAULT 'published';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='equipment' AND column_name='published_at') THEN
+    ALTER TABLE equipment ADD COLUMN published_at TIMESTAMPTZ DEFAULT NOW();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='equipment' AND column_name='published_by') THEN
+    ALTER TABLE equipment ADD COLUMN published_by TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='equipment' AND column_name='data_version') THEN
+    ALTER TABLE equipment ADD COLUMN data_version TEXT NOT NULL DEFAULT 'official-2566-2570-v1';
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='project_budgets' AND column_name='ordinance_amount') THEN
     ALTER TABLE project_budgets ADD COLUMN ordinance_amount NUMERIC DEFAULT 0;
   END IF;
 END $$;
+
+ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_publish_status_check;
+ALTER TABLE projects ADD CONSTRAINT projects_publish_status_check
+  CHECK (publish_status IN ('draft','reviewed','published'));
+
+ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_validation_status_check;
+ALTER TABLE projects ADD CONSTRAINT projects_validation_status_check
+  CHECK (validation_status IN ('pending','valid','warning','error'));
+
+ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_reconciliation_status_check;
+ALTER TABLE projects ADD CONSTRAINT projects_reconciliation_status_check
+  CHECK (reconciliation_status IN ('not_checked','matched','mismatch','needs_review'));
+
+ALTER TABLE equipment DROP CONSTRAINT IF EXISTS equipment_publish_status_check;
+ALTER TABLE equipment ADD CONSTRAINT equipment_publish_status_check
+  CHECK (publish_status IN ('draft','reviewed','published'));
+
+CREATE INDEX IF NOT EXISTS idx_projects_publish_status ON projects(publish_status);
+CREATE INDEX IF NOT EXISTS idx_equipment_publish_status ON equipment(publish_status);
 
 DO $$ BEGIN
   IF EXISTS (

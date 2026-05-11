@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Pencil, Trash2, Plus, Loader2, GitBranch } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { AppLayout } from "@/components/AppLayout";
+import { AdminOnly } from "@/components/AdminOnly";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -506,14 +508,17 @@ function HierarchyPage() {
 
   if (!isLoggedIn) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center gap-3">
-        <GitBranch className="size-10 text-muted-foreground" />
-        <p className="text-muted-foreground">กรุณาเข้าสู่ระบบก่อนเข้าถึงหน้านี้</p>
-      </div>
+      <AdminOnly
+        title="จัดการโครงสร้างแผนสำหรับผู้ดูแลระบบ"
+        description="หน้านี้ใช้เพิ่ม แก้ไข และลบยุทธศาสตร์/แนวทาง/แผนงาน จึงต้องเข้าสู่ระบบก่อน"
+      >
+        <></>
+      </AdminOnly>
     );
   }
 
   return (
+    <AppLayout>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -533,5 +538,6 @@ function HierarchyPage() {
         <TabsContent value="plan" className="mt-4"><PlanTab /></TabsContent>
       </Tabs>
     </div>
+    </AppLayout>
   );
 }
