@@ -2,6 +2,7 @@ import type { Status } from "./mock-data";
 import {
   serverGetStrategies, serverGetTactics, serverGetPlans, serverGetDepartments,
   serverGetProjects, serverGetProject, serverPatchProjectStatus, serverBulkPatchProjectStatus,
+  serverBulkPatchProjectStatusByFilter,
   serverCreateProject, serverUpdateProject, serverUpdateBudgets, serverDeleteProject,
   serverBatchImportProjects,
   serverGetProjectAnnotationLabels,
@@ -259,6 +260,13 @@ export async function apiPatchProjectStatus(id: number, status: Status): Promise
 
 export async function apiBulkPatchProjectStatus(ids: number[], status: Status): Promise<{ updated: number }> {
   return serverBulkPatchProjectStatus({ data: { ids, status } });
+}
+
+export async function apiBulkPatchProjectStatusByFilter(
+  filters: ProjectListParams,
+  status: Status,
+): Promise<{ updated: number }> {
+  return serverBulkPatchProjectStatusByFilter({ data: { filters, status } });
 }
 
 export interface ProjectCreateInput {

@@ -399,6 +399,161 @@ export const serverGetProjects = createServerFn({ method: "POST" })
     return result;
   });
 
+export const serverBulkPatchProjectStatusByFilter = createServerFn({ method: "POST" })
+  .handler(async ({ data }: { data: { filters: ProjectListParams; status: Status } }) => {
+    const session = await requireAdmin();
+    if (!VALID_STATUSES.includes(data.status)) {
+      throw new Response(JSON.stringify({ error: "INVALID_STATUS" }), { status: 400 });
+    }
+
+    const {
+      search,
+      annotation_search,
+      annotation_type,
+      has_annotations,
+      status,
+      strategy_id,
+      plan_id,
+      department,
+      year,
+    } = data.filters ?? {};
+    const sql = getSql();
+
+    const allProjectRows = await sql`
+      SELECT
+        p.*,
+        pl.name AS plan_name,
+        t.code AS tactic_code,
+        t.name AS tactic_name,
+        s.id AS strategy_id,
+        s.name AS strategy_name,
+        COALESCE((SELECT SUM(pb.amount) FROM project_budgets pb WHERE pb.project_id = p.id), 0)::numeric AS total_budget,
+        COALESCE((SELECT SUM(pb.amount) FROM project_budgets pb WHERE pb.project_id = p.id AND pb.year = ${year ?? null}), 0)::numeric AS year_budget
+      FROM projects p
+      LEFT JOIN plans pl ON p.plan_id = pl.id
+      LEFT JOIN tactics t ON pl.tactic_id = t.id
+      LEFT JOIN strategies s ON t.strategy_id = s.id
+      ORDER BY p.id
+    `;
+    const allProjects = await applyPublishedFilter(sql, allProjectRows as any[], "projects");
+    const allAnnotations = (await sql`
+      SELECT *
+      FROM project_annotations
+      ORDER BY source_sheet, source_row, id
+    `) as DBProjectAnnotation[];
+    const annotationsByProject = new Map<number, DBProjectAnnotation[]>();
+    allAnnotations.forEach((annotation) => {
+      if (annotation.project_id !== null) {
+        const list = annotationsByProject.get(annotation.project_id) ?? [];
+        list.push(annotation);
+        annotationsByProject.set(annotation.project_id, list);
+      }
+    });
+
+    let filtered = allProjects as any[];
+    if (search) {
+      const needles = searchTokens(search);
+      filtered = filtered.filter((r) => {
+        const annotations = getLinkedAnnotations(r, annotationsByProject);
+        return matchesSmartSearch(needles, [
+          r.name,
+          r.objective,
+          r.target,
+          r.kpi,
+          r.expected_result,
+          r.department,
+          r.plan_name,
+          r.tactic_code,
+          r.tactic_name,
+          r.strategy_name,
+          r.source_sheet,
+          r.amendment_version,
+          ...annotations.map(annotationSearchText),
+        ]);
+      });
+    }
+    if (status) filtered = filtered.filter((r) => r.status === status);
+    if (department) {
+      const d = department.toLowerCase();
+      filtered = filtered.filter((r) => r.department?.toLowerCase().includes(d));
+    }
+    if (plan_id) {
+      filtered = filtered.filter((r) => r.plan_id === plan_id);
+    } else if (strategy_id) {
+      filtered = filtered.filter((r) => r.strategy_id === strategy_id);
+    }
+    if (year) filtered = filtered.filter((r) => Number(r.year_budget) > 0);
+    if (has_annotations) {
+      filtered = filtered.filter((r) => getLinkedAnnotations(r, annotationsByProject).length > 0);
+    }
+    if (annotation_type) {
+      filtered = filtered.filter((r) =>
+        getLinkedAnnotations(r, annotationsByProject)
+          .some((annotation) => annotation.annotation_type === annotation_type),
+      );
+    }
+    if (annotation_search) {
+      const needles = searchTokens(annotation_search);
+      const matchingUnlinkedAnnotations = allAnnotations.filter((annotation) =>
+        annotation.project_id === null &&
+        matchesSmartSearch(needles, [annotationSearchText(annotation)]),
+      );
+      filtered = filtered.filter((r) => {
+        const linkedAnnotations = getLinkedAnnotations(r, annotationsByProject);
+        const projectTextMatches = matchesSmartSearch(needles, [
+          r.name,
+          r.objective,
+          r.target,
+          r.kpi,
+          r.expected_result,
+          r.department,
+          r.plan_name,
+          r.tactic_code,
+          r.tactic_name,
+          r.strategy_name,
+          r.source_sheet,
+          r.source_row,
+          r.amendment_version,
+        ]);
+        const linkedAnnotationMatches = linkedAnnotations
+          .some((annotation) => matchesSmartSearch(needles, [annotationSearchText(annotation)]));
+        if (projectTextMatches || linkedAnnotationMatches) return true;
+
+        return matchingUnlinkedAnnotations.some((annotation) =>
+          matchesAnySmartSearch(annotationProjectLinkTokens(annotation), [
+            r.name,
+            r.objective,
+            r.target,
+            r.kpi,
+            r.expected_result,
+            r.department,
+            r.plan_name,
+            r.tactic_code,
+            r.tactic_name,
+            r.strategy_name,
+            r.source_sheet,
+            r.source_row,
+            r.amendment_version,
+          ]),
+        );
+      });
+    }
+
+    const ids = filtered.map((row) => Number((row as any).id)).filter(Boolean);
+    if (!ids.length) return { updated: 0 };
+
+    const beforeRows = await sql`SELECT id, name, status FROM projects WHERE id = ANY(${ids}::int[]) ORDER BY id`;
+    const updatedRows = await sql`UPDATE projects SET status = ${data.status} WHERE id = ANY(${ids}::int[]) RETURNING id`;
+    await insertAuditEvent(sql, session, {
+      action: "status_change",
+      entity: "project",
+      entity_id: null,
+      before: { projects: beforeRows, selection: "filtered" },
+      after: { ids: updatedRows.map((row: any) => row.id), status: data.status },
+    });
+    return { updated: updatedRows.length };
+  });
+
 export const serverGetProjectAnnotationLabels = createServerFn({ method: "GET" })
   .handler(async (): Promise<AnnotationLabelOption[]> => {
     const rows = (await getSql()`

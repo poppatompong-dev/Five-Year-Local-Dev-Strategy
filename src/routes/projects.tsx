@@ -18,6 +18,7 @@ import {
   apiDeleteProject,
   apiPatchProjectStatus,
   apiBulkPatchProjectStatus,
+  apiBulkPatchProjectStatusByFilter,
   apiGetProjectAnnotationLabels,
   apiGetStrategies,
   apiGetTactics,
@@ -82,6 +83,7 @@ function ProjectsPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [deleteName, setDeleteName] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [isAllFilteredSelected, setIsAllFilteredSelected] = useState(false);
   const [detailProjectId, setDetailProjectId] = useState<number | null>(null);
 
   const qc = useQueryClient();
@@ -107,12 +109,41 @@ function ProjectsPage() {
     queryFn: apiGetProjectAnnotationLabels,
   });
 
+  function resetSelection() {
+    setSelectedIds(new Set());
+    setIsAllFilteredSelected(false);
+  }
+
   const bulkStatusMutation = useMutation({
-    mutationFn: ({ ids, status }: { ids: number[]; status: Status }) => apiBulkPatchProjectStatus(ids, status),
+    mutationFn: ({
+      ids,
+      status,
+      selectAllFiltered,
+      filters,
+    }: {
+      ids: number[];
+      status: Status;
+      selectAllFiltered?: boolean;
+      filters: {
+        search?: string;
+        annotation_search?: string;
+        annotation_type?: AnnotationType;
+        has_annotations?: boolean;
+        strategy_id?: number;
+        plan_id?: number;
+        department?: string;
+        status?: Status;
+        year?: number;
+      };
+    }) => (
+      selectAllFiltered
+        ? apiBulkPatchProjectStatusByFilter(filters, status)
+        : apiBulkPatchProjectStatus(ids, status)
+    ),
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["projects"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
-      setSelectedIds(new Set());
+      resetSelection();
       toast.success(`อัปเดตสถานะ ${r.updated} โครงการแล้ว`, { icon: "✅" });
     },
     onError: (err) => toast.error(`อัปเดตไม่สำเร็จ: ${err.message}`),
@@ -160,20 +191,23 @@ function ProjectsPage() {
     ? plans.filter((p) => tactics.find((t) => t.id === p.tactic_id)?.strategy_id === strategyId)
     : plans;
   const effectiveAnnotationSearch = debouncedAnnotationSearch || selectedAnnotationLabel;
+  const projectFilters = {
+    search: debouncedSearch || undefined,
+    annotation_search: effectiveAnnotationSearch || undefined,
+    annotation_type: annotationType && annotationType !== "all" ? annotationType : undefined,
+    has_annotations: annotationType === "all" || !!effectiveAnnotationSearch || undefined,
+    strategy_id: strategyId || undefined,
+    plan_id: planId || undefined,
+    department: department || undefined,
+    status: (status as Status) || undefined,
+    year: (year as number) || undefined,
+  };
 
   const { data: result, isLoading } = useQuery({
     queryKey: ["projects", { debouncedSearch, effectiveAnnotationSearch, annotationType, strategyId, planId, department, status, year, page }],
     queryFn: () =>
       apiGetProjects({
-        search: debouncedSearch || undefined,
-        annotation_search: effectiveAnnotationSearch || undefined,
-        annotation_type: annotationType && annotationType !== "all" ? annotationType : undefined,
-        has_annotations: annotationType === "all" || !!effectiveAnnotationSearch || undefined,
-        strategy_id: strategyId || undefined,
-        plan_id: planId || undefined,
-        department: department || undefined,
-        status: (status as Status) || undefined,
-        year: (year as number) || undefined,
+        ...projectFilters,
         page,
         limit: PAGE_SIZE,
       }),
@@ -184,11 +218,14 @@ function ProjectsPage() {
   const safePage = page;
   const totalFiltered = result?.total ?? 0;
   const totalBudget = pageItems.reduce((s, p) => s + p.total_budget, 0);
+  const selectedCount = isAllFilteredSelected ? totalFiltered : selectedIds.size;
+  const allPageItemsSelected = pageItems.length > 0 && pageItems.every((p) => selectedIds.has(p.id));
 
   const hasFilters = strategyId || planId || department || status || year || search || annotationSearch || selectedAnnotationLabel || annotationType;
 
   function handleSearchChange(val: string) {
     setSearch(val);
+    resetSelection();
     setPage(1);
     clearTimeout((handleSearchChange as any)._t);
     (handleSearchChange as any)._t = setTimeout(() => setDebouncedSearch(val), 400);
@@ -197,6 +234,7 @@ function ProjectsPage() {
   function handleAnnotationSearchChange(val: string) {
     setAnnotationSearch(val);
     setSelectedAnnotationLabel("");
+    resetSelection();
     setPage(1);
     clearTimeout((handleAnnotationSearchChange as any)._t);
     (handleAnnotationSearchChange as any)._t = setTimeout(() => setDebouncedAnnotationSearch(val), 400);
@@ -214,6 +252,7 @@ function ProjectsPage() {
     setDepartment("");
     setStatus("");
     setYear("");
+    resetSelection();
     setPage(1);
   }
 
@@ -289,6 +328,7 @@ function ProjectsPage() {
                 setSelectedAnnotationLabel(value);
                 setAnnotationSearch("");
                 setDebouncedAnnotationSearch("");
+                resetSelection();
                 setPage(1);
               }}
               placeholder="ป้าย Text box"
@@ -301,6 +341,7 @@ function ProjectsPage() {
               value={annotationType}
               onChange={(v) => {
                 setAnnotationType(v as AnnotationType | "all" | "");
+                resetSelection();
                 setPage(1);
               }}
               placeholder="Text box"
@@ -317,6 +358,7 @@ function ProjectsPage() {
               onChange={(v) => {
                 setStrategyId(v as number | "");
                 setPlanId("");
+                resetSelection();
                 setPage(1);
               }}
               placeholder="ยุทธศาสตร์ทั้งหมด"
@@ -326,6 +368,7 @@ function ProjectsPage() {
               value={planId}
               onChange={(v) => {
                 setPlanId(v as number | "");
+                resetSelection();
                 setPage(1);
               }}
               placeholder="แผนงาน"
@@ -335,6 +378,7 @@ function ProjectsPage() {
               value={department}
               onChange={(v) => {
                 setDepartment(v as string);
+                resetSelection();
                 setPage(1);
               }}
               placeholder="หน่วยงาน"
@@ -344,6 +388,7 @@ function ProjectsPage() {
               value={status}
               onChange={(v) => {
                 setStatus(v as Status | "");
+                resetSelection();
                 setPage(1);
               }}
               placeholder="สถานะ"
@@ -353,6 +398,7 @@ function ProjectsPage() {
               value={year}
               onChange={(v) => {
                 setYear(v as number | "");
+                resetSelection();
                 setPage(1);
               }}
               placeholder="ปีงบประมาณ"
@@ -371,11 +417,11 @@ function ProjectsPage() {
         </div>
 
         {/* Bulk toolbar (admin only) */}
-        {isLoggedIn && selectedIds.size > 0 && (
+        {isLoggedIn && selectedCount > 0 && (
           <div className="bg-primary/5 border border-primary/30 rounded-xl px-4 py-2.5 flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 text-sm font-medium">
               <CheckSquare className="size-4 text-primary" />
-              เลือก {selectedIds.size} โครงการ
+              เลือก {selectedCount} โครงการ
             </div>
             <div className="flex items-center gap-2 ml-auto">
               <span className="text-xs text-muted-foreground">ปรับสถานะเป็น:</span>
@@ -384,7 +430,12 @@ function ProjectsPage() {
                 onChange={(e) => {
                   const v = e.target.value as Status;
                   if (v) {
-                    bulkStatusMutation.mutate({ ids: [...selectedIds], status: v });
+                    bulkStatusMutation.mutate({
+                      ids: [...selectedIds],
+                      status: v,
+                      selectAllFiltered: isAllFilteredSelected,
+                      filters: projectFilters,
+                    });
                     e.target.value = "";
                   }
                 }}
@@ -399,10 +450,32 @@ function ProjectsPage() {
                 <option value="completed">เสร็จสิ้น</option>
                 <option value="cancelled">ยกเลิก</option>
               </select>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+              <Button variant="ghost" size="sm" onClick={resetSelection}>
                 ยกเลิก
               </Button>
             </div>
+          </div>
+        )}
+
+        {isLoggedIn && allPageItemsSelected && totalFiltered > pageItems.length && !isAllFilteredSelected && (
+          <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-sm">
+            <span>เลือกโครงการในหน้านี้แล้ว {pageItems.length} รายการ</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsAllFilteredSelected(true);
+                setSelectedIds(new Set());
+              }}
+            >
+              เลือกทั้งหมด {totalFiltered} โครงการตามตัวกรอง
+            </Button>
+          </div>
+        )}
+
+        {isLoggedIn && isAllFilteredSelected && (
+          <div className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm font-medium text-primary">
+            เลือกครบ {totalFiltered} โครงการตามตัวกรองแล้ว
           </div>
         )}
 
@@ -418,8 +491,11 @@ function ProjectsPage() {
                         type="checkbox"
                         aria-label="เลือกโครงการทั้งหมดในหน้านี้"
                         className="size-4 cursor-pointer"
-                        checked={pageItems.length > 0 && pageItems.every((p) => selectedIds.has(p.id))}
+                        checked={isAllFilteredSelected || allPageItemsSelected}
                         onChange={(e) => {
+                          if (isAllFilteredSelected) {
+                            setIsAllFilteredSelected(false);
+                          }
                           const next = new Set(selectedIds);
                           if (e.target.checked) pageItems.forEach((p) => next.add(p.id));
                           else pageItems.forEach((p) => next.delete(p.id));
@@ -467,9 +543,12 @@ function ProjectsPage() {
                               type="checkbox"
                               aria-label={`เลือกโครงการ ${p.name}`}
                               className="size-4 cursor-pointer"
-                              checked={selectedIds.has(p.id)}
+                              checked={isAllFilteredSelected || selectedIds.has(p.id)}
                               onClick={(e) => e.stopPropagation()}
                               onChange={(e) => {
+                                if (isAllFilteredSelected) {
+                                  setIsAllFilteredSelected(false);
+                                }
                                 const next = new Set(selectedIds);
                                 if (e.target.checked) next.add(p.id);
                                 else next.delete(p.id);
