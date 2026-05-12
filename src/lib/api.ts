@@ -4,6 +4,7 @@ import {
   serverGetProjects, serverGetProject, serverPatchProjectStatus, serverBulkPatchProjectStatus,
   serverCreateProject, serverUpdateProject, serverUpdateBudgets, serverDeleteProject,
   serverBatchImportProjects,
+  serverGetProjectAnnotationLabels,
   serverGetEquipment, serverCreateEquipment, serverUpdateEquipment, serverDeleteEquipment,
   serverGetDashboard, serverGetPublicDataSummary, serverGetDepartmentsList, serverCreateDepartment,
   serverLogAudit, serverGetAuditEvents,
@@ -227,6 +228,16 @@ export interface ProjectListResult {
 
 export async function apiGetProjects(params: ProjectListParams = {}): Promise<ProjectListResult> {
   return serverGetProjects({ data: params });
+}
+
+export interface AnnotationLabelOption {
+  label: string;
+  value: string;
+  count: number;
+}
+
+export async function apiGetProjectAnnotationLabels(): Promise<AnnotationLabelOption[]> {
+  return serverGetProjectAnnotationLabels();
 }
 
 export interface ProjectDetail extends DBProject {

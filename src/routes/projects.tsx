@@ -18,6 +18,7 @@ import {
   apiDeleteProject,
   apiPatchProjectStatus,
   apiBulkPatchProjectStatus,
+  apiGetProjectAnnotationLabels,
   apiGetStrategies,
   apiGetTactics,
   apiGetPlans,
@@ -68,6 +69,7 @@ function ProjectsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [annotationSearch, setAnnotationSearch] = useState("");
   const [debouncedAnnotationSearch, setDebouncedAnnotationSearch] = useState("");
+  const [selectedAnnotationLabel, setSelectedAnnotationLabel] = useState("");
   const [annotationType, setAnnotationType] = useState<AnnotationType | "all" | "">("");
   const [strategyId, setStrategyId] = useState<number | "">("");
   const [planId, setPlanId] = useState<number | "">("");
@@ -99,6 +101,10 @@ function ProjectsPage() {
   const { data: departments = [] } = useQuery({
     queryKey: ["departments"],
     queryFn: apiGetDepartments,
+  });
+  const { data: annotationLabels = [] } = useQuery({
+    queryKey: ["project-annotation-labels"],
+    queryFn: apiGetProjectAnnotationLabels,
   });
 
   const bulkStatusMutation = useMutation({
@@ -153,15 +159,16 @@ function ProjectsPage() {
   const availablePlans = strategyId
     ? plans.filter((p) => tactics.find((t) => t.id === p.tactic_id)?.strategy_id === strategyId)
     : plans;
+  const effectiveAnnotationSearch = debouncedAnnotationSearch || selectedAnnotationLabel;
 
   const { data: result, isLoading } = useQuery({
-    queryKey: ["projects", { debouncedSearch, debouncedAnnotationSearch, annotationType, strategyId, planId, department, status, year, page }],
+    queryKey: ["projects", { debouncedSearch, effectiveAnnotationSearch, annotationType, strategyId, planId, department, status, year, page }],
     queryFn: () =>
       apiGetProjects({
         search: debouncedSearch || undefined,
-        annotation_search: debouncedAnnotationSearch || undefined,
+        annotation_search: effectiveAnnotationSearch || undefined,
         annotation_type: annotationType && annotationType !== "all" ? annotationType : undefined,
-        has_annotations: annotationType === "all" || !!debouncedAnnotationSearch || undefined,
+        has_annotations: annotationType === "all" || !!effectiveAnnotationSearch || undefined,
         strategy_id: strategyId || undefined,
         plan_id: planId || undefined,
         department: department || undefined,
@@ -178,7 +185,7 @@ function ProjectsPage() {
   const totalFiltered = result?.total ?? 0;
   const totalBudget = pageItems.reduce((s, p) => s + p.total_budget, 0);
 
-  const hasFilters = strategyId || planId || department || status || year || search || annotationSearch || annotationType;
+  const hasFilters = strategyId || planId || department || status || year || search || annotationSearch || selectedAnnotationLabel || annotationType;
 
   function handleSearchChange(val: string) {
     setSearch(val);
@@ -189,6 +196,7 @@ function ProjectsPage() {
 
   function handleAnnotationSearchChange(val: string) {
     setAnnotationSearch(val);
+    setSelectedAnnotationLabel("");
     setPage(1);
     clearTimeout((handleAnnotationSearchChange as any)._t);
     (handleAnnotationSearchChange as any)._t = setTimeout(() => setDebouncedAnnotationSearch(val), 400);
@@ -199,6 +207,7 @@ function ProjectsPage() {
     setDebouncedSearch("");
     setAnnotationSearch("");
     setDebouncedAnnotationSearch("");
+    setSelectedAnnotationLabel("");
     setAnnotationType("");
     setStrategyId("");
     setPlanId("");
@@ -273,6 +282,21 @@ function ProjectsPage() {
                 className="w-full bg-muted/50 border border-border rounded-lg pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground ring-focus"
               />
             </div>
+            <Select
+              value={selectedAnnotationLabel}
+              onChange={(v) => {
+                const value = String(v || "");
+                setSelectedAnnotationLabel(value);
+                setAnnotationSearch("");
+                setDebouncedAnnotationSearch("");
+                setPage(1);
+              }}
+              placeholder="ป้าย Text box"
+              options={annotationLabels.map((item) => ({
+                value: item.value,
+                label: `${item.label} (${item.count.toLocaleString("th-TH")})`,
+              }))}
+            />
             <Select
               value={annotationType}
               onChange={(v) => {

@@ -8,7 +8,7 @@ import type {
   AuthUser, ProjectCreateInput, EquipmentCreateInput,
   ProjectListParams, ProjectListResult, ProjectRow, ProjectDetail,
   EquipmentListResult, DashboardData, ImportResult, StrategyProgress,
-  PublicDataSummary,
+  PublicDataSummary, AnnotationLabelOption,
 } from "./api";
 import type { Status } from "./mock-data";
 
@@ -71,6 +71,40 @@ function annotationProjectLinkTokens(annotation: DBProjectAnnotation) {
     }
   }
   return searchTokens(parts.filter(Boolean).join(" "));
+}
+
+function annotationDropdownLabel(annotation: DBProjectAnnotation) {
+  if (annotation.amendment_number && annotation.amendment_year) {
+    const prefix = annotation.amendment_type ? `${annotation.amendment_type} ` : "";
+    return `${prefix}ครั้งที่ ${annotation.amendment_number}/${annotation.amendment_year}`;
+  }
+  return [
+    annotation.target_ref,
+    annotation.target_plan,
+    annotation.funding_source,
+    annotation.raw_text,
+  ]
+    .map((value) => String(value ?? "").replace(/\s+/g, " ").trim())
+    .find(Boolean) ?? "";
+}
+
+function toAnnotationLabelOptions(annotations: DBProjectAnnotation[]) {
+  const labelMap = new Map<string, AnnotationLabelOption>();
+  annotations.forEach((annotation) => {
+    const label = annotationDropdownLabel(annotation);
+    if (!label) return;
+    const value = label;
+    const prev = labelMap.get(value);
+    labelMap.set(value, {
+      label: label.length > 90 ? `${label.slice(0, 87)}...` : label,
+      value,
+      count: (prev?.count ?? 0) + 1,
+    });
+  });
+
+  return [...labelMap.values()]
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "th"))
+    .slice(0, 120);
 }
 
 function matchesSmartSearch(needles: string[], values: unknown[]) {
@@ -363,6 +397,16 @@ export const serverGetProjects = createServerFn({ method: "POST" })
       totalPages: Math.ceil(total / limit) || 1,
     };
     return result;
+  });
+
+export const serverGetProjectAnnotationLabels = createServerFn({ method: "GET" })
+  .handler(async (): Promise<AnnotationLabelOption[]> => {
+    const rows = (await getSql()`
+      SELECT *
+      FROM project_annotations
+      ORDER BY amendment_year DESC NULLS LAST, amendment_number DESC NULLS LAST, source_sheet, source_row, id
+    `) as DBProjectAnnotation[];
+    return toAnnotationLabelOptions(rows);
   });
 
 // ---------------------------------------------------------------------------
