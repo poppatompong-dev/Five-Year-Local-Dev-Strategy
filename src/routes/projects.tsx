@@ -32,7 +32,7 @@ import {
 import { toast } from "sonner";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { Search, Filter, ChevronLeft, ChevronRight, X, ArrowUpDown, Plus, Trash2, Download, CheckSquare, Loader2, ExternalLink, Pencil, MessageSquareText } from "lucide-react";
+import { Search, Filter, ChevronLeft, ChevronRight, X, ArrowUpDown, Plus, Trash2, Download, CheckSquare, Loader2, ExternalLink, Pencil, MessageSquareText, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -85,6 +85,8 @@ function ProjectsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [isAllFilteredSelected, setIsAllFilteredSelected] = useState(false);
   const [detailProjectId, setDetailProjectId] = useState<number | null>(null);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   const qc = useQueryClient();
 
@@ -256,6 +258,33 @@ function ProjectsPage() {
     setPage(1);
   }
 
+  function getFilterSummary() {
+    const items: string[] = [];
+    const selectedStrategy = strategyId ? strategies.find((s) => s.id === strategyId) : null;
+    const selectedPlan = planId ? plans.find((p) => p.id === planId) : null;
+
+    if (debouncedSearch) items.push(`คำค้น: ${debouncedSearch}`);
+    if (effectiveAnnotationSearch) items.push(`Text box: ${effectiveAnnotationSearch}`);
+    if (annotationType) {
+      items.push(annotationType === "all" ? "มี Text box" : `ประเภท Text box: ${ANNOTATION_TYPE_LABEL[annotationType as AnnotationType]}`);
+    }
+    if (selectedStrategy) items.push(`ยุทธศาสตร์: ${selectedStrategy.short_name ?? selectedStrategy.name}`);
+    if (selectedPlan) items.push(`แผนงาน: ${selectedPlan.name}`);
+    if (department) items.push(`หน่วยงาน: ${department}`);
+    if (status) items.push(`สถานะ: ${STATUS_LABEL[status]}`);
+    if (year) items.push(`ปีงบประมาณ: ${year}`);
+
+    return items.length ? items : ["ข้อมูลโครงการทั้งหมด"];
+  }
+
+  async function getAllFilteredProjectsForExport() {
+    return apiGetProjects({
+      ...projectFilters,
+      page: 1,
+      limit: Math.max(totalFiltered, PAGE_SIZE),
+    });
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -274,17 +303,65 @@ function ProjectsPage() {
             <Button
               variant="outline"
               onClick={async () => {
-                if (pageItems.length > 0) {
+                if (totalFiltered > 0) {
+                  setIsExportingExcel(true);
+                  try {
+                    const exportResult = await getAllFilteredProjectsForExport();
                   const { exportProjectsToExcel } = await import("@/lib/export");
-                  exportProjectsToExcel(pageItems, `projects-${new Date().toISOString().slice(0, 10)}.xlsx`);
+                    exportProjectsToExcel(exportResult.data, `projects-filtered-${new Date().toISOString().slice(0, 10)}.xlsx`);
                   toast.success("ส่งออกไฟล์ Excel แล้ว", { icon: "📄" });
+                  } catch (err) {
+                    toast.error(`ส่งออก Excel ไม่สำเร็จ: ${err instanceof Error ? err.message : "กรุณาลองใหม่อีกครั้ง"}`);
+                  } finally {
+                    setIsExportingExcel(false);
+                  }
                 }
               }}
-              disabled={pageItems.length === 0}
+              disabled={totalFiltered === 0 || isExportingExcel || isExportingPdf}
               className="gap-1.5"
-              aria-label="ส่งออกโครงการในหน้านี้เป็นไฟล์ Excel"
+              aria-label="ส่งออกโครงการที่ตรงกับตัวกรองทั้งหมดเป็นไฟล์ Excel"
             >
-              <Download className="size-4" /> ส่งออก
+              {isExportingExcel ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />} Excel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                if (totalFiltered === 0) return;
+                const printWindow = window.open("", "_blank", "width=1200,height=800");
+                if (!printWindow) {
+                  toast.error("เบราว์เซอร์บล็อกหน้าต่าง PDF กรุณาอนุญาต pop-up สำหรับเว็บไซต์นี้แล้วลองใหม่");
+                  return;
+                }
+
+                printWindow.document.open();
+                printWindow.document.write(`<!doctype html><html lang="th"><head><meta charset="utf-8"><title>กำลังเตรียมรายงาน PDF</title><style>body{margin:0;display:grid;min-height:100vh;place-items:center;font-family:"IBM Plex Sans Thai","Sarabun",Arial,sans-serif;color:#12372a;background:#f7faf8}.box{border:1px solid #d6ded9;background:white;padding:24px 28px;border-radius:10px;box-shadow:0 12px 36px rgba(15,23,42,.08)}.title{font-weight:700;font-size:18px}.note{margin-top:6px;color:#667085;font-size:13px}</style></head><body><div class="box"><div class="title">กำลังเตรียมรายงาน PDF</div><div class="note">ระบบกำลังรวบรวมข้อมูลตามตัวกรองปัจจุบัน</div></div></body></html>`);
+                printWindow.document.close();
+
+                setIsExportingPdf(true);
+                try {
+                  const [exportResult, exportModule] = await Promise.all([
+                    getAllFilteredProjectsForExport(),
+                    import("@/lib/export"),
+                  ]);
+                  exportModule.exportProjectsToPdf(exportResult.data, {
+                    title: "รายงานรายการโครงการตามตัวกรอง",
+                    filterSummary: getFilterSummary(),
+                    totalFiltered: exportResult.total,
+                    printWindow,
+                  });
+                  toast.success("เปิดรายงาน PDF ตามตัวกรองแล้ว");
+                } catch (err) {
+                  printWindow.close();
+                  toast.error(`ส่งออก PDF ไม่สำเร็จ: ${err instanceof Error ? err.message : "กรุณาลองใหม่อีกครั้ง"}`);
+                } finally {
+                  setIsExportingPdf(false);
+                }
+              }}
+              disabled={totalFiltered === 0 || isExportingExcel || isExportingPdf}
+              className="gap-1.5"
+              aria-label="ส่งออกโครงการที่ตรงกับตัวกรองทั้งหมดเป็น PDF"
+            >
+              {isExportingPdf ? <Loader2 className="size-4 animate-spin" /> : <Printer className="size-4" />} PDF
             </Button>
             {isLoggedIn && (
               <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
