@@ -52,3 +52,4 @@ src/*.xls
 *.njsproj
 *.sln
 *.sw?
+.vercel
