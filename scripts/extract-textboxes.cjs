@@ -15,6 +15,31 @@
 const AdmZip = require("adm-zip");
 const fs = require("fs");
 const path = require("path");
+const THAI_DIGITS = "๐๑๒๓๔๕๖๗๘๙";
+
+function decodeXmlText(value) {
+  return String(value ?? "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'");
+}
+
+function normalizeThaiDigits(value) {
+  return String(value ?? "").replace(/[๐-๙]/g, (digit) => String(THAI_DIGITS.indexOf(digit)));
+}
+
+function normalizeTextForClassification(value) {
+  return normalizeThaiDigits(value)
+    .normalize("NFKC")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/(\d)\s+(\d)/g, "$1$2")
+    .replace(/(?<=[\u0E00-\u0E7F])\s+(?=[\u0E00-\u0E7F])/gu, "")
+    .replace(/\s*\/\s*/g, "/")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 // ─── Source file ──────────────────────────────────────────────────────────────
 const SRC = path.join(
@@ -119,7 +144,7 @@ function parseDrawing(drawingFileName) {
     const textRe = /<a:t>([^<]+)<\/a:t>/g;
     let tm;
     while ((tm = textRe.exec(block)) !== null) {
-      textFragments.push(tm[1]);
+      textFragments.push(decodeXmlText(tm[1]));
     }
 
     if (textFragments.length === 0) continue;
@@ -135,7 +160,7 @@ function parseDrawing(drawingFileName) {
 
     // Classify the text box
     // classifyTextBox now returns an ARRAY (multi-amendment support)
-    const classifiedList = classifyTextBox(rawText, fromRow, toRow, fromCol, toCol);
+    const classifiedList = classifyTextBox(normalizeTextForClassification(rawText), fromRow, toRow, fromCol, toCol);
 
     for (const classified of classifiedList) {
       results.push({

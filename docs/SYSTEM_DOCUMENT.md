@@ -2,9 +2,9 @@
 
 > **Document Type:** Combined Software Requirements Specification (SRS) + System Design Document (SDD)
 > **Target Audience:** AI development agents analyzing, maintaining, and extending this codebase
-> **Version:** 5.5
-> **Date:** 2026-05-10
-> **Repository Root:** `C:\Users\Patompong.l\Documents\Web Applications\Five-Year-Local-Dev-Strategy`
+> **Version:** 5.6
+> **Date:** 2026-05-12
+> **Repository Root:** `G:\My Drive\เทศบาลนครนครสวรรค์\P'Pok\Five-Year-Local-Dev-Strategy`
 > **Production URL:** `https://five-year-local-dev-strategy.vercel.app`
 > **Repository:** `https://github.com/poppatompong-dev/Five-Year-Local-Dev-Strategy`
 
@@ -91,7 +91,7 @@ There is no Neon Auth / Better Auth dependency anymore. Auth is custom session-c
 | ID | Requirement | Status |
 |---|---|---|
 | FR-01 | System SHALL display an overview dashboard showing total projects, total budget, budget-by-year, budget-by-strategy, status breakdown, strategy progress, radar chart, top 10 departments, and a sortable project table. | ✅ Implemented |
-| FR-02 | System SHALL list all projects with pagination (default 12/page) and filters for search text, strategy, plan, department, status, year, and Excel text box annotations. | ✅ Implemented |
+| FR-02 | System SHALL list all projects with pagination (default 12/page) and filters for search text, strategy, plan, department, status, year, and Excel text box annotations. Search SHALL tolerate Thai/Arabic digit differences, punctuation, spacing, and OOXML text-run splits. | ✅ Implemented — smart normalized search in `serverGetProjects` |
 | FR-03 | System SHALL show a single-project detail view including hierarchy path, objective, target, KPI, expected result, department, per-year budget, and Excel text box annotations. | ✅ Implemented |
 | FR-04 | System SHALL allow changing a project's status to one of: `not_set`, `planning`, `in_progress`, `completed`, `cancelled`. | ✅ Implemented — admin-only, persisted via `serverPatchProjectStatus` |
 | FR-04b | System SHALL allow admins to bulk-update status for multiple selected projects at once. | ✅ Implemented — `serverBulkPatchProjectStatus` + checkbox toolbar on `/projects` |
@@ -109,7 +109,7 @@ There is no Neon Auth / Better Auth dependency anymore. Auth is custom session-c
 | FR-16 | System SHALL provide an admin user management page. | ✅ Implemented against `admin_users` for list/create/delete. Password reset and granular roles remain future work. |
 | FR-17 | Public visitors SHALL NOT see admin-only menu items (Import, Users, Audit) or CRUD buttons (Add/Edit/Delete). | ✅ Implemented — `useAuth()` gates visibility throughout `AppLayout` and route components |
 | FR-18 | Database credentials SHALL NEVER be present in client-side JavaScript bundles. | ✅ Implemented — all SQL runs in `createServerFn` handlers; `DATABASE_URL` (no `VITE_` prefix) is server-only |
-| FR-19 | System SHALL preserve and display row-anchored Excel drawing/text box notes used by officers for amendments, changes, budget sources, and related context. | ✅ Implemented — `project_annotations` are linked by `project_id` and surfaced in project list/detail |
+| FR-19 | System SHALL preserve and display row-anchored Excel drawing/text box notes used by officers for amendments, changes, budget sources, and related context. | ✅ Implemented — `project_annotations` are linked by `project_id`, surfaced in project list/detail, and searchable by normalized raw text plus structured amendment metadata |
 
 ### 3.3 Non-Functional Requirements
 
@@ -204,6 +204,8 @@ There is **no PostgREST / Neon Data API** layer anymore — all SQL runs server-
 - **`session.server.ts` is server-only** and must NOT be imported by any file that gets bundled for the client. TanStack Start's import-protection plugin will fail the build otherwise. `auth.ts` re-exports the public `serverLogin` / `serverLogout` / `serverGetSession` functions and is safe to import from client code.
 - **`requireAdmin` throws `Response`, not `Error`.** Throwing `Error` from a server function causes Seroval (TanStack Start's serializer) to fail with `Seroval Error (step: 3)` on Vercel. `throw new Response(JSON.stringify({error}), {status:401})` serializes correctly.
 - **`serverLogin` returns `{ok:true|false}` instead of throwing.** Same Seroval reason — credential errors are returned as a discriminated union, then `useAuth.login` rethrows on the client.
+- **Login setup failures are converted to explicit safe codes.** Production login now distinguishes `DATABASE_URL_MISSING`, `SESSION_PASSWORD_MISSING`, `ADMIN_USERS_TABLE_MISSING`, and `ADMIN_USERS_NOT_SEEDED` so Vercel/Neon setup issues are visible without exposing secrets.
+- **Project and annotation search is normalized in memory after DB reads.** `serverGetProjects` builds a search haystack from project fields, linked annotation raw text, annotation type, and structured amendment metadata. Matching normalizes Thai digits to Arabic digits, compacts whitespace/punctuation/symbols, and therefore matches queries such as `ครั้งที่ 2/2568` even if the Excel text box was extracted as `ครั้งที่ 2 / 2568` or split across OOXML runs.
 - **File-based routing** — TanStack Router auto-generates `src/routeTree.gen.ts`. Never hand-edit.
 - **Import page** — `/import` is admin-gated and functional for the Simple 8-column format. It can download `project-import-template-2566-2570.xlsx`, parse `.xlsx` / `.xls` files in the browser, reject files over 10 MB, preview rows/warnings, and persist projects through `serverBatchImportProjects`. `scripts/import-projects.cjs` remains the fuller CLI importer for legacy multi-sheet workbooks.
 - **CORS not applicable** — there is no separate API origin; everything is same-origin via the Vercel function.
@@ -362,6 +364,13 @@ The data layer has three files with strict separation of concerns:
 | `useAuth().logout()` | `serverLogout` | Clears session. |
 | `useAuth()` (auto on mount) | `serverGetSession` | Returns `{username}` or `null`. Drives `isLoggedIn` everywhere. |
 
+**Search normalization details:**
+
+- General project search (`search`) checks project name, objective, target, KPI, expected result, department, hierarchy labels, source sheet, amendment version, and linked annotations.
+- Annotation search (`annotation_search`) checks only explicitly linked `project_annotations`.
+- Both paths use smart normalization: Unicode NFKC, Thai digit to Arabic digit conversion, zero-width character removal, and compact matching with whitespace/punctuation/symbols removed.
+- Annotation haystacks include structured fields (`annotation_type`, `amendment_type`, `amendment_number`, `amendment_year`, `target_plan`, `target_ref`, `funding_source`) in addition to `raw_text`.
+
 ### 5.4 Helper Functions (retained from `src/lib/mock-data.ts`)
 
 | Function | Purpose |
@@ -413,6 +422,13 @@ There is exactly one user-facing auth route:
 | `/login` | `LoginPage` (`src/routes/login.tsx`) | Username + password form. On success, full-page reload to `/` so the cookie + AppLayout state propagate cleanly. |
 
 After login, the sidebar gains the **Admin** section (Import / Users / Audit) and CRUD buttons appear in Projects / Equipment / Dashboard.
+
+Login error handling:
+
+- Wrong username/password returns a normal Thai credential error.
+- Too many failed attempts returns `TOO_MANY_ATTEMPTS` and the UI explains the one-minute lock.
+- Vercel/Neon setup failures return safe diagnostic codes shown as Thai admin-facing messages: missing `DATABASE_URL`, missing/short `SESSION_PASSWORD`, missing `admin_users` table, or empty admin user table.
+- The UI never displays passwords, connection strings, raw stack traces, or secret values.
 
 **Demo users (seeded by v5.0 migration):**
 
@@ -604,6 +620,7 @@ A robust importer should:
 - ✅ **Audit log** (`/admin/audit`) — important project/status/import mutations write authoritative audit events server-side with actor data from the admin session.
 - ✅ **Excel export** (`src/lib/export.ts`) — dashboard + filtered project list; string cells are sanitized against Excel formula injection.
 - ✅ **Login redirect uses `window.location.href`** — full reload after `serverLogin` so the `admin_session` cookie is included on the next render and `useAuth` returns `isLoggedIn=true` immediately.
+- ✅ **Login setup diagnostics** — production login now reports safe setup errors for missing Vercel env vars, missing `admin_users`, and unseeded admin users instead of collapsing into a generic failure.
 - ✅ Dashboard with recharts visualizations (live data).
 - ✅ **Interactive chart filtering** — clicking any chart bar/slice/row instantly filters the project table below. Active filter shown as a dismissible chip.
 - ✅ **Multi-sort** on every dashboard section (strategies, progress, departments, years, project table) — dedicated `<SortSelect>` controls.
@@ -620,7 +637,7 @@ A robust importer should:
 - ✅ Strategy / Tactic / Plan management UI (`/admin/hierarchy`) for admin CRUD with child-record delete guards.
 - ✅ Password reset in `/admin/users`; granular roles remain future work.
 - ✅ Project list with server-side filters + pagination (12/page) via TanStack Start server functions.
-- ✅ Project list can filter by text box annotation content/type and shows annotation previews in rows.
+- ✅ Project list can filter by text box annotation content/type and shows annotation previews in rows. Annotation search is normalized for Thai/Arabic digits, spacing, punctuation, symbols, and Excel OOXML text-run splits, so `ครั้งที่ 2/2568` can match extracted text such as `ครั้งที่ 2 / 2568`.
 - ✅ Project detail with hierarchy path + budget bar chart + linked Excel text box annotations (live data).
 - ✅ Equipment list with pagination + search (live data).
 - ✅ Import page UI (file picker, drag-and-drop, Simple 8-column parser, 10 MB client-side size guard, preview, import result).
@@ -1023,6 +1040,7 @@ Important limitation: request IP address and user-agent are not captured yet bec
 
 | Version | Date | Author | Change |
 |---|---|---|---|
+| 5.6 | 2026-05-12 | System analyst (AI) + User | **Smart Thai annotation search + production login diagnostics.** (1) Added normalized search helpers in `serverGetProjects`: Unicode NFKC, Thai digit conversion, zero-width cleanup, and compact matching with whitespace/punctuation/symbols removed. (2) Project search and annotation search now include linked annotation raw text plus structured amendment metadata (`amendment_type`, `amendment_number`, `amendment_year`, target/funding fields), so queries such as `ครั้งที่ 2/2568` match extracted text boxes even when OOXML inserted spaces or slash spacing. (3) Updated `scripts/extract-textboxes.cjs` to decode XML entities and normalize text for classification while preserving `rawText` for display/audit. (4) `serverLogin` now returns safe setup diagnostics for missing `DATABASE_URL`, missing/short `SESSION_PASSWORD`, missing `admin_users`, and unseeded admin users; `/login` maps these codes to Thai admin-facing messages. (5) Verified local build and route health: `npm run build`, `/login` 200, `/projects` 200; local Neon check found `admin_users` present with 2 users. |
 | 5.5 | 2026-05-10 | System analyst (AI) + User | **Official workbook data + text box annotation release.** (1) Loaded the production Neon database from the official multi-sheet staging output: 548 projects, 1,281 budget rows, 33 plans, 15 tactics, 6 strategies. (2) Added `scripts/load-official-projects.js` and `npm run load-official-projects` to recreate the official hierarchy and link row-anchored Excel text boxes into `project_annotations.project_id` by deterministic project-row ownership. (3) Added `npm run verify-annotation-links`; latest verification passed with 230 total text boxes, 117/117 project-detail-sheet text boxes linked, 0 project-sheet unmatched text boxes, 0 duplicate linked groups, and 0 DB/source mismatches. (4) Project list search now includes project detail fields and annotation text; filters were added for "has text box", annotation type, and annotation text. (5) Project rows, dashboard detail sheet, project modal sheet, and full project detail page now show annotation previews/full annotation cards. (6) `apiGetProjects` / `serverGetProjects` and `apiGetProject` / `serverGetProject` now return annotation summaries/details only from explicit `project_id` links, preventing source-row fallback from attaching unreviewed notes to the wrong project. (7) `npm run build` passes for Vercel deployment readiness. |
 | 5.3 | 2026-05-08 | System analyst (AI) + User | **Official reporting + branding + detailed logs.** (1) Added agency logo rendering via `AgencyLogo`, with `/agency-logo.png` first and checked-in `/agency-logo.svg` fallback. (2) Added official A4 print-to-PDF report template for dashboard summaries, with government-style header, KPI/table sections, signature lines, and footer credit. (3) Added dashboard PDF export button and `export` audit event. (4) Expanded audit action set to `login`, `logout`, and `export`; login/logout events are now written without storing passwords. (5) Expanded server-side audit coverage to equipment CRUD, department create, admin user create/delete, and richer `system` metadata. (6) Footer now credits `นักวิชาการคอมพิวเตอร์` with the slogan `คิดเป็นระบบ เขียนเป็นจริง ขับเคลื่อนเมืองด้วยข้อมูล`. |
 | 5.2 | 2026-05-08 | System analyst (AI) + User | **Import template + security hardening.** (1) `/import` now provides a downloadable Simple 8-column Excel template with `template` and `instructions` sheets. (2) `/import` is admin-gated in UI, enforces 10 MB file size before parse, validates required project name / numeric `plan_id` / non-negative numeric budgets, and still persists through `serverBatchImportProjects`. (3) Important project/status/import mutations now write audit events server-side with actor data from the admin session and before/after where practical; duplicate client-side audit calls were removed. (4) Dashboard detail sheet status controls are admin-gated, toast only after server success, and invalidate project/list/dashboard caches. (5) `scripts/seed-admins.js` refuses default credentials when `NODE_ENV=production` and `ADMIN_USERS` is missing. (6) Excel export sanitizes strings beginning with formula-trigger characters. |

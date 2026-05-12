@@ -38,6 +38,17 @@ function normalizeUsername(value: string) {
   return value.trim().toLowerCase().split("@")[0].replace(/[^a-z0-9._-]/g, "");
 }
 
+function loginSetupError(error: any) {
+  const message = String(error?.message ?? "");
+  const code = String(error?.code ?? "");
+  if (message.includes("DATABASE_URL")) return "DATABASE_URL_MISSING";
+  if (message.includes("SESSION_PASSWORD")) return "SESSION_PASSWORD_MISSING";
+  if (code === "42P01" || (/admin_users/i.test(message) && /does not exist|relation/i.test(message))) {
+    return "ADMIN_USERS_TABLE_MISSING";
+  }
+  return null;
+}
+
 function getClientKey() {
   try {
     const ip = getRequestIP({ xForwardedFor: true });
@@ -116,10 +127,16 @@ export const serverLogin = createServerFn({ method: "POST" })
 
       const rows = await sql`SELECT id, username, password_hash FROM admin_users WHERE username = ${username} LIMIT 1`;
       if (!rows.length) {
-        await insertAuthAudit(sql, "login", { username, success: false, reason: "user_not_found", clientKey }).catch(() => {});
+        const countRows = await sql`SELECT COUNT(*)::int AS count FROM admin_users`;
+        const adminCount = Number((countRows[0] as any)?.count ?? 0);
+        const reason = adminCount === 0 ? "admin_users_empty" : "user_not_found";
+        await insertAuthAudit(sql, "login", { username, success: false, reason, clientKey }).catch(() => {});
         registerFailure(usernameAttempts, username || "blank", now);
         registerFailure(ipAttempts, clientKey, now);
         registerGlobalFailure(now);
+        if (adminCount === 0) {
+          return { ok: false, error: "ADMIN_USERS_NOT_SEEDED" };
+        }
         return { ok: false, error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" };
       }
 
@@ -140,7 +157,8 @@ export const serverLogin = createServerFn({ method: "POST" })
       await insertAuthAudit(sql, "login", { username: user.username, userId: user.id, success: true, clientKey }).catch(() => {});
       return { ok: true, username: user.username };
     } catch (e: any) {
-      return { ok: false, error: e?.message || "เข้าสู่ระบบไม่สำเร็จ" };
+      const setupError = loginSetupError(e);
+      return { ok: false, error: setupError || e?.message || "เข้าสู่ระบบไม่สำเร็จ" };
     }
   });
 

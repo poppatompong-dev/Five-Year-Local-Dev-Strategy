@@ -237,6 +237,8 @@ Annotation storage:
 - `project_annotations.project_id` is the trusted link between a note/text box and a project.
 - Do not fall back to `source_row` matching in user-facing queries unless explicitly designing a review workflow.
 - Current project list/detail surfaces only explicitly linked annotations.
+- Project list annotation search is intentionally smart-normalized in `src/lib/server-fns.ts`: Thai digits are converted to Arabic digits, zero-width characters are removed, and compact matching ignores whitespace, punctuation, and symbols. This is required so queries like `ครั้งที่ 2/2568` match text boxes extracted as `ครั้งที่ 2 / 2568` or split across OOXML text runs.
+- Annotation search haystacks include both `raw_text` and structured fields such as `amendment_type`, `amendment_number`, `amendment_year`, `target_plan`, `target_ref`, and `funding_source`.
 
 ## 7. Server Functions and API Pattern
 
@@ -303,6 +305,8 @@ Login behavior:
 - Password hash uses bcryptjs.
 - Failed attempts are rate-limited in memory: 5 failures per username per 60 seconds.
 - Login/logout write audit events.
+- Production setup problems are returned as safe diagnostic codes, then translated on `/login`: `DATABASE_URL_MISSING`, `SESSION_PASSWORD_MISSING`, `ADMIN_USERS_TABLE_MISSING`, and `ADMIN_USERS_NOT_SEEDED`.
+- Do not replace these setup diagnostics with raw thrown errors; raw Vercel/Neon errors can expose implementation details and are harder for officers to act on.
 
 Authorization rule:
 
@@ -402,6 +406,8 @@ Text box extraction/import supporting scripts:
 - `scripts/forensic-extract.cjs`
 - `scripts/import-projects.cjs`
 - `scripts/lib/textbox-lookup.cjs`
+
+`scripts/extract-textboxes.cjs` preserves original `rawText` for traceability, but classifies against normalized text. Keep that behavior: XML entities are decoded, Thai digits are normalized, split year digits are joined, Thai intra-word spaces are compacted, and slash spacing is normalized before amendment parsing.
 
 Sensitive generated import artifacts should stay untracked. Check `.gitignore` before adding any large or source-data-derived files.
 
@@ -617,6 +623,7 @@ Recommended pre-launch checks:
 - `src/routeTree.gen.ts` can be dirty after route changes/build. Treat it as generated.
 - Thai text may appear mojibake in some shell outputs because of terminal encoding. Inspect in editor/browser when accuracy matters.
 - Server errors should generally be thrown as `Response`, not plain `Error`, from server functions.
+- If Vercel login fails, first confirm production env vars (`DATABASE_URL`, `SESSION_PASSWORD`) and that production Neon has `admin_users` seeded. The login page should now surface these setup issues as Thai messages instead of a generic failure.
 - UI import supports simple 8-column format; full official workbook handling is CLI-oriented.
 - Audit writes are not universally transactional with data writes.
 - Request IP/user-agent are not captured in audit logs yet.

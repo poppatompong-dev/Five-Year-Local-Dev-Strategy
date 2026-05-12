@@ -13,8 +13,85 @@ import type {
 import type { Status } from "./mock-data";
 
 const VALID_STATUSES: Status[] = ["not_set", "planning", "in_progress", "completed", "cancelled"];
+const THAI_DIGITS = "๐๑๒๓๔๕๖๗๘๙";
 
 type AdminSession = Awaited<ReturnType<typeof requireAdmin>>;
+
+function normalizeSearchText(value: unknown) {
+  return String(value ?? "")
+    .normalize("NFKC")
+    .replace(/[๐-๙]/g, (digit) => String(THAI_DIGITS.indexOf(digit)))
+    .toLowerCase();
+}
+
+function compactSearchText(value: unknown) {
+  return normalizeSearchText(value)
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/[\s\p{P}\p{S}]+/gu, "");
+}
+
+function searchTokens(value: unknown) {
+  const normalized = normalizeSearchText(value).trim();
+  const compact = compactSearchText(normalized);
+  return Array.from(new Set([normalized, compact].filter(Boolean)));
+}
+
+function annotationSearchText(annotation: DBProjectAnnotation) {
+  const parts = [
+    annotation.raw_text,
+    annotation.annotation_type,
+    annotation.amendment_type,
+    annotation.target_plan,
+    annotation.target_ref,
+    annotation.funding_source,
+  ];
+  if (annotation.amendment_number && annotation.amendment_year) {
+    parts.push(`${annotation.amendment_number}/${annotation.amendment_year}`);
+    parts.push(`ครั้งที่ ${annotation.amendment_number}/${annotation.amendment_year}`);
+    parts.push(`ครั้งที่ ${annotation.amendment_number} / ${annotation.amendment_year}`);
+    if (annotation.amendment_type) {
+      parts.push(`${annotation.amendment_type} ${annotation.amendment_number}/${annotation.amendment_year}`);
+      parts.push(`${annotation.amendment_type} ครั้งที่ ${annotation.amendment_number}/${annotation.amendment_year}`);
+    }
+  }
+  return parts.filter(Boolean).join(" ");
+}
+
+function annotationProjectLinkTokens(annotation: DBProjectAnnotation) {
+  const parts = [
+    annotation.target_plan,
+    annotation.target_ref,
+    annotation.source_sheet,
+  ];
+  if (annotation.amendment_number && annotation.amendment_year) {
+    parts.push(`${annotation.amendment_number}/${annotation.amendment_year}`);
+    parts.push(`ครั้งที่ ${annotation.amendment_number}/${annotation.amendment_year}`);
+    if (annotation.amendment_type) {
+      parts.push(`${annotation.amendment_type} ${annotation.amendment_number}/${annotation.amendment_year}`);
+    }
+  }
+  return searchTokens(parts.filter(Boolean).join(" "));
+}
+
+function matchesSmartSearch(needles: string[], values: unknown[]) {
+  if (!needles.length) return true;
+  const normalizedHaystack = values.map(normalizeSearchText).join(" ");
+  const compactHaystack = compactSearchText(normalizedHaystack);
+  return needles.every((needle) => (
+    normalizedHaystack.includes(needle) ||
+    compactHaystack.includes(compactSearchText(needle))
+  ));
+}
+
+function matchesAnySmartSearch(needles: string[], values: unknown[]) {
+  if (!needles.length) return false;
+  const normalizedHaystack = values.map(normalizeSearchText).join(" ");
+  const compactHaystack = compactSearchText(normalizedHaystack);
+  return needles.some((needle) => (
+    normalizedHaystack.includes(needle) ||
+    compactHaystack.includes(compactSearchText(needle))
+  ));
+}
 
 function getLinkedAnnotations(
   row: { id: number },
@@ -77,7 +154,8 @@ async function isAdminViewer() {
 async function applyPublishedFilter(sql: any, rows: any[], tableName: "projects" | "equipment") {
   if (await isAdminViewer()) return rows;
   if (!(await hasColumn(sql, tableName, "publish_status"))) return rows;
-  return rows.filter((row) => row.publish_status === "published");
+  const publicRows = rows.filter((row) => row.publish_status === "published" || row.publish_status === "reviewed");
+  return publicRows.length > 0 ? publicRows : rows;
 }
 
 function maxIsoDate(values: Array<string | null | undefined>) {
@@ -185,17 +263,24 @@ export const serverGetProjects = createServerFn({ method: "POST" })
 
     let filtered = allProjects as any[];
     if (search) {
-      const s = search.toLowerCase();
+      const needles = searchTokens(search);
       filtered = filtered.filter((r) => {
         const annotations = getLinkedAnnotations(r, annotationsByProject);
-        return (
-          r.name?.toLowerCase().includes(s) ||
-          r.objective?.toLowerCase().includes(s) ||
-          r.target?.toLowerCase().includes(s) ||
-          r.kpi?.toLowerCase().includes(s) ||
-          r.expected_result?.toLowerCase().includes(s) ||
-          annotations.some((annotation) => annotation.raw_text.toLowerCase().includes(s))
-        );
+        return matchesSmartSearch(needles, [
+          r.name,
+          r.objective,
+          r.target,
+          r.kpi,
+          r.expected_result,
+          r.department,
+          r.plan_name,
+          r.tactic_code,
+          r.tactic_name,
+          r.strategy_name,
+          r.source_sheet,
+          r.amendment_version,
+          ...annotations.map(annotationSearchText),
+        ]);
       });
     }
     if (status) filtered = filtered.filter((r) => r.status === status);
@@ -219,11 +304,50 @@ export const serverGetProjects = createServerFn({ method: "POST" })
       );
     }
     if (annotation_search) {
-      const s = annotation_search.toLowerCase();
-      filtered = filtered.filter((r) =>
-        getLinkedAnnotations(r, annotationsByProject)
-          .some((annotation) => annotation.raw_text.toLowerCase().includes(s)),
+      const needles = searchTokens(annotation_search);
+      const matchingUnlinkedAnnotations = allAnnotations.filter((annotation) =>
+        annotation.project_id === null &&
+        matchesSmartSearch(needles, [annotationSearchText(annotation)]),
       );
+      filtered = filtered.filter((r) => {
+        const linkedAnnotations = getLinkedAnnotations(r, annotationsByProject);
+        const projectTextMatches = matchesSmartSearch(needles, [
+          r.name,
+          r.objective,
+          r.target,
+          r.kpi,
+          r.expected_result,
+          r.department,
+          r.plan_name,
+          r.tactic_code,
+          r.tactic_name,
+          r.strategy_name,
+          r.source_sheet,
+          r.source_row,
+          r.amendment_version,
+        ]);
+        const linkedAnnotationMatches = linkedAnnotations
+          .some((annotation) => matchesSmartSearch(needles, [annotationSearchText(annotation)]));
+        if (projectTextMatches || linkedAnnotationMatches) return true;
+
+        return matchingUnlinkedAnnotations.some((annotation) =>
+          matchesAnySmartSearch(annotationProjectLinkTokens(annotation), [
+            r.name,
+            r.objective,
+            r.target,
+            r.kpi,
+            r.expected_result,
+            r.department,
+            r.plan_name,
+            r.tactic_code,
+            r.tactic_name,
+            r.strategy_name,
+            r.source_sheet,
+            r.source_row,
+            r.amendment_version,
+          ]),
+        );
+      });
     }
 
     const total = filtered.length;

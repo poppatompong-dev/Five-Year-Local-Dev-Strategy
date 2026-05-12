@@ -1,6 +1,6 @@
 # Pre-Launch Checklist
 
-ตรวจสอบล่าสุด: 2026-05-11
+ตรวจสอบล่าสุด: 2026-05-12
 
 เอกสารนี้ใช้คู่กับ `docs/PUBLIC_LAUNCH_READINESS.md` สำหรับเตรียมเปิดระบบสู่สาธารณะในรูปแบบ Public Read-only Portal
 
@@ -67,11 +67,14 @@ git ls-files | findstr /i ".env .xlsx forensic staging textbox raw-import import
 - [ ] Public user ไม่เห็นปุ่มเพิ่ม แก้ไข ลบ import user management หรือรายงานราชการสำหรับ admin
 - [ ] Public export มีเฉพาะข้อมูลเผยแพร่และ metadata แหล่งข้อมูล
 - [ ] Direct mutation โดยไม่ login ต้องไม่สำเร็จ
+- [ ] ค้นหา annotation ด้วยตัวอย่าง `ครั้งที่ 2/2568` ต้องพบโครงการที่มี text box แม้ raw text ถูกแยกช่องว่างหรือใช้รูปแบบ `ครั้งที่ 2 / 2568`
+- [ ] ค้นหา annotation ด้วยเลขไทย เช่น `ครั้งที่ ๒/๒๕๖๘` ต้อง match กับข้อมูลเลขอารบิกในฐานข้อมูล
 
 ### 6. ตรวจ Admin Workflow
 
 - [ ] `pop` login ได้
 - [ ] `pok` login ได้
+- [ ] หาก login บน Vercel ไม่สำเร็จ หน้า login ต้องแสดงสาเหตุ setup ที่อ่านได้ เช่น ขาด `DATABASE_URL`, ขาด/สั้นกว่า 32 ตัวอักษรสำหรับ `SESSION_PASSWORD`, ยังไม่ได้ migrate `admin_users`, หรือยังไม่ได้ seed admin users
 - [ ] เพิ่ม/แก้ไข/ลบโครงการได้หลัง login
 - [ ] import ทำงานเฉพาะ admin
 - [ ] audit log แสดง create/update/delete/import/export/status/login/logout

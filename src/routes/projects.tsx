@@ -461,17 +461,15 @@ function ProjectsPage() {
                             </span>
                             <span className="truncate md:hidden">{p.department || "ไม่ระบุหน่วยงาน"}</span>
                           </div>
-                          <button
-                            type="button"
+                          <Link
+                            to="/projects/$projectId"
+                            params={{ projectId: String(p.id) }}
                             className="line-clamp-2 text-left font-semibold leading-relaxed transition group-hover:text-primary"
                             aria-label={`ดูรายละเอียดโครงการ ${p.name}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDetailProjectId(p.id);
-                            }}
+                            onClick={(e) => e.stopPropagation()}
                           >
                             {p.name}
-                          </button>
+                          </Link>
                           {p.tactic_code && (
                             <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                               <span className="inline-flex items-center justify-center size-4 rounded bg-primary-soft text-primary text-[10px] font-semibold">

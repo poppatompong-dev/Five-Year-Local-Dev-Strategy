@@ -173,7 +173,9 @@ These are the **core data sheets** containing individual project records organiz
 
 **SheetJS does NOT extract drawing objects.** Text boxes in Excel are stored as OOXML `<xdr:twoCellAnchor>` elements within `xl/drawings/drawingN.xml` inside the .xlsx ZIP package. A dedicated extractor (`scripts/extract-textboxes.cjs`) reads these directly.
 
-**Results**: **43 drawing XML files** contain **212 text box annotations** across **42 sheets**.
+**Initial scan results**: **43 drawing XML files** contained **212 text box annotations** across **42 sheets**.
+
+**Current pipeline note (2026-05-12)**: the later official-load verifier records **230 total text boxes**, with **117/117 project-detail-sheet text boxes linked** into `project_annotations.project_id`, **0 unmatched project-sheet text boxes**, **0 duplicate linked groups**, and **0 DB/source mismatches**. Treat the 212-count table below as the original forensic inventory and the 230-count verifier result as the current operational baseline.
 
 #### Annotation Type Classification
 
@@ -230,6 +232,7 @@ These are the **core data sheets** containing individual project records organiz
 - **Tool**: `scripts/extract-textboxes.cjs` (uses `adm-zip` for ZIP reading)
 - **Output**: `scripts/textbox-data.json` (machine-readable) + `scripts/textbox-report.txt` (human-readable)
 - **Row indexing**: 0-based (matches SheetJS convention), so text box anchored at Row 33 corresponds to Excel row 34
+- **Normalization**: current extraction preserves original `rawText` for audit/display, but classifies against normalized text. XML entities are decoded, Thai digits are converted to Arabic digits, split year digits are joined, Thai intra-word spaces are compacted, and slash spacing is normalized before amendment parsing.
 
 ---
 
@@ -487,7 +490,7 @@ CREATE TABLE project_annotations (
   annotation_type TEXT NOT NULL
     CHECK (annotation_type IN (
       'amendment','change','addition','transfer','merge',
-      'duplicate','budget_source','status_note','form_index'
+      'duplicate','budget_source','status_note','form_index','cover_metadata'
     )),
   raw_text        TEXT NOT NULL,         -- original text box content
   amendment_type  TEXT,                  -- แก้ไข / เปลี่ยนแปลง / เพิ่มเติม
@@ -644,6 +647,7 @@ FOR EACH sheet in Category C:
 | R9 | **Provincial coordination data** — very large budgets (billions) in ผ.02.2 may inflate totals if mixed with regular projects | HIGH | MEDIUM | Separate import stream | Tag with `source_category = 'provincial'`; exclude from standard reports unless explicitly included |
 | R10 | **Community project data** — 1,005 small projects from 02.1 sheets | MEDIUM | LOW | Separate import stream | Tag with `source_category = 'community'` |
 | R11 | **Text box annotations lost** — 212 drawing-object annotations (amendments, transfers, merges, budget sources) invisible to SheetJS cell extraction. Without these, transferred projects become phantom duplicates and amendment provenance is lost. | HIGH | CERTAIN | `scripts/extract-textboxes.cjs` extracts from OOXML drawings | Pre-load `textbox-data.json` into import pipeline; attach per-row annotations during project parsing. See §1.4 and §4.2 (`project_annotations` table). |
+| R12 | **Thai annotation search misses visually identical labels** — OOXML may split Thai words/runs, insert spaces around `/`, or mix Thai/Arabic digits, causing exact substring search to miss labels such as `ครั้งที่ 2/2568`. | MEDIUM | HIGH | Regression search using `ครั้งที่ 2/2568` and `ครั้งที่ ๒/๒๕๖๘` | Current app normalizes query/haystack in `serverGetProjects`; extractor normalizes classification text while preserving raw text. |
 
 ### 5.2 Error Classification
 
@@ -681,7 +685,8 @@ FOR EACH sheet in Category C:
 - Open .xlsx as ZIP with `adm-zip`
 - Traverse `xl/drawings/drawingN.xml` for all sheets
 - Parse `<xdr:twoCellAnchor>` → extract anchor rows + `<a:t>` text
-- Classify annotations (amendment, change, addition, transfer, merge, budget_source, form_index)
+- Decode XML text entities and normalize classification text while preserving raw display text
+- Classify annotations (amendment, change, addition, transfer, merge, duplicate, budget_source, status_note, form_index, cover_metadata)
 - Output: `textbox-data.json` → loaded as `Map<sheetName, Map<row, Annotation[]>>`
 
 **1b. Cell Data Extraction** (SheetJS):

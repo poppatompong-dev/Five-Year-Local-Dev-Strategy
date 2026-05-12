@@ -15,8 +15,10 @@
 - Session cookie เป็น `httpOnly`, `sameSite=lax`, และ `secure` ใน production
 - Login มี rate limit 5 ครั้งใน 1 นาทีต่อ username และต่อ client IP พร้อม lock ชั่วคราว
 - Failed login, successful login และ logout ถูกบันทึกใน `audit_events`
+- หน้า login แสดง diagnostic แบบปลอดภัยสำหรับ production setup ได้แก่ `DATABASE_URL`, `SESSION_PASSWORD`, ตาราง `admin_users`, และบัญชี admin ที่ยังไม่ได้ seed โดยไม่เปิดเผย secret หรือ stack trace
 - หน้า admin direct URL เช่น `/admin/users`, `/admin/audit`, `/admin/hierarchy` ซ่อน UI และไม่ยิง query เมื่อยังไม่ login
 - Public metadata แสดงแหล่งข้อมูล วันที่ปรับปรุงล่าสุด สถานะข้อมูล และหมายเหตุการตรวจสอบ
+- Project/annotation search รองรับการค้นหาแบบ normalized สำหรับภาษาไทย เลขไทย/อารบิก ช่องว่าง เครื่องหมายคั่น และข้อความจาก Excel text box ที่ถูก OOXML split เช่น `ครั้งที่ 2/2568`
 - Export Excel มี metadata sheet และ sanitize ค่า string ที่ขึ้นต้นด้วย `=`, `+`, `-`, `@` เพื่อลดความเสี่ยง Excel formula injection
 - Raw Excel ใน `src/*.xlsx` ถูก ignore และไม่ควร commit ขึ้น public repository
 
@@ -87,6 +89,8 @@ Draft -> Reviewed -> Published
 - [ ] ทดสอบยิง mutation โดยไม่ login ต้องได้ 401/ไม่สำเร็จ
 - [ ] ทดสอบ login ผิด 5 ครั้งใน 1 นาที ต้องถูก lock ชั่วคราวและเกิด audit log
 - [ ] ทดสอบ `pop` และ `pok` login ได้ตามเดิม
+- [ ] ทดสอบ Vercel login setup diagnostics โดยยืนยันว่าหาก env/table/user setup ผิด จะได้ข้อความไทยที่บอกสาเหตุโดยไม่เปิดเผย secret
+- [ ] ทดสอบ annotation search ด้วย `ครั้งที่ 2/2568` และเลขไทย `ครั้งที่ ๒/๒๕๖๘`
 - [ ] ทดสอบ export public ว่าไม่มีข้อมูล admin/audit/internal note
 - [ ] ตั้งค่า Vercel Firewall/WAF หรือ network allowlist สำหรับ admin login
 - [ ] ตั้ง backup schedule และทดสอบ restore Neon ก่อนเปิด public

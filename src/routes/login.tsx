@@ -19,6 +19,7 @@ function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (isLoggedIn) navigate({ to: "/" });
@@ -26,7 +27,11 @@ function LoginPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!username || !password) return;
+    setError("");
+    if (!username || !password) {
+      setError("กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
+      return;
+    }
     setSubmitting(true);
     try {
       await login(username, password);
@@ -40,8 +45,17 @@ function LoginPage() {
             ? "ระบบปิดการเข้าสู่ระบบผู้ดูแลชั่วคราว กรุณาติดต่อผู้ดูแลระบบ"
             : err?.message === "ADMIN_LOGIN_NOT_ALLOWED"
               ? "เครือข่ายนี้ไม่ได้รับอนุญาตให้เข้าสู่ระบบผู้ดูแล"
-              : err?.message || "เข้าสู่ระบบไม่สำเร็จ";
+              : err?.message === "DATABASE_URL_MISSING"
+                ? "Vercel ยังไม่ได้ตั้งค่า DATABASE_URL สำหรับเชื่อมต่อฐานข้อมูล"
+                : err?.message === "SESSION_PASSWORD_MISSING"
+                  ? "Vercel ยังไม่ได้ตั้งค่า SESSION_PASSWORD หรือค่าสั้นกว่า 32 ตัวอักษร"
+                  : err?.message === "ADMIN_USERS_TABLE_MISSING"
+                    ? "ฐานข้อมูลยังไม่มีตารางผู้ดูแลระบบ กรุณารัน migrate"
+                    : err?.message === "ADMIN_USERS_NOT_SEEDED"
+                      ? "ฐานข้อมูลยังไม่มีบัญชีผู้ดูแลระบบ กรุณารัน seed-admins"
+                      : err?.message || "เข้าสู่ระบบไม่สำเร็จ";
       toast.error(msg);
+      setError(msg);
       setSubmitting(false);
     }
   }
@@ -63,7 +77,10 @@ function LoginPage() {
               <Input
                 id="username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  if (error) setError("");
+                }}
                 autoComplete="username"
                 autoFocus
                 disabled={submitting}
@@ -75,12 +92,20 @@ function LoginPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (error) setError("");
+                }}
                 autoComplete="current-password"
                 disabled={submitting}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={submitting || !username || !password}>
+            {error && (
+              <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </p>
+            )}
+            <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? <Loader2 className="size-4 mr-2 animate-spin" /> : <LogIn className="size-4 mr-2" />}
               เข้าสู่ระบบ
             </Button>
