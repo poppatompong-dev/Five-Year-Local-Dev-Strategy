@@ -1,0 +1,13 @@
+Use case: short government workflow explainer video
+Primary request: a warm cinematic office desk scene showing many organized but dense government planning documents, spreadsheets, folders, sticky notes, and budget tables
+Scene/background: Thai municipal office desk, late afternoon, neat but busy paperwork, no visible private data
+Subject: stacks of generic folders, printed tables, calculator, pen, laptop in the background
+Action: slow push-in across the documents to suggest time-consuming manual searching
+Camera: locked-off 35mm look with a gentle forward dolly, shallow depth of field
+Lighting/mood: warm natural office light, realistic, professional, slightly busy but not chaotic
+Color palette: warm white, muted green, paper cream, soft gold, dark gray
+Style/format: realistic documentary-style b-roll, clean government office, 16:9
+Timing/beats: 4 seconds, slow reveal from folders to laptop
+Audio: no dialogue, subtle office ambience only
+Constraints: no readable personal data, no real people, no logos, no brand names
+Avoid: distorted text, fake official seals, dramatic clutter, dark mood

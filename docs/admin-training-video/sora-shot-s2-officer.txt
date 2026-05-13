@@ -1,0 +1,13 @@
+Use case: short admin onboarding video
+Primary request: a professional Thai municipal planning officer working calmly at a computer, reviewing structured planning data on screen
+Scene/background: bright municipal office, clean desk, neutral background, work-focused atmosphere
+Subject: generic office worker seen from behind or side angle, no identifiable face, laptop and monitor with abstract dashboard-like shapes
+Action: the officer moves a mouse, checks a table, and nods slightly with confidence
+Camera: medium over-the-shoulder shot, gentle handheld stability, no fast movement
+Lighting/mood: soft daylight, supportive, modern public service mood
+Color palette: white, municipal green, slate gray, soft gold
+Style/format: realistic office b-roll, 16:9
+Timing/beats: 4 seconds, hand moves mouse, screen glow, slight confident pause
+Audio: no dialogue, quiet office ambience
+Constraints: screen content should be abstract and unreadable, no passwords, no real logos, no identifiable person
+Avoid: futuristic sci-fi UI, exaggerated gestures, readable fake Thai text

@@ -1,0 +1,13 @@
+Use case: transition shot for digital transformation in a municipal planning system
+Primary request: paper planning folders visually transition into a clean digital dashboard made of simple charts, tables, and status cards
+Scene/background: neutral office background, soft light, documents on desk transforming into abstract digital panels
+Subject: generic documents and abstract dashboard panels, no real UI text
+Action: smooth morph-like transition from paper folders to floating dashboard cards
+Camera: slow lateral move, elegant and restrained
+Lighting/mood: optimistic, organized, professional
+Color palette: municipal green, white, soft gold, light gray, charcoal
+Style/format: realistic b-roll with subtle digital overlay, not sci-fi, 16:9
+Timing/beats: 4 seconds, paper at start, dashboard-like structure by the end
+Audio: soft transition swell, no dialogue
+Constraints: no readable text, no real logos, no private data
+Avoid: flashy holograms, cluttered UI, neon cyber look, distorted characters
