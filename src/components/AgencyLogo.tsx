@@ -1,7 +1,7 @@
 import { Building2 } from "lucide-react";
 import { useState } from "react";
 
-const LOGO_CANDIDATES = ["/agency-logo.png", "/agency-logo.svg"];
+const LOGO_CANDIDATES = ["/agency-logo.svg", "/agency-logo.png"];
 
 export function AgencyLogo({ className = "size-11", imgClassName = "size-full" }: { className?: string; imgClassName?: string }) {
   const [logoIndex, setLogoIndex] = useState(0);
@@ -16,7 +16,7 @@ export function AgencyLogo({ className = "size-11", imgClassName = "size-full" }
           width={128}
           height={128}
           decoding="async"
-          fetchPriority="high"
+          fetchPriority="low"
           loading="eager"
           className={`${imgClassName} object-contain`}
           onError={() => {

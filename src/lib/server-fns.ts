@@ -151,6 +151,36 @@ function attachAnnotationSummary(row: any, annotations: DBProjectAnnotation[]): 
   } as ProjectRow;
 }
 
+async function getAnnotationsByProjectIds(sql: any, projectIds: number[]) {
+  const ids = Array.from(new Set(projectIds.filter(Boolean)));
+  if (!ids.length) return new Map<number, DBProjectAnnotation[]>();
+
+  const annotations = (await sql`
+    SELECT *
+    FROM project_annotations
+    WHERE project_id = ANY(${ids}::int[])
+    ORDER BY source_sheet, source_row, id
+  `) as DBProjectAnnotation[];
+
+  return buildAnnotationsByProject(annotations);
+}
+
+function buildAnnotationsByProject(annotations: DBProjectAnnotation[]) {
+  const annotationsByProject = new Map<number, DBProjectAnnotation[]>();
+  annotations.forEach((annotation) => {
+    if (annotation.project_id !== null) {
+      const list = annotationsByProject.get(annotation.project_id) ?? [];
+      list.push(annotation);
+      annotationsByProject.set(annotation.project_id, list);
+    }
+  });
+  return annotationsByProject;
+}
+
+let annotationLabelCache:
+  | { expiresAt: number; value: AnnotationLabelOption[] }
+  | null = null;
+
 function actorFromSession(session: AdminSession) {
   return {
     userId: session.userId ?? null,
@@ -281,19 +311,15 @@ export const serverGetProjects = createServerFn({ method: "POST" })
       ORDER BY p.id
     `;
     const allProjects = await applyPublishedFilter(sql, allProjectRows as any[], "projects");
-    const allAnnotations = (await sql`
-      SELECT *
-      FROM project_annotations
-      ORDER BY source_sheet, source_row, id
-    `) as DBProjectAnnotation[];
-    const annotationsByProject = new Map<number, DBProjectAnnotation[]>();
-    allAnnotations.forEach((annotation) => {
-      if (annotation.project_id !== null) {
-        const list = annotationsByProject.get(annotation.project_id) ?? [];
-        list.push(annotation);
-        annotationsByProject.set(annotation.project_id, list);
-      }
-    });
+    const needsGlobalAnnotations = Boolean(search || annotation_search || annotation_type || has_annotations);
+    const allAnnotations = needsGlobalAnnotations
+      ? ((await sql`
+          SELECT *
+          FROM project_annotations
+          ORDER BY source_sheet, source_row, id
+        `) as DBProjectAnnotation[])
+      : [];
+    let annotationsByProject = buildAnnotationsByProject(allAnnotations);
 
     let filtered = allProjects as any[];
     if (search) {
@@ -386,6 +412,9 @@ export const serverGetProjects = createServerFn({ method: "POST" })
 
     const total = filtered.length;
     const paged = filtered.slice(offset, offset + limit);
+    if (!needsGlobalAnnotations) {
+      annotationsByProject = await getAnnotationsByProjectIds(sql, paged.map((row: any) => Number(row.id)));
+    }
     const result: ProjectListResult = {
       data: paged.map((r: any) => attachAnnotationSummary(
         { ...r, total_budget: Number(year ? r.year_budget : r.total_budget) },
@@ -556,12 +585,19 @@ export const serverBulkPatchProjectStatusByFilter = createServerFn({ method: "PO
 
 export const serverGetProjectAnnotationLabels = createServerFn({ method: "GET" })
   .handler(async (): Promise<AnnotationLabelOption[]> => {
+    const now = Date.now();
+    if (annotationLabelCache && annotationLabelCache.expiresAt > now) {
+      return annotationLabelCache.value;
+    }
+
     const rows = (await getSql()`
       SELECT *
       FROM project_annotations
       ORDER BY amendment_year DESC NULLS LAST, amendment_number DESC NULLS LAST, source_sheet, source_row, id
     `) as DBProjectAnnotation[];
-    return toAnnotationLabelOptions(rows);
+    const value = toAnnotationLabelOptions(rows);
+    annotationLabelCache = { value, expiresAt: now + 5 * 60_000 };
+    return value;
   });
 
 // ---------------------------------------------------------------------------

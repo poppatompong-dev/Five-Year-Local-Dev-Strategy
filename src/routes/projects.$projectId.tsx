@@ -15,7 +15,6 @@ import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ChevronLeft, ChevronRight, FileText, Target, Award, TrendingUp, Building2, Calendar, Pencil, Trash2, CheckCircle2, XCircle, ArrowRight, RotateCcw, Save, X, MessageSquareText } from "lucide-react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -449,30 +448,7 @@ function ProjectDetailPage() {
                 <p className="text-xs text-muted-foreground mt-0.5">การจัดสรรงบประมาณตลอด 5 ปีงบประมาณ</p>
               </div>
               <div className="h-[260px] mt-4">
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={budgetData} margin={{ left: -10, right: 10, top: 10 }}>
-                    <defs>
-                      <linearGradient id="budgetBar" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="oklch(0.74 0.12 88)" />
-                        <stop offset="100%" stopColor="oklch(0.62 0.13 75)" />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.015 140)" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 12, fill: "oklch(0.48 0.02 160)" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: "oklch(0.48 0.02 160)" }} axisLine={false} tickLine={false} />
-                    <Tooltip
-                      cursor={{ fill: "oklch(0.95 0.03 165 / 0.4)" }}
-                      contentStyle={{
-                        borderRadius: 12,
-                        border: "1px solid oklch(0.9 0.015 140)",
-                        background: "oklch(1 0 0)",
-                      }}
-                      formatter={(v) => [`${Number(v).toLocaleString("th-TH")} บาท`, "งบประมาณ"]}
-                      labelFormatter={(l) => `ปีงบประมาณ ${l}`}
-                    />
-                    <Bar dataKey="amount" fill="url(#budgetBar)" radius={[8, 8, 0, 0]} maxBarSize={70} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <ProjectBudgetChart data={budgetData} />
               </div>
             </div>
           </div>
@@ -584,6 +560,33 @@ function ProjectAnnotationsPanel({ annotations }: { annotations: ProjectDetail["
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function ProjectBudgetChart({ data }: { data: { label: string; amount: number }[] }) {
+  const max = Math.max(1, ...data.map((item) => item.amount));
+
+  return (
+    <div className="grid h-full grid-cols-5 items-end gap-3 pt-4">
+      {data.map((item) => {
+        const pct = item.amount > 0 ? Math.max(6, (item.amount / max) * 100) : 3;
+
+        return (
+          <div key={item.label} className="flex h-full min-w-0 flex-col justify-end text-center">
+            <div className="relative mx-auto flex h-[180px] w-full max-w-20 items-end rounded-t-xl bg-muted/45">
+              <div
+                className="w-full rounded-t-xl bg-gradient-to-b from-gold to-gold/70 shadow-sm transition-[height] duration-500"
+                style={{ height: `${pct}%`, opacity: item.amount > 0 ? 1 : 0.25 }}
+              />
+            </div>
+            <div className="mt-2 text-xs font-semibold tabular">{item.label}</div>
+            <div className="truncate text-[11px] text-muted-foreground">
+              {item.amount > 0 ? formatBaht(item.amount, { compact: true }) : "-"}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

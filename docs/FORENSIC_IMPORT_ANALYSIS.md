@@ -6,6 +6,7 @@
 **Analysis Date**: 2025-06
 **Document Version**: 1.0
 **Status**: Production-grade forensic analysis for import pipeline design
+**Current System Note (2026-05-13)**: ระบบ production ปัจจุบันใช้ข้อมูลที่โหลดผ่าน official workbook pipeline แล้ว เอกสารนี้ยังเป็นแหล่งอ้างอิงด้าน forensic/import ส่วนสถานะระบบล่าสุดให้อ่าน `docs/SYSTEM_DOCUMENT.md`, หน้า `/about`, และหน้า `/manual`
 
 ---
 

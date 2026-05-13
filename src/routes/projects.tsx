@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { PublicDataNotice } from "@/components/PublicDataNotice";
@@ -93,22 +93,27 @@ function ProjectsPage() {
   const { data: strategies = [] } = useQuery({
     queryKey: ["strategies"],
     queryFn: apiGetStrategies,
+    staleTime: 10 * 60_000,
   });
   const { data: tactics = [] } = useQuery({
     queryKey: ["tactics"],
     queryFn: apiGetTactics,
+    staleTime: 10 * 60_000,
   });
   const { data: plans = [] } = useQuery({
     queryKey: ["plans"],
     queryFn: apiGetPlans,
+    staleTime: 10 * 60_000,
   });
   const { data: departments = [] } = useQuery({
     queryKey: ["departments"],
     queryFn: apiGetDepartments,
+    staleTime: 10 * 60_000,
   });
   const { data: annotationLabels = [] } = useQuery({
     queryKey: ["project-annotation-labels"],
     queryFn: apiGetProjectAnnotationLabels,
+    staleTime: 5 * 60_000,
   });
 
   function resetSelection() {
@@ -189,11 +194,24 @@ function ProjectsPage() {
     },
   });
 
-  const availablePlans = strategyId
-    ? plans.filter((p) => tactics.find((t) => t.id === p.tactic_id)?.strategy_id === strategyId)
-    : plans;
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search), 350);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedAnnotationSearch(annotationSearch), 350);
+    return () => window.clearTimeout(timer);
+  }, [annotationSearch]);
+
+  const tacticStrategyById = useMemo(() => new Map(tactics.map((t) => [t.id, t.strategy_id])), [tactics]);
+  const availablePlans = useMemo(() => (
+    strategyId
+      ? plans.filter((p) => tacticStrategyById.get(p.tactic_id) === strategyId)
+      : plans
+  ), [plans, strategyId, tacticStrategyById]);
   const effectiveAnnotationSearch = debouncedAnnotationSearch || selectedAnnotationLabel;
-  const projectFilters = {
+  const projectFilters = useMemo(() => ({
     search: debouncedSearch || undefined,
     annotation_search: effectiveAnnotationSearch || undefined,
     annotation_type: annotationType && annotationType !== "all" ? annotationType : undefined,
@@ -203,7 +221,7 @@ function ProjectsPage() {
     department: department || undefined,
     status: (status as Status) || undefined,
     year: (year as number) || undefined,
-  };
+  }), [annotationType, debouncedSearch, department, effectiveAnnotationSearch, planId, status, strategyId, year]);
 
   const { data: result, isLoading } = useQuery({
     queryKey: ["projects", { debouncedSearch, effectiveAnnotationSearch, annotationType, strategyId, planId, department, status, year, page }],
@@ -213,6 +231,8 @@ function ProjectsPage() {
         page,
         limit: PAGE_SIZE,
       }),
+    placeholderData: (previous) => previous,
+    staleTime: 30_000,
   });
 
   const pageItems = result?.data ?? [];
@@ -229,8 +249,6 @@ function ProjectsPage() {
     setSearch(val);
     resetSelection();
     setPage(1);
-    clearTimeout((handleSearchChange as any)._t);
-    (handleSearchChange as any)._t = setTimeout(() => setDebouncedSearch(val), 400);
   }
 
   function handleAnnotationSearchChange(val: string) {
@@ -238,8 +256,6 @@ function ProjectsPage() {
     setSelectedAnnotationLabel("");
     resetSelection();
     setPage(1);
-    clearTimeout((handleAnnotationSearchChange as any)._t);
-    (handleAnnotationSearchChange as any)._t = setTimeout(() => setDebouncedAnnotationSearch(val), 400);
   }
 
   function clearFilters() {

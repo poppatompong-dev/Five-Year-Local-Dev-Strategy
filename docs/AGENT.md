@@ -6,7 +6,7 @@
 
 ## 1. ภาพรวมระบบ
 
-ระบบนี้เป็นเว็บแอปสำหรับบริหารข้อมูลแผนพัฒนาท้องถิ่น พ.ศ. 2566-2570 ของเทศบาลนครนครสวรรค์ โดยย้ายข้อมูลจาก Excel workbook ทางราชการมาเก็บในฐานข้อมูล PostgreSQL และแสดงผลผ่าน dashboard, รายการโครงการ, รายละเอียดโครงการ, ครุภัณฑ์, import/export, audit log และระบบผู้ดูแล
+ระบบนี้เป็นเว็บแอปสำหรับบริหารข้อมูลแผนพัฒนาท้องถิ่น พ.ศ. 2566-2570 ของเทศบาลนครนครสวรรค์ โดยย้ายข้อมูลจาก Excel workbook ทางราชการมาเก็บในฐานข้อมูล PostgreSQL และแสดงผลผ่าน dashboard, รายการโครงการ, รายละเอียดโครงการ, ครุภัณฑ์, หน้าเกี่ยวกับระบบ, คู่มือ, import/export, audit log และระบบผู้ดูแล
 
 กลุ่มผู้ใช้หลัก:
 
@@ -36,7 +36,7 @@ Strategy -> Tactic -> Plan -> Project -> Project Budget by Fiscal Year
 - Build: Vite 7 ผ่าน `@lovable.dev/vite-tanstack-config`
 - Styling: Tailwind CSS 4 + shadcn/ui + Radix UI
 - Icons: `lucide-react`
-- Charts: `recharts`
+- Charts: lightweight React + CSS/SVG components
 - Data fetching/cache: TanStack Query
 - Database: Neon PostgreSQL
 - DB driver: `@neondatabase/serverless` ใน server functions และ `pg` ใน scripts
@@ -77,10 +77,12 @@ src/
     projects.$projectId.tsx       project detail, budget panel, annotations
     equipment.tsx                 equipment list/detail
     import.tsx                    admin import page
+    about.tsx                     เกี่ยวกับระบบ แหล่งข้อมูล PDPA/accessibility
+    manual.tsx                    คู่มือภาษาไทย พิมพ์/บันทึกเป็น PDF ได้
     login.tsx                     admin login
     admin.users.tsx               admin user management
     admin.audit.tsx               audit log
-    admin.hierarchy.tsx           strategy/tactic/plan CRUD
+    admin.hierarchy.tsx           strategy/tactic/plan CRUD พร้อม child-record delete guards
     account.$pathname.tsx         legacy account redirect
 
 scripts/
@@ -142,10 +144,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 Local workspace warning:
 
-- This repository may live inside Google Drive (`G:\My Drive\...`).
-- Installing `node_modules` directly inside Google Drive can fail with `EBADF`, `EPERM`, or `UNKNOWN: write`.
-- If install fails, use a local runtime clone under a normal NTFS path such as `C:\Users\poppa\Documents\Five-Year-Local-Dev-Strategy-runtime`.
-- Keep authoritative source changes in the Google Drive repo unless the user explicitly chooses the runtime clone as the active source.
+- This repository currently lives in a normal local workspace: `C:\Users\Patompong.l\Documents\Web Applications\Five-Year-Local-Dev-Strategy`.
+- Older notes may mention Google Drive paths. Treat the current workspace path as authoritative unless the user explicitly changes folders.
 
 Current known local dev URL from previous setup:
 
@@ -239,6 +239,12 @@ Annotation storage:
 - Current project list/detail surfaces only explicitly linked annotations.
 - Project list annotation search is intentionally smart-normalized in `src/lib/server-fns.ts`: Thai digits are converted to Arabic digits, zero-width characters are removed, and compact matching ignores whitespace, punctuation, and symbols. This is required so queries like `ครั้งที่ 2/2568` match text boxes extracted as `ครั้งที่ 2 / 2568` or split across OOXML text runs.
 - Annotation search haystacks include both `raw_text` and structured fields such as `amendment_type`, `amendment_number`, `amendment_year`, `target_plan`, `target_ref`, and `funding_source`.
+
+Public visibility:
+
+- Public users see read-only routes and controls only.
+- When `publish_status` exists, public project/equipment reads show `reviewed` and `published` rows. Admin viewers see all rows.
+- Current code falls back to all rows if no reviewed/published rows exist, so the public portal does not appear empty during setup. Revisit this before strict launch.
 
 ## 7. Server Functions and API Pattern
 

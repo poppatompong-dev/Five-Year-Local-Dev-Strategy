@@ -14,30 +14,8 @@ import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import { formatBaht, STATUS_COLOR, YEARS, type Status } from "@/lib/mock-data";
 import { getActivePlanFiscalYear, getFiscalQuarter } from "@/lib/fiscal-year";
 import { ANNOTATION_TYPE_LABEL, apiGetDashboard, apiGetProjects, apiGetProject, apiUpdateProject, apiPatchProjectStatus, apiLogAudit } from "@/lib/api";
-import { exportDashboardToExcel, exportOfficialDashboardPdf } from "@/lib/export";
 import type { ProjectRow, StrategyProgress, ProjectCreateInput, ProjectDetail } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip as ReTooltip,
-  CartesianGrid,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  Treemap,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Line,
-  ComposedChart,
-} from "recharts";
 import {
   TrendingUp,
   Wallet,
@@ -214,6 +192,7 @@ function DashboardPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard"],
     queryFn: apiGetDashboard,
+    staleTime: 60_000,
   });
 
   // Filtered projects query — depends on active filter
@@ -227,17 +206,21 @@ function DashboardPage() {
       year: filterYear ?? undefined,
     }),
     enabled: hasFilter,
+    placeholderData: (previous) => previous,
+    staleTime: 30_000,
   });
 
   const { data: recentResult } = useQuery({
     queryKey: ["projects", "recent"],
     queryFn: () => apiGetProjects({ page: 1, limit: 6 }),
     enabled: !hasFilter,
+    staleTime: 60_000,
   });
 
   const { data: followUpResult } = useQuery({
     queryKey: ["projects", "follow-up", activeFiscalYear],
-    queryFn: () => apiGetProjects({ page: 1, limit: 200, year: activeFiscalYear }),
+    queryFn: () => apiGetProjects({ page: 1, limit: 120, year: activeFiscalYear }),
+    staleTime: 60_000,
   });
 
   const tableRows: ProjectRow[] = hasFilter
@@ -384,14 +367,6 @@ function DashboardPage() {
     { bar: "from-teal-700 to-teal-500",       badge: "bg-teal-100 text-teal-800",       hex: "#0f766e" },
   ];
 
-  const tooltipStyle = {
-    borderRadius: 12,
-    border: "1px solid oklch(0.9 0.015 140)",
-    background: "oklch(1 0 0)",
-    boxShadow: "0 10px 30px -10px oklch(0 0 0 / 0.15)",
-    fontSize: 12,
-  };
-
   // Filter label for display
   const filterLabel =
     filterStatus  ? `สถานะ: ${data.byStatus.find(s => s.status === filterStatus)?.label}` :
@@ -434,8 +409,9 @@ function DashboardPage() {
               <div className="text-primary-foreground/70 text-xs">บาท · {data.totalProjects.toLocaleString("th-TH")} โครงการ</div>
               <div className="mt-2 flex items-center gap-2">
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (data) {
+                      const { exportDashboardToExcel } = await import("@/lib/export");
                       exportDashboardToExcel(data, `dashboard-${new Date().toISOString().slice(0, 10)}.xlsx`);
                       toast.success("ส่งออกสรุปแดชบอร์ดแล้ว", { icon: "📄" });
                     }
@@ -446,7 +422,7 @@ function DashboardPage() {
                 </button>
                 {isLoggedIn && (
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (data) {
                         apiLogAudit({
                           action: "export",
@@ -458,6 +434,7 @@ function DashboardPage() {
                             totalBudget: data.totalBudget,
                           },
                         }).catch(() => {});
+                        const { exportOfficialDashboardPdf } = await import("@/lib/export");
                         exportOfficialDashboardPdf(data);
                         toast.success("เปิดเทมเพลตรายงาน PDF แล้ว");
                       }
@@ -550,57 +527,11 @@ function DashboardPage() {
               }
             />
             <div className="h-[280px] mt-4">
-              <ResponsiveContainer width="100%" height={280}>
-                <ComposedChart
-                  data={yearSorted.map((d) => ({ ...d, totalM: +(d.total / 1_000_000).toFixed(2) }))}
-                  margin={{ left: -10, right: 20, top: 10 }}
-                  onClick={(e: any) => {
-                    const yr = e?.activePayload?.[0]?.payload?.year as number | undefined;
-                    if (yr) setYearFilter(yr);
-                  }}
-                  style={{ cursor: "pointer" }}
-                >
-                  <defs>
-                    <linearGradient id="barGreen" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="oklch(0.52 0.105 165)" />
-                      <stop offset="100%" stopColor="oklch(0.36 0.085 162)" />
-                    </linearGradient>
-                    <linearGradient id="barGreenActive" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="oklch(0.74 0.12 88)" />
-                      <stop offset="100%" stopColor="oklch(0.62 0.13 75)" />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.015 140)" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 12, fill: "oklch(0.48 0.02 160)" }} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="budget" tick={{ fontSize: 11, fill: "oklch(0.48 0.02 160)" }} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="count" orientation="right" tick={{ fontSize: 11, fill: "oklch(0.6 0.02 220)" }} axisLine={false} tickLine={false} />
-                  <ReTooltip
-                    cursor={{ fill: "oklch(0.95 0.03 165 / 0.35)" } as any}
-                    contentStyle={tooltipStyle as any}
-                    formatter={(v: any, name: any) =>
-                      name === "totalM"
-                        ? [`${Number(v).toLocaleString("th-TH", { maximumFractionDigits: 2 })} ล้านบาท`, "งบประมาณ"]
-                        : [`${Number(v).toLocaleString("th-TH")} โครงการ`, "จำนวนโครงการ"]
-                    }
-                    labelFormatter={(l: any) => `ปีงบประมาณ ${l} (คลิกเพื่อกรอง)`}
-                  />
-                  <Bar
-                    yAxisId="budget"
-                    dataKey="totalM"
-                    radius={[8, 8, 0, 0]}
-                    maxBarSize={56}
-                  >
-                    {yearSorted.map((d) => (
-                      <Cell
-                        key={d.year}
-                        fill={filterYear === d.year ? "url(#barGreenActive)" : "url(#barGreen)"}
-                        opacity={filterYear !== null && filterYear !== d.year ? 0.4 : 1}
-                      />
-                    ))}
-                  </Bar>
-                  <Line yAxisId="count" type="monotone" dataKey="project_count" stroke="oklch(0.55 0.12 260)" strokeWidth={2.5} dot={{ r: 4, fill: "oklch(0.55 0.12 260)", strokeWidth: 0 }} />
-                </ComposedChart>
-              </ResponsiveContainer>
+              <YearBudgetChart
+                data={yearSorted}
+                activeYear={filterYear}
+                onYearClick={setYearFilter}
+              />
             </div>
           </Card>
 
@@ -608,47 +539,13 @@ function DashboardPage() {
           <Card>
             <CardHeader title="สัดส่วนสถานะโครงการ" subtitle={`คลิกส่วนใดก็ได้เพื่อกรอง · รวม ${data.totalProjects.toLocaleString("th-TH")} โครงการ`} />
             <div className="relative h-[280px] mt-2">
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={data.byStatus}
-                    dataKey="count"
-                    nameKey="label"
-                    cx="50%"
-                    cy="45%"
-                    innerRadius={68}
-                    outerRadius={100}
-                    paddingAngle={3}
-                    stroke="none"
-                    startAngle={90}
-                    endAngle={-270}
-                    onClick={(entry: any) => setStatusFilter(entry.status as Status)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    {data.byStatus.map((entry) => (
-                      <Cell
-                        key={entry.status}
-                        fill={STATUS_COLOR[entry.status as Status]}
-                        opacity={filterStatus !== null && filterStatus !== entry.status ? 0.3 : 1}
-                        stroke={filterStatus === entry.status ? "white" : "none"}
-                        strokeWidth={filterStatus === entry.status ? 3 : 0}
-                      />
-                    ))}
-                  </Pie>
-                  <ReTooltip
-                    contentStyle={tooltipStyle as any}
-                    formatter={(v: any, _n: any, p: any) => [
-                      `${Number(v).toLocaleString("th-TH")} โครงการ (${data.totalProjects > 0 ? Math.round((Number(v) / data.totalProjects) * 100) : 0}%)`,
-                      (p as { payload?: { label?: string } }).payload?.label ?? "",
-                    ]}
-                  />
-                  <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 12, paddingTop: 4 }} formatter={(value) => <span className="text-foreground">{value}</span>} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-start pointer-events-none" style={{ paddingTop: "72px" }}>
-                <div className="text-2xl font-bold tabular">{activePct}%</div>
-                <div className="text-xs text-muted-foreground">กำลังดำเนินการ</div>
-              </div>
+              <StatusDonut
+                data={data.byStatus}
+                total={data.totalProjects}
+                activeStatus={filterStatus}
+                activePct={activePct}
+                onStatusClick={setStatusFilter}
+              />
             </div>
           </Card>
         </section>
@@ -762,21 +659,11 @@ function DashboardPage() {
           <Card>
             <CardHeader title="Treemap งบประมาณ" subtitle="คลิกช่องเพื่อกรองยุทธศาสตร์" />
             <div className="h-[320px] mt-4">
-              <ResponsiveContainer width="100%" height={320}>
-                <Treemap
-                  data={data.byStrategy.map((s, i) => ({
-                    name: s.name, size: Math.round(s.total_budget / 1_000_000),
-                    colorIndex: i, stratId: s.id,
-                    dimmed: filterStrategy !== null && filterStrategy !== s.id,
-                  }))}
-                  dataKey="size"
-                  aspectRatio={4 / 3}
-                  stroke="oklch(1 0 0 / 0.08)"
-                  onClick={(node: any) => { if (node?.stratId) setStrategyFilter(node.stratId); }}
-                  style={{ cursor: "pointer" }}
-                  content={<TreemapCell activeId={filterStrategy} />}
-                />
-              </ResponsiveContainer>
+              <StrategyTreemapLite
+                data={data.byStrategy}
+                activeId={filterStrategy}
+                onStrategyClick={setStrategyFilter}
+              />
             </div>
           </Card>
         </section>
@@ -786,30 +673,7 @@ function DashboardPage() {
           <Card>
             <CardHeader title="Radar เปรียบเทียบยุทธศาสตร์" subtitle="สัดส่วนโครงการ vs งบประมาณ (% เทียบยุทธศาสตร์สูงสุด)" />
             <div className="h-[300px] mt-4">
-              <ResponsiveContainer width="100%" height={300}>
-                <RadarChart
-                  data={(() => {
-                    const maxProj   = Math.max(...data.byStrategy.map((s) => s.project_count));
-                    const maxBudget = Math.max(...data.byStrategy.map((s) => s.total_budget));
-                    return data.byStrategy.map((s) => ({
-                      subject:  s.name,
-                      stratId:  s.id,
-                      โครงการ:  Math.round((s.project_count / maxProj) * 100),
-                      งบประมาณ: Math.round((s.total_budget / maxBudget) * 100),
-                    }));
-                  })()}
-                  outerRadius={80}
-                  margin={{ top: 30, right: 90, bottom: 30, left: 90 }}
-                >
-                  <PolarGrid stroke="oklch(0.88 0.02 150)" />
-                  <PolarAngleAxis dataKey="subject" tick={CustomPolarAngleTick} />
-                  <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9, fill: "oklch(0.6 0.02 160)" }} tickCount={4} />
-                  <Radar name="โครงการ"  dataKey="โครงการ"  stroke="oklch(0.52 0.105 165)" fill="oklch(0.52 0.105 165)" fillOpacity={0.25} strokeWidth={2} />
-                  <Radar name="งบประมาณ" dataKey="งบประมาณ" stroke="oklch(0.74 0.12 88)"   fill="oklch(0.74 0.12 88)"   fillOpacity={0.2}  strokeWidth={2} />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: 12, paddingTop: 4 }} formatter={(v) => <span className="text-foreground">{v} (%)</span>} />
-                  <ReTooltip contentStyle={tooltipStyle as any} formatter={(v: any, name: any) => [`${v}%`, name]} />
-                </RadarChart>
-              </ResponsiveContainer>
+              <StrategyRadarLite data={data.byStrategy} />
             </div>
           </Card>
         </section>
@@ -1422,118 +1286,223 @@ const STRATEGY_COLORS = [
   "oklch(0.48 0.10 195)",
 ];
 
-function TreemapCell(props: any) {
-  const { x, y, width, height, name, value, colorIndex, stratId, activeId } = props;
-  if (!width || !height || width < 10 || height < 10) return null;
-  const color = STRATEGY_COLORS[colorIndex % STRATEGY_COLORS.length];
-  const isActive = activeId === null || activeId === stratId;
-  const clipId = `tree-clip-${stratId}`;
+type YearBudgetRow = { year: number; label: string; total: number; project_count: number };
+type StatusShareRow = { status: Status; label: string; count: number };
+type StrategyShareRow = { id: number; name: string; full_name: string; project_count: number; total_budget: number };
+
+function YearBudgetChart({
+  data,
+  activeYear,
+  onYearClick,
+}: {
+  data: YearBudgetRow[];
+  activeYear: number | null;
+  onYearClick: (year: number | null) => void;
+}) {
+  const maxBudget = Math.max(1, ...data.map((item) => item.total));
+  const maxProjects = Math.max(1, ...data.map((item) => item.project_count));
+
   return (
-    <g style={{ cursor: "pointer" }}>
-      <title>{name}</title>
-      <defs>
-        <clipPath id={clipId}>
-          <rect x={x + 4} y={y + 4} width={width - 8} height={height - 8} />
-        </clipPath>
-      </defs>
-      <rect
-        x={x} y={y} width={width} height={height}
-        style={{ fill: color, stroke: "oklch(1 0 0 / 0.12)", strokeWidth: 2, opacity: isActive ? 1 : 0.35 }}
-        rx={6}
-      />
-      {activeId === stratId && (
-        <rect x={x + 2} y={y + 2} width={width - 4} height={3}
-          style={{ fill: "white", opacity: 0.5 }} rx={2} />
-      )}
-      {width > 50 && height > 30 && (
-        <>
-          <text
-            clipPath={`url(#${clipId})`}
-            x={x + width / 2} y={y + height / 2 - (height > 50 ? 8 : 0)}
-            textAnchor="middle" dominantBaseline="middle"
-            fill="white" fontSize={Math.min(12, width / 8)} fontWeight={600}
-            opacity={isActive ? 1 : 0.4}
+    <div className="grid h-full grid-cols-5 items-end gap-2 pt-5">
+      {data.map((item) => {
+        const budgetPct = Math.max(6, (item.total / maxBudget) * 100);
+        const countPct = Math.max(4, (item.project_count / maxProjects) * 100);
+        const isActive = activeYear === item.year;
+
+        return (
+          <button
+            key={item.year}
+            type="button"
+            onClick={() => onYearClick(item.year)}
+            className={[
+              "group flex h-full min-w-0 flex-col justify-end rounded-xl px-2 py-2 text-center transition-all press-effect",
+              isActive ? "bg-primary-soft ring-1 ring-primary/30" : "hover:bg-muted/50",
+              activeYear !== null && !isActive ? "opacity-45" : "",
+            ].join(" ")}
+            title={`ปี ${item.year}: ${formatBaht(item.total)} บาท · ${item.project_count} โครงการ`}
           >
-            {name}
-          </text>
-          {height > 50 && (
-            <text
-              clipPath={`url(#${clipId})`}
-              x={x + width / 2} y={y + height / 2 + 12}
-              textAnchor="middle" dominantBaseline="middle"
-              fill="white" fontSize={10} opacity={isActive ? 0.85 : 0.3}
-            >
-              {value?.toLocaleString("th-TH")} ล้านบาท
-            </text>
-          )}
-        </>
-      )}
-    </g>
+            <div className="relative mx-auto flex h-[180px] w-full max-w-16 items-end justify-center">
+              <div
+                className="w-full rounded-t-lg bg-emerald-gradient shadow-sm transition-[height] duration-500"
+                style={{ height: `${budgetPct}%` }}
+              />
+              <span
+                className="absolute bottom-0 h-1.5 rounded-full bg-gold shadow-[0_0_0_2px_oklch(1_0_0_/_0.65)] transition-[height] duration-500"
+                style={{ width: "72%", transform: `translateY(-${countPct * 1.55}px)` }}
+                aria-hidden
+              />
+            </div>
+            <div className="mt-2 text-xs font-semibold tabular text-foreground">{item.year}</div>
+            <div className="truncate text-[11px] font-medium text-primary">{formatBaht(item.total, { compact: true })}</div>
+            <div className="text-[10px] text-muted-foreground">{item.project_count.toLocaleString("th-TH")} โครงการ</div>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
-/** Count Thai grapheme clusters (not raw code-point length) */
-function graphemeLen(s: string): number {
-  return Array.from(new Intl.Segmenter("th", { granularity: "grapheme" }).segment(s)).length;
-}
+function StatusDonut({
+  data,
+  total,
+  activeStatus,
+  activePct,
+  onStatusClick,
+}: {
+  data: StatusShareRow[];
+  total: number;
+  activeStatus: Status | null;
+  activePct: number;
+  onStatusClick: (status: Status | null) => void;
+}) {
+  let cursor = 0;
+  const gradient = total > 0
+    ? data.map((item) => {
+        const degrees = (item.count / total) * 360;
+        const start = cursor;
+        cursor += degrees;
+        return `${STATUS_COLOR[item.status]} ${start}deg ${cursor}deg`;
+      }).join(", ")
+    : "var(--color-muted)";
 
-/**
- * Wrap Thai text by word boundary (Intl.Segmenter "word"), keeping
- * each line ≤ maxPerLine grapheme clusters.  Long single words are
- * left intact on one line (no mid-word break).
- */
-function wrapThai(text: string, maxPerLine: number): string[] {
-  const words = Array.from(
-    new Intl.Segmenter("th", { granularity: "word" }).segment(text),
-  ).map((s) => s.segment);
-
-  const lines: string[] = [];
-  let current = "";
-  let currentLen = 0;
-
-  for (const word of words) {
-    const wLen = graphemeLen(word);
-    if (currentLen === 0) {
-      current = word;
-      currentLen = wLen;
-    } else if (currentLen + wLen <= maxPerLine) {
-      current += word;
-      currentLen += wLen;
-    } else {
-      lines.push(current);
-      current = word;
-      currentLen = wLen;
-    }
-  }
-  if (current.length > 0) lines.push(current);
-  return lines.length > 0 ? lines : [text];
-}
-
-function CustomPolarAngleTick({ x, y, cx, payload, textAnchor }: any) {
-  const text = String(payload?.value ?? "");
-
-  // Side labels get narrower lines; top/bottom labels get wider
-  const dx = x - (cx ?? 0);
-  const isCenter = Math.abs(dx) < 20;
-  const maxPerLine = isCenter ? 14 : 9;
-
-  const lines = wrapThai(text, maxPerLine);
-  const lineH = 14;
-  const startY = y - ((lines.length - 1) * lineH) / 2;
+  const centerLabel = activeStatus
+    ? data.find((item) => item.status === activeStatus)?.label
+    : "ทั้งหมด";
+  const centerValue = activeStatus
+    ? activePct
+    : 100;
 
   return (
-    <text
-      textAnchor={textAnchor ?? "middle"}
-      fontSize={11}
-      fill="oklch(0.35 0.03 160)"
-      fontWeight={500}
-    >
-      {lines.map((line, i) => (
-        <tspan key={i} x={x} y={startY + i * lineH}>
-          {line}
-        </tspan>
-      ))}
-    </text>
+    <div className="grid h-full grid-cols-[minmax(130px,0.9fr)_minmax(0,1fr)] items-center gap-4">
+      <button
+        type="button"
+        onClick={() => activeStatus && onStatusClick(activeStatus)}
+        className="relative mx-auto aspect-square w-full max-w-[210px] rounded-full transition-transform hover:scale-[1.01]"
+        style={{ background: `conic-gradient(${gradient})` }}
+        aria-label="สัดส่วนสถานะโครงการ"
+      >
+        <span className="absolute inset-[18%] flex flex-col items-center justify-center rounded-full bg-card text-center shadow-inner ring-1 ring-border">
+          <span className="text-3xl font-bold tabular text-primary">{centerValue}%</span>
+          <span className="mt-1 max-w-24 truncate text-xs text-muted-foreground">{centerLabel}</span>
+          {activeStatus && <span className="mt-1 text-[10px] text-primary">คลิกเพื่อล้าง</span>}
+        </span>
+      </button>
+      <div className="space-y-2">
+        {data.map((item) => {
+          const pct = total > 0 ? Math.round((item.count / total) * 100) : 0;
+          const isActive = activeStatus === item.status;
+
+          return (
+            <button
+              key={item.status}
+              type="button"
+              onClick={() => onStatusClick(item.status)}
+              className={[
+                "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors",
+                isActive ? "bg-primary-soft ring-1 ring-primary/25" : "hover:bg-muted/60",
+                activeStatus !== null && !isActive ? "opacity-50" : "",
+              ].join(" ")}
+            >
+              <span className="size-2.5 rounded-full" style={{ background: STATUS_COLOR[item.status] }} />
+              <span className="min-w-0 flex-1 truncate text-xs font-medium">{item.label}</span>
+              <span className="text-xs tabular text-muted-foreground">{pct}%</span>
+              <span className="text-xs font-semibold tabular">{item.count.toLocaleString("th-TH")}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StrategyTreemapLite({
+  data,
+  activeId,
+  onStrategyClick,
+}: {
+  data: StrategyShareRow[];
+  activeId: number | null;
+  onStrategyClick: (id: number | null) => void;
+}) {
+  const sorted = [...data].sort((a, b) => b.total_budget - a.total_budget);
+  const totalBudget = Math.max(1, sorted.reduce((sum, item) => sum + item.total_budget, 0));
+  const tileClasses = ["col-span-2", "col-span-1", "col-span-1", "col-span-1", "col-span-1", "col-span-2"];
+
+  return (
+    <div className="grid h-full grid-cols-2 grid-rows-4 gap-2">
+      {sorted.map((item, index) => {
+        const isActive = activeId === item.id;
+        const color = STRATEGY_COLORS[index % STRATEGY_COLORS.length];
+        const share = Math.round((item.total_budget / totalBudget) * 100);
+
+        return (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onStrategyClick(item.id)}
+            className={[
+              "min-h-0 rounded-xl p-3 text-left text-white transition-all press-effect",
+              tileClasses[index] ?? "col-span-1",
+              isActive ? "ring-2 ring-primary/40 ring-offset-2 ring-offset-card" : "",
+              activeId !== null && !isActive ? "opacity-40" : "hover:brightness-105",
+            ].join(" ")}
+            style={{ background: color }}
+            title={`${item.full_name}: ${formatBaht(item.total_budget)} บาท`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="rounded-md bg-white/16 px-2 py-0.5 text-xs font-semibold">S{item.id}</span>
+              <span className="text-xs font-semibold tabular">{share}%</span>
+            </div>
+            <div className="mt-2 line-clamp-2 text-sm font-semibold leading-snug">{item.name}</div>
+            <div className="mt-1 text-xs text-white/80">{formatBaht(item.total_budget, { compact: true })}</div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function StrategyRadarLite({ data }: { data: StrategyShareRow[] }) {
+  const maxBudget = Math.max(1, ...data.map((item) => item.total_budget));
+  const maxProjects = Math.max(1, ...data.map((item) => item.project_count));
+
+  return (
+    <div className="h-full space-y-3 overflow-y-auto pr-1">
+      {data.map((item, index) => {
+        const budgetPct = (item.total_budget / maxBudget) * 100;
+        const projectPct = (item.project_count / maxProjects) * 100;
+
+        return (
+          <div key={item.id} className="grid gap-2 sm:grid-cols-[minmax(150px,0.55fr)_1fr] sm:items-center">
+            <div className="flex min-w-0 items-center gap-2">
+              <span
+                className="flex size-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
+                style={{ background: STRATEGY_COLORS[index % STRATEGY_COLORS.length] }}
+              >
+                {item.id}
+              </span>
+              <span className="truncate text-sm font-medium">{item.name}</span>
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="w-14 text-[10px] text-muted-foreground">งบ</span>
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${budgetPct}%` }} />
+                </div>
+                <span className="w-9 text-right text-[10px] tabular text-muted-foreground">{Math.round(budgetPct)}%</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-14 text-[10px] text-muted-foreground">โครงการ</span>
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-gold transition-[width] duration-500" style={{ width: `${projectPct}%` }} />
+                </div>
+                <span className="w-9 text-right text-[10px] tabular text-muted-foreground">{Math.round(projectPct)}%</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -1892,100 +1861,81 @@ function ProgressChart({
   onStrategyClick: (id: number | null) => void;
   activeId: number | null;
 }) {
-  const tooltipStyle = {
-    borderRadius: 12,
-    border: "1px solid oklch(0.9 0.015 140)",
-    background: "oklch(1 0 0)",
-    boxShadow: "0 10px 30px -10px oklch(0 0 0 / 0.15)",
-    fontSize: 12,
-  };
-
-  const chartData = data.map((s) => ({
-    name: "S" + s.id,
-    fullName: s.full_name,
-    stratId: s.id,
-    completed:   s.completed,
-    in_progress: s.in_progress,
-    planning:    s.planning,
-    cancelled:   s.cancelled,
-    total:       s.project_count,
-    rate:        s.completion_rate,
-    dimmed:      activeId !== null && activeId !== s.id,
-  }));
-
-  const CustomLabel = (props: any) => {
-    const { x, y, width, value } = props;
-    if (!value || width < 24) return null;
-    return (
-      <text x={x + width / 2} y={y + 10} textAnchor="middle" dominantBaseline="middle"
-        fill="white" fontSize={9} fontWeight={600} opacity={0.9}>
-        {value}
-      </text>
-    );
-  };
+  const maxProjects = Math.max(1, ...data.map((s) => s.project_count));
+  const statusKeys = ["completed", "in_progress", "planning", "cancelled"] as const;
 
   return (
     <div className="mt-5 space-y-4">
-      {/* Stacked 100% horizontal bar chart */}
-      <div className="h-[320px]">
-        <ResponsiveContainer width="100%" height={320}>
-          <BarChart
-            data={chartData}
-            layout="vertical"
-            margin={{ left: 4, right: 48, top: 4, bottom: 4 }}
-            onClick={(e: any) => {
-              const id = e?.activePayload?.[0]?.payload?.stratId as number | undefined;
-              if (id) onStrategyClick(activeId === id ? null : id);
-            }}
-            style={{ cursor: "pointer" }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0.015 140)" horizontal={false} />
-            <XAxis type="number" tick={{ fontSize: 10, fill: "oklch(0.55 0.02 160)" }} axisLine={false} tickLine={false} />
-            <YAxis
-              type="category" dataKey="name" width={30}
-              tick={({ x, y, payload }: any) => (
-                <text
-                  x={(x as number) - 4} y={y} textAnchor="end" dominantBaseline="middle"
-                  fontSize={10} fill={activeId === null || activeId === chartData.find(d => d.name === payload.value)?.stratId ? "oklch(0.35 0.02 160)" : "oklch(0.7 0.01 160)"}
-                  fontWeight={activeId !== null && activeId === chartData.find(d => d.name === payload.value)?.stratId ? 700 : 400}
-                >
-                  {payload.value}
-                </text>
-              )}
-              axisLine={false} tickLine={false}
-            />
-            <ReTooltip
-              contentStyle={tooltipStyle as any}
-              formatter={(v: any, name: any) => [v + " โครงการ", STATUS_LABEL_TH[String(name)] ?? String(name)]}
-              labelFormatter={(l: any, payload: any) => {
-                const d = payload?.[0]?.payload;
-                return d ? `${d.fullName} (สำเร็จ ${d.rate}%)` : l;
-              }}
-            />
-            <Legend
-              iconType="circle"
-              wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
-              formatter={(v) => <span className="text-foreground">{STATUS_LABEL_TH[v] ?? v}</span>}
-            />
-            {(["completed", "in_progress", "planning", "cancelled"] as const).map((st) => (
-              <Bar
-                key={st} dataKey={st} stackId="a"
-                fill={STATUS_FILL[st]}
-                radius={st === "cancelled" ? [0, 4, 4, 0] : st === "completed" ? [4, 0, 0, 4] : [0, 0, 0, 0]}
-                maxBarSize={28}
-                label={st === "completed" ? <CustomLabel /> : undefined}
-              >
-                {chartData.map((d) => (
-                  <Cell
-                    key={d.stratId}
-                    fill={STATUS_FILL[st]}
-                    opacity={d.dimmed ? 0.25 : 1}
-                  />
-                ))}
-              </Bar>
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="space-y-2">
+        {data.map((s) => {
+          const isActive = activeId === s.id;
+          const isDimmed = activeId !== null && !isActive;
+          const widthPct = Math.max(12, (s.project_count / maxProjects) * 100);
+
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => onStrategyClick(isActive ? null : s.id)}
+              className={[
+                "grid w-full gap-2 rounded-xl border px-3 py-2.5 text-left transition-all press-effect sm:grid-cols-[42px_1fr_72px] sm:items-center",
+                isActive
+                  ? "border-primary/35 bg-primary-soft ring-1 ring-primary/25"
+                  : isDimmed
+                  ? "border-border bg-card opacity-40"
+                  : "border-border bg-card hover:border-primary/25 hover:bg-muted/35",
+              ].join(" ")}
+              title={`${s.full_name}: ${s.project_count} โครงการ · สำเร็จ ${s.completion_rate}%`}
+            >
+              <div className="flex items-center justify-between gap-2 sm:block">
+                <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary-soft text-xs font-bold text-primary">S{s.id}</span>
+                <span className="text-xs font-semibold text-muted-foreground sm:hidden">{s.project_count} โครงการ</span>
+              </div>
+              <div className="min-w-0">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <span className="truncate text-xs font-medium">{s.name}</span>
+                  <span className="hidden text-xs text-muted-foreground sm:inline">{s.project_count.toLocaleString("th-TH")} โครงการ</span>
+                </div>
+                <div className="w-full rounded-full bg-muted p-0.5">
+                  <div className="flex h-5 overflow-hidden rounded-full bg-background" style={{ width: `${widthPct}%` }}>
+                    {statusKeys.map((status) => {
+                      const value = s[status];
+                      if (value <= 0 || s.project_count <= 0) return null;
+                      return (
+                        <span
+                          key={status}
+                          className="flex min-w-[2px] items-center justify-center text-[10px] font-semibold text-white"
+                          style={{
+                            width: `${(value / s.project_count) * 100}%`,
+                            background: STATUS_FILL[status],
+                          }}
+                        >
+                          {value > 0 && (value / s.project_count) * widthPct > 12 ? value : ""}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2 sm:block sm:text-right">
+                <span className="text-[10px] text-muted-foreground">สำเร็จ</span>
+                <span className={`text-lg font-bold tabular ${
+                  s.completion_rate >= 60 ? "text-success" :
+                  s.completion_rate >= 30 ? "text-warning" : "text-muted-foreground"
+                }`}>{s.completion_rate}%</span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+        {statusKeys.map((status) => (
+          <span key={status} className="inline-flex items-center gap-1.5">
+            <span className="size-2.5 rounded-full" style={{ background: STATUS_FILL[status] }} />
+            {STATUS_LABEL_TH[status]}
+          </span>
+        ))}
       </div>
 
       {/* Completion rate mini-cards */}

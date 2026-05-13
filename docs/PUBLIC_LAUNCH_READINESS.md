@@ -1,10 +1,12 @@
 # Public Launch Readiness
 
+ตรวจสอบล่าสุด: 2026-05-13
+
 เอกสารนี้เป็นคู่มือสำหรับเตรียมเผยแพร่ระบบบริหารแผนพัฒนาท้องถิ่น 5 ปี เทศบาลนครนครสวรรค์ในรูปแบบ Public Read-only Portal โดยยังคง workflow เจ้าหน้าที่ให้เรียบง่ายที่สุด
 
 ## หลักการสำคัญ
 
-- ประชาชนดูข้อมูลได้เฉพาะหน้าสาธารณะ: Dashboard, โครงการ, รายละเอียดโครงการ, ครุภัณฑ์, เกี่ยวกับระบบ และข้อมูล/รายงานที่เผยแพร่แล้ว
+- ประชาชนดูข้อมูลได้เฉพาะหน้าสาธารณะ: Dashboard, โครงการ, รายละเอียดโครงการ, ครุภัณฑ์, เกี่ยวกับระบบ, คู่มือ และข้อมูลที่เผยแพร่แล้ว
 - เจ้าหน้าที่ใช้บัญชีเดิมได้: `pop` และ `pok` แต่เอกสารสาธารณะห้ามเผยแพร่รหัสผ่าน
 - การป้องกันบัญชีผู้ดูแลใช้ compensating controls: rate limit, temporary lock, audit log, IP allowlist/WAF, backup, rollback และ network restriction
 - ข้อมูลลับต้องอยู่ฝั่ง server เท่านั้น: `DATABASE_URL`, `SESSION_PASSWORD`, Neon credentials และ production secrets ห้ามขึ้นต้นด้วย `VITE_`
@@ -18,6 +20,10 @@
 - หน้า login แสดง diagnostic แบบปลอดภัยสำหรับ production setup ได้แก่ `DATABASE_URL`, `SESSION_PASSWORD`, ตาราง `admin_users`, และบัญชี admin ที่ยังไม่ได้ seed โดยไม่เปิดเผย secret หรือ stack trace
 - หน้า admin direct URL เช่น `/admin/users`, `/admin/audit`, `/admin/hierarchy` ซ่อน UI และไม่ยิง query เมื่อยังไม่ login
 - Public metadata แสดงแหล่งข้อมูล วันที่ปรับปรุงล่าสุด สถานะข้อมูล และหมายเหตุการตรวจสอบ
+- Public routes `/about` และ `/manual` พร้อมใช้งานสำหรับคำอธิบายระบบ ข้อจำกัดข้อมูล PDPA/accessibility และคู่มือที่พิมพ์หรือบันทึกเป็น PDF ได้
+- Public data filter ใช้ `publish_status` เมื่อมีคอลัมน์นี้ โดย public เห็น `reviewed` และ `published`; admin เห็นข้อมูลครบเพื่อใช้ตรวจทาน
+- หน้า `/admin/hierarchy` พร้อมจัดการยุทธศาสตร์ แนวทาง และแผนงาน พร้อมกันลบรายการที่ยังมีข้อมูลลูก
+- หน้า `/admin/users` รองรับเพิ่ม ลบ และรีเซ็ตรหัสผ่านผู้ดูแลแล้ว
 - Project/annotation search รองรับการค้นหาแบบ normalized สำหรับภาษาไทย เลขไทย/อารบิก ช่องว่าง เครื่องหมายคั่น และข้อความจาก Excel text box ที่ถูก OOXML split เช่น `ครั้งที่ 2/2568`
 - Export Excel มี metadata sheet และ sanitize ค่า string ที่ขึ้นต้นด้วย `=`, `+`, `-`, `@` เพื่อลดความเสี่ยง Excel formula injection
 - Raw Excel ใน `src/*.xlsx` ถูก ignore และไม่ควร commit ขึ้น public repository
@@ -49,10 +55,11 @@ Draft -> Reviewed -> Published
 
 ข้อกำหนด:
 
-- Public user เห็นเฉพาะ `publish_status = 'published'`
+- Public user เห็นข้อมูลที่ `publish_status = 'reviewed'` หรือ `publish_status = 'published'` ตาม implementation ปัจจุบัน
 - Admin เห็น Draft/Reviewed/Published ได้เพื่อเตรียมข้อมูล
 - ทุกการเปลี่ยนสถานะ publish ต้องบันทึก audit log
 - Migration เพิ่ม field ที่จำเป็นแล้ว: `publish_status`, `published_at`, `published_by`, `validation_status`, `reconciliation_status`, `data_version`, `plan_revision`, `source_file_name`, `imported_at`, `imported_by`
+- หากยังไม่มีแถวที่เป็น reviewed/published ระบบ public read จะ fallback เป็นข้อมูลทั้งหมดเพื่อไม่ให้ portal ว่างระหว่าง setup ต้องตัดสินใจอีกครั้งก่อน strict public launch
 
 ## Data Governance Metadata
 
@@ -84,11 +91,13 @@ Draft -> Reviewed -> Published
 - [ ] ยืนยันว่า `.env` ไม่ถูก track ด้วย `git ls-files | findstr /i ".env"`
 - [ ] ยืนยันว่าไม่มี raw Excel หรือไฟล์ forensic/staging/textbox output ถูก track
 - [ ] ตรวจ `dist/client` หลัง build ว่าไม่มี `DATABASE_URL`, `SESSION_PASSWORD`, `postgresql://`, `npg_`
-- [ ] ทดสอบ public routes โดยไม่ login: `/`, `/projects`, `/projects/:id`, `/equipment`, `/about`
+- [ ] ทดสอบ public routes โดยไม่ login: `/`, `/projects`, `/projects/:id`, `/equipment`, `/about`, `/manual`
 - [ ] ทดสอบ admin routes โดยไม่ login: `/import`, `/admin/users`, `/admin/audit`, `/admin/hierarchy` ต้องไม่เห็น control จัดการ
 - [ ] ทดสอบยิง mutation โดยไม่ login ต้องได้ 401/ไม่สำเร็จ
 - [ ] ทดสอบ login ผิด 5 ครั้งใน 1 นาที ต้องถูก lock ชั่วคราวและเกิด audit log
-- [ ] ทดสอบ `pop` และ `pok` login ได้ตามเดิม
+- [ ] ทดสอบบัญชีผู้ดูแลที่ production seed ไว้ login ได้ตามเดิม
+- [ ] ทดสอบ `/admin/hierarchy` เพิ่ม/แก้ไข/ลบยุทธศาสตร์ แนวทาง และแผนงาน พร้อม child-record delete guard
+- [ ] ทดสอบ `/admin/users` เพิ่ม ลบ และรีเซ็ตรหัสผ่านผู้ดูแล
 - [ ] ทดสอบ Vercel login setup diagnostics โดยยืนยันว่าหาก env/table/user setup ผิด จะได้ข้อความไทยที่บอกสาเหตุโดยไม่เปิดเผย secret
 - [ ] ทดสอบ annotation search ด้วย `ครั้งที่ 2/2568` และเลขไทย `ครั้งที่ ๒/๒๕๖๘`
 - [ ] ทดสอบ export public ว่าไม่มีข้อมูล admin/audit/internal note
@@ -126,6 +135,7 @@ Draft -> Reviewed -> Published
 ## TODO เวอร์ชันถัดไป
 
 - เพิ่ม UI สำหรับ Draft/Reviewed/Published พร้อม audit log
+- ตัดสินใจเรื่อง strict public publish mode ว่าจะปิด fallback เมื่อไม่มี reviewed/published หรือไม่
 - เพิ่ม import staging preview, validation report และ confirmation ก่อน commit
 - เพิ่ม public CSV/PDF export เฉพาะข้อมูล Published พร้อม filter metadata
 - เพิ่ม health endpoint ที่คืนสถานะ DB แบบไม่เปิดเผย secrets

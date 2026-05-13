@@ -1,6 +1,6 @@
 # Pre-Launch Checklist
 
-ตรวจสอบล่าสุด: 2026-05-12
+ตรวจสอบล่าสุด: 2026-05-13
 
 เอกสารนี้ใช้คู่กับ `docs/PUBLIC_LAUNCH_READINESS.md` สำหรับเตรียมเปิดระบบสู่สาธารณะในรูปแบบ Public Read-only Portal
 
@@ -62,10 +62,11 @@ git ls-files | findstr /i ".env .xlsx forensic staging textbox raw-import import
 
 ### 5. ตรวจ Public Read-only
 
-- [ ] ไม่ login แล้วเปิด `/`, `/projects`, `/projects/:id`, `/equipment`, `/about` ได้
+- [ ] ไม่ login แล้วเปิด `/`, `/projects`, `/projects/:id`, `/equipment`, `/about`, `/manual` ได้
 - [ ] ไม่ login แล้วเปิด `/import`, `/admin/users`, `/admin/audit`, `/admin/hierarchy` ไม่เห็น control จัดการ
 - [ ] Public user ไม่เห็นปุ่มเพิ่ม แก้ไข ลบ import user management หรือรายงานราชการสำหรับ admin
 - [ ] Public export มีเฉพาะข้อมูลเผยแพร่และ metadata แหล่งข้อมูล
+- [ ] หากเปิดใช้ `publish_status` ให้ยืนยันว่า public เห็นเฉพาะ `reviewed`/`published` หรือยืนยันอย่างเป็นทางการว่าจะใช้ fallback ข้อมูลทั้งหมดระหว่าง setup
 - [ ] Direct mutation โดยไม่ login ต้องไม่สำเร็จ
 - [ ] ค้นหา annotation ด้วยตัวอย่าง `ครั้งที่ 2/2568` ต้องพบโครงการที่มี text box แม้ raw text ถูกแยกช่องว่างหรือใช้รูปแบบ `ครั้งที่ 2 / 2568`
 - [ ] ค้นหา annotation ด้วยเลขไทย เช่น `ครั้งที่ ๒/๒๕๖๘` ต้อง match กับข้อมูลเลขอารบิกในฐานข้อมูล
@@ -77,6 +78,8 @@ git ls-files | findstr /i ".env .xlsx forensic staging textbox raw-import import
 - [ ] หาก login บน Vercel ไม่สำเร็จ หน้า login ต้องแสดงสาเหตุ setup ที่อ่านได้ เช่น ขาด `DATABASE_URL`, ขาด/สั้นกว่า 32 ตัวอักษรสำหรับ `SESSION_PASSWORD`, ยังไม่ได้ migrate `admin_users`, หรือยังไม่ได้ seed admin users
 - [ ] เพิ่ม/แก้ไข/ลบโครงการได้หลัง login
 - [ ] import ทำงานเฉพาะ admin
+- [ ] โครงสร้างแผน `/admin/hierarchy` เพิ่ม/แก้ไข/ลบยุทธศาสตร์ แนวทาง และแผนงานได้ และลบรายการที่มีข้อมูลลูกไม่ได้
+- [ ] จัดการผู้ใช้ `/admin/users` เพิ่ม ลบ และรีเซ็ตรหัสผ่านได้
 - [ ] audit log แสดง create/update/delete/import/export/status/login/logout
 - [ ] login ผิด 5 ครั้งใน 1 นาทีถูก lock ชั่วคราวและมี failed login audit
 
