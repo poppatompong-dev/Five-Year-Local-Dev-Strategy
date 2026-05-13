@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Wrench, Upload, Bell, Search, Users, History, LogIn, LogOut, GitBranch, Info, BookOpen } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Wrench, Upload, Bell, Search, Users, History, LogIn, LogOut, GitBranch, Info, BookOpen, MonitorPlay, ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -82,6 +82,17 @@ export function AppLayout({ children }: { children?: ReactNode }) {
               </Link>
             );
           })}
+
+          <a
+            href="https://gamma.app/docs/14lr074ar7bw3y6"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 text-sidebar-foreground/70 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground"
+          >
+            <MonitorPlay className="size-[17px] shrink-0" strokeWidth={1.75} />
+            <span>คู่มือสำหรับเจ้าหน้าที่</span>
+            <ExternalLink className="size-3 ml-auto opacity-40 group-hover:opacity-70 transition-opacity" strokeWidth={1.75} />
+          </a>
 
           {isLoggedIn && (
             <>
