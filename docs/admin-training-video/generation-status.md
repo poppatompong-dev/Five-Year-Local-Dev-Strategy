@@ -11,6 +11,15 @@
 
 Presentation นี้คือ output หลักสำหรับแนะนำระบบให้เจ้าหน้าที่ แชร์ link หรือฉายจากเบราว์เซอร์ได้ทันที
 
-## Sora B-roll (ยกเลิก)
+## Final MP4 Video (สร้างแล้ว)
 
-ไม่ได้ดำเนินการต่อ — ไฟล์ prompt ยังคงอยู่ใน archive สำหรับอ้างอิงหากต้องการในอนาคต
+- **File:** `docs/admin-training-video/generated/final-admin-training-video.mp4`
+- Format: MP4, 1280x720, 1:45 นาที
+- ภาพประกอบ: screen capture จากระบบจริง + local animated b-roll fallback
+- เสียงบรรยาย: Thai TTS จาก `voiceover-script.md`
+- Subtitle/caption: ฝังในวิดีโอจากเนื้อหาใน `captions.md` และ `admin-training-video.srt`
+
+## Sora B-roll (ติดข้อจำกัด billing)
+
+พยายามสร้างด้วย `generate-sora.ps1` แล้ว แต่ Sora API ตอบ `billing_hard_limit_reached`
+จึงใช้ local animated b-roll fallback แทนเพื่อให้ได้วิดีโอพร้อมใช้งานในรอบนี้
